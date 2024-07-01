@@ -1,0 +1,18 @@
+{
+  "dependencies": [
+    "gflags",
+    "glfw3",
+    "glm",
+    {
+      "name": "imgui",
+      "features": [
+        "docking-experimental",
+        "glfw-binding",
+        "vulkan-binding"
+      ]
+    },
+    "shaderc",
+    "vulkan",
+    "stb"
+  ]
+}
