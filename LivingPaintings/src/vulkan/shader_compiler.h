@@ -12,9 +12,9 @@ class ShaderCompiler {
 
     std::map<std::string, std::filesystem::directory_entry> listModifiedFiles(const std::string& shadersPath);
     std::vector<char> readFile(const std::string& shaderPath);
-    void compile(std::filesystem::path shaderPath, const std::string& shaderCode);
+    void compile(const std::filesystem::path shaderPath, const std::string& shaderCode);
 
 public:
-    void compileIfChanged(std::string const& shaderPath);
+    void compileIfChanged(const std::string& shaderPath);
     std::map<std::string, const std::vector<char>> getCompiledShaders();
 };

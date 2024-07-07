@@ -6,7 +6,7 @@
 
 using namespace std;
 
-void VulkanInstance::create(VkDebugUtilsMessengerCreateInfoEXT& debugCreateInfo)
+VkInstance& VulkanInstance::create(VkDebugUtilsMessengerCreateInfoEXT& debugCreateInfo)
 {
     if (Constants::ENABLE_VALIDATION_LAYERS && !checkValidationLayerSupport()) {
         throw runtime_error("validation layers requested, but not available!");
@@ -24,9 +24,9 @@ void VulkanInstance::create(VkDebugUtilsMessengerCreateInfoEXT& debugCreateInfo)
     instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instanceInfo.pApplicationInfo = &appInfo;
 
-    auto extentions = getRequiredExtensions();
-    instanceInfo.enabledExtensionCount = static_cast<uint32_t>(extentions.size());
-    instanceInfo.ppEnabledExtensionNames = extentions.data();
+    const std::vector<const char*> requiredExtentions = findRequiredExtensions();
+    instanceInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtentions.size());
+    instanceInfo.ppEnabledExtensionNames = requiredExtentions.data();
 
     enumerateExtentions();
 
@@ -40,11 +40,11 @@ void VulkanInstance::create(VkDebugUtilsMessengerCreateInfoEXT& debugCreateInfo)
         instanceInfo.pNext = NULL;
     }
 
-    VkResult result = vkCreateInstance(&instanceInfo, nullptr, &instance);
-
-    if (result != VK_SUCCESS) {
-        throw runtime_error("failed to create instance!");
+    if (vkCreateInstance(&instanceInfo, nullptr, &instance) != VK_SUCCESS) {
+        throw runtime_error("Failed to create instance.");
     }
+
+    return instance;
 }
 
 void VulkanInstance::enumerateExtentions()
@@ -56,19 +56,17 @@ void VulkanInstance::enumerateExtentions()
 
     vkEnumerateInstanceExtensionProperties(nullptr, &extentionCount, extensions.data());
 
-    cout << "available extensions:\n";
+    cout << "Available extensions:\n";
 
-    for (const auto& extension : extensions) {
+    for (const VkExtensionProperties& extension : extensions) {
         cout << '\t' << extension.extensionName << '\n';
     }
 }
 
-vector<const char*> VulkanInstance::getRequiredExtensions() const
+vector<const char*> VulkanInstance::findRequiredExtensions() const
 {
     uint32_t glfwExtensionCount = 0;
-    const char** glfwExtensions;
-    glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
+    const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
     vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
     if (Constants::ENABLE_VALIDATION_LAYERS) {
@@ -89,7 +87,7 @@ bool VulkanInstance::checkValidationLayerSupport() const
     for (const char* layerName : Constants::VALIDATION_LAYERS) {
         bool layerFound = false;
 
-        for (const auto& layerProperties : availableLayers) {
+        for (const VkLayerProperties& layerProperties : availableLayers) {
             if (strcmp(layerName, layerProperties.layerName) == 0) {
                 layerFound = true;
                 break;

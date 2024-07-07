@@ -7,13 +7,27 @@
 #include "command_buffer.h"
 #include "device.h"
 #include "fence.h"
+#include "graphics_pipeline.h"
 #include "swapchain.h"
 #include "vulkan/vulkan.h"
+#include <stdexcept>
 #include <vector>
 
-struct ForwardRenderingAction {
-    void drawFrame(Device device, CommandBuffer commandBuffer, VkPipeline graphicsPipeline, VkRenderPass renderPass, SwapChain swapChain, std::vector<VkFramebuffer> framebuffers, Fence fence, Semaphore imageAvailable, Semaphore renderFinished);
-    void beginRenderPass(CommandBuffer commandBuffer, VkPipeline graphicsPipeline, std::vector<VkFramebuffer> framebuffers, VkRenderPass renderPass, SwapChain swapChain);
-    void recordCommandBuffer(CommandBuffer commandBuffer, SwapChain swapChain, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet, VertexBuffer vertexBuffer, IndexBuffer indexBuffer, VertexData vertexData);
-    void endRenderPass(CommandBuffer commandBuffer, SwapChain swapChain);
+class ForwardRenderingAction {
+
+    VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+    VkPipeline graphicsPipeline = VK_NULL_HANDLE;
+    VkExtent2D extent {};
+
+public:
+    void setContext(GraphicsPipeline& graphicsPipeline, const VkExtent2D extent);
+    void beginRenderPass(VkCommandBuffer& commandBuffer, VkRenderPass& renderPass,
+        const std::vector<VkFramebuffer>& framebuffers,
+        const uint32_t currentFrame);
+    void recordCommandBuffer(VkCommandBuffer& commandBuffer,
+        VkDescriptorSet& descriptorSet,
+        VertexBuffer& vertexBuffer,
+        IndexBuffer& indexBuffer,
+        Data::GraphicsObject& graphicsObject);
+    void endRenderPass(VkCommandBuffer& commandBuffer);
 };

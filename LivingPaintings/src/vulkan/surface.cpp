@@ -3,41 +3,96 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #include "surface.h"
+#include "consts.h"
 #include <algorithm>
 #include <stdexcept>
 
 using namespace std;
 
-void Surface::create(VkInstance& instance, GLFWwindow* window)
+VkSurfaceKHR& Surface::create(VkInstance& instance, GLFWwindow* pWindow)
 {
-    glfwWindow = window;
-    if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS) {
+    this->instance = instance;
+    this->pWindow = pWindow;
+    if (glfwCreateWindowSurface(instance, pWindow, nullptr, &surface) != VK_SUCCESS) {
         throw runtime_error("Failed to create window surface.");
     }
+
+    return surface;
 }
 
-VkExtent2D
-Surface::chooseResolution(const VkSurfaceCapabilitiesKHR& capabilities)
+VkExtent2D Surface::chooseResolution()
 {
-    constexpr auto maxResolution = numeric_limits<uint32_t>::max();
-    if (capabilities.currentExtent.width != maxResolution && capabilities.currentExtent.height != maxResolution) {
-        return capabilities.currentExtent;
+    constexpr unsigned int maxResolution = numeric_limits<uint32_t>::max();
+    if (details.capabilities.currentExtent.width != maxResolution && details.capabilities.currentExtent.height != maxResolution) {
+        return details.capabilities.currentExtent;
     } else {
         int width, height;
-        glfwGetFramebufferSize(glfwWindow, &width, &height);
+        glfwGetFramebufferSize(pWindow, &width, &height);
 
         VkExtent2D extent = {
             static_cast<uint32_t>(width),
             static_cast<uint32_t>(height)
         };
 
-        extent.width = clamp(extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-        extent.height = clamp(extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+        extent.width = clamp(extent.width, details.capabilities.minImageExtent.width,
+            details.capabilities.maxImageExtent.width);
+        extent.height = clamp(extent.height, details.capabilities.minImageExtent.height,
+            details.capabilities.maxImageExtent.height);
         return extent;
     }
 }
 
-void Surface::destory(VkInstance& instance)
+Surface::Details Surface::findSurfaceDetails(VkPhysicalDevice& device)
+{
+
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+
+    uint32_t formatsCount;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatsCount,
+        nullptr);
+
+    if (formatsCount != 0) {
+        details.formats.resize(formatsCount);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatsCount,
+            details.formats.data());
+    }
+
+    uint32_t presentationModsCount;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface,
+        &presentationModsCount, nullptr);
+
+    if (formatsCount != 0) {
+        details.presentationModes.resize(presentationModsCount);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(
+            device, surface, &presentationModsCount,
+            details.presentationModes.data());
+    }
+
+    return details;
+}
+
+VkSurfaceFormatKHR Surface::chooseSurfaceFormat()
+{
+    for (const VkSurfaceFormatKHR& availableFormat : details.formats) {
+        if (availableFormat.format == Constants::IMAGE_FORMAT && availableFormat.colorSpace == Constants::COLOR_SPACE) {
+            return availableFormat;
+        }
+    }
+
+    return details.formats[0];
+}
+
+VkPresentModeKHR Surface::choosePresentationMode()
+{
+    for (const VkPresentModeKHR& presentationMode : details.presentationModes) {
+        if (presentationMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+            return VK_PRESENT_MODE_MAILBOX_KHR;
+        }
+    }
+    return VK_PRESENT_MODE_FIFO_KHR;
+}
+
+void Surface::destory()
 {
     vkDestroySurfaceKHR(instance, surface, nullptr);
 }

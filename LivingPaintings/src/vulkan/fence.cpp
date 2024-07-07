@@ -7,7 +7,7 @@
 
 using namespace std;
 
-void Fence::create(VkDevice device, bool signaled)
+void Fence::create(VkDevice& device, const bool signaled)
 {
     this->device = device;
 
@@ -24,24 +24,24 @@ void Fence::create(VkDevice device, bool signaled)
     }
 }
 
-void Fence::wait(size_t frame)
+void Fence::wait(const size_t frame)
 {
     vkWaitForFences(device, 1, &fences[frame], VK_TRUE, UINT64_MAX);
 }
 
-void Fence::reset(size_t frame)
+void Fence::reset(const size_t frame)
 {
     vkResetFences(device, 1, &fences[frame]);
 }
 
 void Fence::destroy()
 {
-    for (const auto& fence : fences) {
+    for (const VkFence& fence : fences) {
         vkDestroyFence(device, fence, nullptr);
     }
 }
 
-VkFence& Fence::get(size_t frame)
+VkFence& Fence::get(const size_t frame)
 {
     return fences[frame];
 }

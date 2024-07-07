@@ -7,8 +7,10 @@
 
 using namespace std;
 
-void RenderPass::create(VkDevice device, VkFormat imageFormat)
+VkRenderPass& RenderPass::create(VkDevice& device, VkFormat imageFormat)
 {
+    this->device = device;
+
     VkAttachmentDescription colorAttachment {};
     colorAttachment.format = imageFormat;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -48,11 +50,12 @@ void RenderPass::create(VkDevice device, VkFormat imageFormat)
     if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
         throw runtime_error("Failed to create render pass.");
     }
+
+    return renderPass;
 }
 
-void RenderPass::destroy(VkDevice device, VkPipelineLayout pipelineLayout)
+void RenderPass::destroy()
 {
-    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyRenderPass(device, renderPass, nullptr);
 }
 

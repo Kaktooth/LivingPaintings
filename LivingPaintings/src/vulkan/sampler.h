@@ -7,10 +7,11 @@
 
 class Sampler {
 
-    VkSampler sampler;
+    VkSampler sampler = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
 
 public:
-    void create(VkDevice device, VkPhysicalDevice physicalDevice);
-    void destroy(VkDevice device);
-    VkSampler get();
+    void create(VkDevice& device, VkPhysicalDevice& physicalDevice);
+    void destroy();
+    VkSampler& get();
 };

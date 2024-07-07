@@ -7,10 +7,11 @@
 
 using namespace std;
 
-void Sampler::create(VkDevice device, VkPhysicalDevice physicalDevice)
+void Sampler::create(VkDevice& device, VkPhysicalDevice& physicalDevice)
 {
-    // TODO refactor and get physical properties
-    VkPhysicalDeviceProperties properties {};
+    this->device = device;
+
+    VkPhysicalDeviceProperties properties;
     vkGetPhysicalDeviceProperties(physicalDevice, &properties);
 
     VkSamplerCreateInfo samplerInfo {};
@@ -36,12 +37,12 @@ void Sampler::create(VkDevice device, VkPhysicalDevice physicalDevice)
     }
 }
 
-void Sampler::destroy(VkDevice device)
+void Sampler::destroy()
 {
     vkDestroySampler(device, sampler, nullptr);
 }
 
-VkSampler Sampler::get()
+VkSampler& Sampler::get()
 {
     return sampler;
 }

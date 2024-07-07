@@ -14,7 +14,7 @@ struct QueueFamily {
         std::optional<uint32_t> transferFamily;
 
         bool isAvailable();
-    };
+    } indicies;
 
-    QueueFamily::Indices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
+    QueueFamily::Indices findQueueFamilies(VkPhysicalDevice& device, VkSurfaceKHR& surface);
 };

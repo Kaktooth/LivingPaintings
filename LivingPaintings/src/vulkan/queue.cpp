@@ -7,7 +7,11 @@
 
 using namespace std;
 
-void Queue::submit(VkCommandBuffer commandBuffer, Fence fence, vector<VkSemaphore> waitSemafores, vector<VkSemaphore> signalSemafores, vector<VkPipelineStageFlags> waitStages, size_t currentFrame)
+void Queue::submit(VkCommandBuffer& commandBuffer, Fence& fence,
+    const std::vector<VkSemaphore> waitSemafores,
+    const std::vector<VkSemaphore> signalSemafores,
+    const std::vector<VkPipelineStageFlags> waitStages,
+    const size_t currentFrame)
 {
     VkSubmitInfo submitInfo {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -22,11 +26,11 @@ void Queue::submit(VkCommandBuffer commandBuffer, Fence fence, vector<VkSemaphor
     fence.reset(currentFrame);
 
     if (vkQueueSubmit(queue, 1, &submitInfo, fence.get(currentFrame)) != VK_SUCCESS) {
-        throw runtime_error("Failed to submit draw command buffer");
+        throw runtime_error("Failed to submit draw command buffer.");
     }
 }
 
-void Queue::submit(VkCommandBuffer commandBuffer)
+void Queue::submit(VkCommandBuffer& commandBuffer)
 {
     VkSubmitInfo submitInfo {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

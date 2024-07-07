@@ -21,12 +21,16 @@
 
 class Gui {
 
-    ObjectParams animatedObjectParams;
-
-    ObjectParams objectParams = animatedObjectParams = {
+    ObjectParams animatedObjectParams = {
         { 0.0f, 0.0f, 0.0f },
         { 0.0f, 0.0f, 0.0f },
         { 1.0f, 1.0f, 1.0f } // initial object scale
+    };
+
+    ObjectParams objectParams = {
+        { 0.0f, 0.0f, 0.0f },
+        { 0.0f, 0.0f, 0.0f },
+        { 1.0f, 1.0f, 1.0f }
     };
 
     CameraParams cameraParams = {
@@ -53,12 +57,17 @@ class Gui {
         0
     };
 
-    void uploadFonts(VkCommandPool commandPool, Queue queue, VkDevice device);
+    VkDevice device = VK_NULL_HANDLE;
+    VkCommandPool commandPool = VK_NULL_HANDLE;
+
+    void uploadFonts(Queue queue);
 
 public:
-    void init(VkInstance instance, Device device, QueueFamily::Indices queueFamilyIndicies, RenderPass renderPass, SwapChain swapChain, VkCommandPool commandPool, VkDescriptorPool descriptorPool, Queue queue, GLFWwindow* window);
+    void init(VkInstance& instance, Device& device, VkCommandPool& commandPool,
+        VkRenderPass& renderPass, Swapchain& swapChain,
+        VkDescriptorPool& descriptorPool, GLFWwindow* window);
     void draw();
-    void renderDrawData(VkCommandBuffer commandBuffer);
+    void renderDrawData(VkCommandBuffer& commandBuffer);
     void destroy();
     ObjectParams getObjectParams();
     ObjectParams getAnimatedObjectParams();

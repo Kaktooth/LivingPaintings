@@ -7,7 +7,9 @@
 
 using namespace std;
 
-void Descriptor::create(VkDevice device, vector<UniformBuffer> uniformBuffers, Image textureImage, Sampler textureSampler)
+void Descriptor::create(VkDevice& device,
+    vector<UniformBuffer>& uniformBuffers,
+    Image& textureImage, Sampler& textureSampler)
 {
     VkDescriptorSetLayoutBinding uniformLayoutBinding {};
     uniformLayoutBinding.binding = 0;
@@ -66,7 +68,7 @@ void Descriptor::create(VkDevice device, vector<UniformBuffer> uniformBuffers, I
         VkDescriptorBufferInfo bufferInfo {};
         bufferInfo.buffer = uniformBuffers[i].get();
         bufferInfo.offset = 0;
-        bufferInfo.range = sizeof(VertexData::UniformBufferObject);
+        bufferInfo.range = sizeof(Data::GraphicsObject::UniformBufferObject);
 
         VkDescriptorImageInfo descriptorImageinfo {};
         descriptorImageinfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -94,23 +96,24 @@ void Descriptor::create(VkDevice device, vector<UniformBuffer> uniformBuffers, I
     }
 }
 
-void Descriptor::destroy(VkDevice device)
+void Descriptor::destroy(VkDevice& device)
 {
     vkDestroyDescriptorPool(device, pool, nullptr);
-
     vkDestroyDescriptorSetLayout(device, setLayout, nullptr);
+    sets.clear();
 }
 
-VkDescriptorSetLayout Descriptor::getSetLayout()
+VkDescriptorSetLayout& Descriptor::getSetLayout()
 {
     return setLayout;
 }
 
-VkDescriptorPool Descriptor::getPool()
+VkDescriptorPool& Descriptor::getPool()
 {
     return pool;
 }
-VkDescriptorSet Descriptor::getSet(uint32_t frame)
+
+VkDescriptorSet& Descriptor::getSet(const uint32_t frame)
 {
     return sets[frame];
 }

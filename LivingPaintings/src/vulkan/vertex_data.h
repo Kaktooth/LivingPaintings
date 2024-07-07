@@ -12,8 +12,9 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/glm.hpp>
 #include <vector>
+namespace Data {
+struct GraphicsObject {
 
-struct VertexData {
     struct UniformBufferObject {
         glm::mat4 model;
         glm::mat4 view;
@@ -26,8 +27,8 @@ struct VertexData {
         void move(ObjectParams params, float time);
         void rotate(ObjectParams params, float time);
         void scale(ObjectParams params, float time);
-        void cameraView(CameraParams const& params, VkExtent2D extent);
-    };
+        void cameraView(CameraParams& params, VkExtent2D extent);
+    } uniform;
 
     struct Vertex {
         glm::vec2 pos;
@@ -35,14 +36,13 @@ struct VertexData {
         glm::vec2 texCoord;
 
         static VkVertexInputBindingDescription getBindingDescription();
-        static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
-    };
+        static std::vector<VkVertexInputAttributeDescription>
+        getAttributeDescriptions();
+    } vert;
 
-    std::vector<Vertex> verticies = {
-        { { -0.5f, -0.5f }, { 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
-        { { 0.5f, -0.5f }, { 0.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
-        { { 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 1.0f } },
-        { { -0.5f, 0.5f }, { 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } }
-    };
-    std::vector<uint16_t> indicies = { 0, 1, 2, 2, 3, 0 };
+    std::vector<Vertex> verticies;
+    std::vector<uint16_t> indicies;
+
+    void constructQuad();
 };
+} // namespace Data

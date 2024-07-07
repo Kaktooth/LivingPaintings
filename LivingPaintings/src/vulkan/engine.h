@@ -11,12 +11,10 @@
 #include "device.h"
 #include "fence.h"
 #include "forward_rendering_action.h"
-#include "framebuffer.h"
 #include "graphics_pipeline.h"
 #include "gui.h"
 #include "image.h"
 #include "instance.h"
-#include "physical_device.h"
 #include "queue_family.h"
 #include "render_pass.h"
 #include "sampler.h"
@@ -31,22 +29,27 @@
 #include <stdexcept>
 #include <vector>
 
+#define INIT(mainHandle, instance) (mainHandle = instance)
+
 class Engine {
 
-    void init();
-    void update();
-    void cleanup();
-    void initWindow(int width, int height);
+    struct {
+        VkInstance instance = VK_NULL_HANDLE;
+        VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
+        VkSurfaceKHR surface = VK_NULL_HANDLE;
+        VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+        VkDevice device = VK_NULL_HANDLE;
+        VkRenderPass renderPass = VK_NULL_HANDLE;
+        VkCommandPool commandPool = VK_NULL_HANDLE;
+    } vulkan;
 
-public:
-    GLFWwindow* pWindow;
+    GLFWwindow* pWindow = NULL;
     VulkanInstance instance;
     VulkanDebugMessenger debugMessenger;
-    PhysicalDevice physicalDevice;
     QueueFamily queueFamily;
     Device device;
     Surface surface;
-    SwapChain swapChain;
+    Swapchain swapchain;
     GraphicsPipeline graphicsPipeline;
     RenderPass renderPass;
     CommandPool commandPool;
@@ -55,15 +58,20 @@ public:
     Semaphore imageAvailable;
     Semaphore renderFinished;
     Fence inFlightFence;
-    VertexData vertexData;
     VertexBuffer vertexBuffer;
     IndexBuffer indexBuffer;
     Descriptor descriptor;
-    VertexData::UniformBufferObject uniformObject;
+    Data::GraphicsObject quad;
     std::vector<UniformBuffer> uniformBuffers;
     Image textureImage;
     Sampler textureSampler;
     Gui gui;
 
+    void init();
+    void update();
+    void cleanup();
+    void initWindow(const uint16_t width, const uint16_t height);
+
+public:
     void run();
 };

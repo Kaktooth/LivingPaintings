@@ -6,7 +6,8 @@
 
 using namespace std;
 using std::chrono::steady_clock;
-VkVertexInputBindingDescription VertexData::Vertex::getBindingDescription()
+
+VkVertexInputBindingDescription Data::GraphicsObject::Vertex::getBindingDescription()
 {
     VkVertexInputBindingDescription bindingDescription {};
     bindingDescription.binding = 0;
@@ -15,7 +16,7 @@ VkVertexInputBindingDescription VertexData::Vertex::getBindingDescription()
     return bindingDescription;
 }
 
-vector<VkVertexInputAttributeDescription> VertexData::Vertex::getAttributeDescriptions()
+vector<VkVertexInputAttributeDescription> Data::GraphicsObject::Vertex::getAttributeDescriptions()
 {
     vector<VkVertexInputAttributeDescription> attributeDescriptions(3);
 
@@ -37,24 +38,25 @@ vector<VkVertexInputAttributeDescription> VertexData::Vertex::getAttributeDescri
     return attributeDescriptions;
 }
 
-void VertexData::UniformBufferObject::move(ObjectParams params)
+void Data::GraphicsObject::UniformBufferObject::move(ObjectParams params)
 {
     model = glm::translate(glm::mat4(1.0f), glm::vec3(params.position[0], params.position[1], params.position[2]));
 }
 
-void VertexData::UniformBufferObject::rotate(ObjectParams params)
+void Data::GraphicsObject::UniformBufferObject::rotate(ObjectParams params)
 {
     model = glm::rotate(model, glm::radians(params.rotation[0]), glm::vec3(1.0f, 0.0f, 0.0f));
     model = glm::rotate(model, glm::radians(params.rotation[1]), glm::vec3(0.0f, 1.0f, 0.0f));
     model = glm::rotate(model, glm::radians(params.rotation[2]), glm::vec3(0.0f, 0.0f, 1.0f));
 }
 
-void VertexData::UniformBufferObject::scale(ObjectParams params)
+void Data::GraphicsObject::UniformBufferObject::scale(ObjectParams params)
 {
     model = glm::scale(model, glm::vec3(params.scale[0], params.scale[1], params.scale[2]));
 }
 
-void VertexData::UniformBufferObject::transform(ObjectParams params, AnimationParams animationParams)
+void Data::GraphicsObject::UniformBufferObject::transform(
+    ObjectParams params, AnimationParams animationParams)
 {
     if (animationParams.play) {
         static auto startTime = chrono::high_resolution_clock::now();
@@ -99,24 +101,27 @@ void VertexData::UniformBufferObject::transform(ObjectParams params, AnimationPa
     }
 }
 
-void VertexData::UniformBufferObject::move(ObjectParams params, float time)
+void Data::GraphicsObject::UniformBufferObject::move(ObjectParams params,
+    float time)
 {
     model = glm::translate(model, time * glm::vec3(params.position[0], params.position[1], params.position[2]));
 }
 
-void VertexData::UniformBufferObject::rotate(ObjectParams params, float time)
+void Data::GraphicsObject::UniformBufferObject::rotate(ObjectParams params,
+    float time)
 {
     model = glm::rotate(model, time * glm::radians(params.rotation[0]), glm::vec3(1.0f, 0.0f, 0.0f));
     model = glm::rotate(model, time * glm::radians(params.rotation[1]), glm::vec3(0.0f, 1.0f, 0.0f));
     model = glm::rotate(model, time * glm::radians(params.rotation[2]), glm::vec3(0.0f, 0.0f, 1.0f));
 }
 
-void VertexData::UniformBufferObject::scale(ObjectParams params, float time)
+void Data::GraphicsObject::UniformBufferObject::scale(ObjectParams params,
+    float time)
 {
     model = glm::scale(model, time * glm::vec3(params.scale[0], params.scale[1], params.scale[2]));
 }
 
-void VertexData::UniformBufferObject::cameraView(CameraParams const& params, VkExtent2D extent)
+void Data::GraphicsObject::UniformBufferObject::cameraView(CameraParams& params, VkExtent2D extent)
 {
     if (params.lookMode) {
         view = glm::lookAt(glm::vec3(params.cameraPos[0], params.cameraPos[1], params.cameraPos[2]),
@@ -136,4 +141,14 @@ void VertexData::UniformBufferObject::cameraView(CameraParams const& params, VkE
         proj = glm::ortho(-params.orthoSize, params.orthoSize, -params.orthoSize, params.orthoSize, params.nearClippingPlane, params.farClippingPlane);
     }
     proj[1][1] *= -1;
+}
+
+void Data::GraphicsObject::constructQuad()
+{
+    verticies = { { { -0.5f, -0.5f }, { 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
+        { { 0.5f, -0.5f }, { 0.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
+        { { 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 1.0f } },
+        { { -0.5f, 0.5f }, { 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } } };
+
+    indicies = { 0, 1, 2, 2, 3, 0 };
 }

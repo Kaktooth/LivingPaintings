@@ -7,9 +7,9 @@
 
 using namespace std;
 
-void Semaphore::create(VkDevice device)
+void Semaphore::create(VkDevice& device)
 {
-    Semaphore::device = device;
+    this->device = device;
 
     semaphores.resize(Constants::MAX_FRAMES_IN_FLIGHT);
 
@@ -25,7 +25,7 @@ void Semaphore::create(VkDevice device)
 
 void Semaphore::destroy()
 {
-    for (const auto& semaphore : semaphores) {
+    for (const VkSemaphore& semaphore : semaphores) {
         vkDestroySemaphore(device, semaphore, nullptr);
     }
 }
@@ -35,7 +35,7 @@ vector<VkSemaphore>& Semaphore::get()
     return semaphores;
 }
 
-VkSemaphore& Semaphore::get(size_t frame)
+VkSemaphore& Semaphore::get(const size_t frame)
 {
     return semaphores[frame];
 }

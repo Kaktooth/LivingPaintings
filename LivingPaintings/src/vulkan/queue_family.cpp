@@ -14,11 +14,9 @@ bool QueueFamily::Indices::isAvailable()
         && QueueFamily::Indices::transferFamily.has_value();
 }
 
-QueueFamily::Indices
-QueueFamily::findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)
+QueueFamily::Indices QueueFamily::findQueueFamilies(VkPhysicalDevice& device, VkSurfaceKHR& surface)
 {
     uint32_t queueFamilyCount = 0;
-    QueueFamily::Indices indicies;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
     vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(
@@ -26,8 +24,7 @@ QueueFamily::findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)
 
     int queueIndex = 0;
     VkBool32 presentationSupport = false;
-
-    for (const auto& queueFamily : queueFamilies) {
+    for (const VkQueueFamilyProperties& queueFamily : queueFamilies) {
         if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             indicies.graphicsFamily = queueIndex;
         }
@@ -36,8 +33,7 @@ QueueFamily::findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)
             indicies.transferFamily = queueIndex;
         }
 
-        vkGetPhysicalDeviceSurfaceSupportKHR(
-            device, queueIndex, surface, &presentationSupport);
+        vkGetPhysicalDeviceSurfaceSupportKHR(device, queueIndex, surface, &presentationSupport);
         if (presentationSupport) {
             indicies.presentationFamily = queueIndex;
         }

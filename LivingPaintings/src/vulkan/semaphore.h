@@ -13,8 +13,8 @@ class Semaphore {
     std::vector<VkSemaphore> semaphores;
 
 public:
-    void create(VkDevice device);
+    void create(VkDevice& device);
     void destroy();
     std::vector<VkSemaphore>& get();
-    VkSemaphore& get(size_t frame);
+    VkSemaphore& get(const size_t frame);
 };

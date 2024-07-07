@@ -7,11 +7,18 @@
 
 using namespace std;
 
-void GraphicsPipeline::create(VkDevice& device, VkExtent2D swapChainExtent, VkRenderPass renderPass, VertexData vertexData, VkDescriptorSetLayout descriptorSetLayout)
+void GraphicsPipeline::create(VkDevice& device, VkExtent2D swapChainExtent,
+    VkRenderPass& renderPass,
+    VkDescriptorSetLayout& descriptorSetLayout)
 {
+    const vector<VkDynamicState> dynamicStates = {
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR
+    };
+
     shaderManager.createShaderModules(device);
     vector<VkPipelineShaderStageCreateInfo> shaderModuleInfos {};
-    for (const auto& shaderModule : shaderManager.getShaderModules()) {
+    for (const std::pair<VkShaderModule_T* const, VkShaderStageFlagBits>& shaderModule : shaderManager.getShaderModules()) {
         VkPipelineShaderStageCreateInfo shaderModuleInfo {};
         shaderModuleInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         shaderModuleInfo.module = shaderModule.first;
@@ -20,11 +27,6 @@ void GraphicsPipeline::create(VkDevice& device, VkExtent2D swapChainExtent, VkRe
         shaderModuleInfo.pSpecializationInfo = nullptr;
         shaderModuleInfos.push_back(shaderModuleInfo);
     }
-
-    vector<VkDynamicState> dynamicStates = {
-        VK_DYNAMIC_STATE_VIEWPORT,
-        VK_DYNAMIC_STATE_SCISSOR
-    };
 
     VkViewport viewport {};
     viewport.x = 0.0f;
@@ -66,8 +68,8 @@ void GraphicsPipeline::create(VkDevice& device, VkExtent2D swapChainExtent, VkRe
     colorBlending.pAttachments = &colorBlendAttachment;
     // colorBlending.blendConstants[0] = 0.0f;
 
-    const auto bindingDescription = VertexData::Vertex::getBindingDescription();
-    const auto attributeDescription = VertexData::Vertex::getAttributeDescriptions();
+    const VkVertexInputBindingDescription bindingDescription = Data::GraphicsObject::Vertex::getBindingDescription();
+    const std::vector<VkVertexInputAttributeDescription> attributeDescription = Data::GraphicsObject::Vertex::getAttributeDescriptions();
 
     VkPipelineVertexInputStateCreateInfo vertexInfo {};
     vertexInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -141,6 +143,7 @@ void GraphicsPipeline::destroy(VkDevice& device)
 {
     shaderManager.destroyShaderModules(device);
     vkDestroyPipeline(device, graphicsPipeline, nullptr);
+    vkDestroyPipelineLayout(device, layout, nullptr);
 }
 
 VkPipelineLayout& GraphicsPipeline::getLayout()

@@ -7,24 +7,30 @@
 
 using namespace std;
 
-void CommandPool::create(VkDevice device, QueueFamily::Indices indicies)
+VkCommandPool& CommandPool::create(Device& _device)
 {
+    this->device = _device.get();
+
+    const QueueFamily::Indices familyQueueIndicies = _device.getQueueFamily().indicies;
+
     VkCommandPoolCreateInfo commandPoolInfo {};
     commandPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     commandPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    commandPoolInfo.queueFamilyIndex = indicies.graphicsFamily.value();
+    commandPoolInfo.queueFamilyIndex = familyQueueIndicies.graphicsFamily.value();
 
     if (vkCreateCommandPool(device, &commandPoolInfo, nullptr, &commandPool) != VK_SUCCESS) {
         throw runtime_error("Failed to create command pool.");
     }
+
+    return commandPool;
 }
 
-void CommandPool::destroy(VkDevice device)
+void CommandPool::destroy()
 {
     vkDestroyCommandPool(device, commandPool, nullptr);
 }
 
-VkCommandPool CommandPool::get()
+VkCommandPool& CommandPool::get()
 {
     return commandPool;
 }

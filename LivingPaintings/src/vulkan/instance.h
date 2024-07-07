@@ -16,14 +16,12 @@
 
 class VulkanInstance {
 
-    VkInstance instance;
+    VkInstance instance = VK_NULL_HANDLE;
 
 public:
-    VulkanInstance() = default;
-
-    void create(VkDebugUtilsMessengerCreateInfoEXT& debugCreateInfo);
+    VkInstance& create(VkDebugUtilsMessengerCreateInfoEXT& debugCreateInfo);
     void enumerateExtentions();
-    std::vector<const char*> getRequiredExtensions() const;
+    std::vector<const char*> findRequiredExtensions() const;
     bool checkValidationLayerSupport() const;
     void destroy();
     VkInstance& get();

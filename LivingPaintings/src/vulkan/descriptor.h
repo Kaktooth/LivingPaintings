@@ -11,14 +11,14 @@
 
 class Descriptor {
 
-    VkDescriptorSetLayout setLayout;
-    VkDescriptorPool pool;
+    VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
+    VkDescriptorPool pool = VK_NULL_HANDLE;
     std::vector<VkDescriptorSet> sets;
 
 public:
-    void create(VkDevice device, std::vector<UniformBuffer> uniformBuffers, Image textureImage, Sampler textureSampler);
-    void destroy(VkDevice device);
-    VkDescriptorSetLayout getSetLayout();
-    VkDescriptorPool getPool();
-    VkDescriptorSet getSet(uint32_t frame);
+    void create(VkDevice& device, std::vector<UniformBuffer>& uniformBuffers, Image& textureImage, Sampler& textureSampler);
+    void destroy(VkDevice& device);
+    VkDescriptorSetLayout& getSetLayout();
+    VkDescriptorPool& getPool();
+    VkDescriptorSet& getSet(const uint32_t frame);
 };

@@ -6,15 +6,26 @@
 #define GLFW_INCLUDE_VULKAN
 #include "vulkan/vulkan.h"
 #include <GLFW/glfw3.h>
+#include <vector>
 
 class Surface {
 
+    VkInstance instance;
     VkSurfaceKHR surface;
-    GLFWwindow* glfwWindow;
+    GLFWwindow* pWindow;
 
 public:
-    void create(VkInstance& instance, GLFWwindow* window);
-    void destory(VkInstance& instance);
-    VkExtent2D chooseResolution(const VkSurfaceCapabilitiesKHR& capabilities);
+    struct Details {
+        VkSurfaceCapabilitiesKHR capabilities;
+        std::vector<VkSurfaceFormatKHR> formats;
+        std::vector<VkPresentModeKHR> presentationModes;
+    } details;
+
+    VkSurfaceKHR& create(VkInstance& instance, GLFWwindow* pWindow);
+    void destory();
+    VkExtent2D chooseResolution();
+    Surface::Details findSurfaceDetails(VkPhysicalDevice& device);
+    VkSurfaceFormatKHR chooseSurfaceFormat();
+    VkPresentModeKHR choosePresentationMode();
     VkSurfaceKHR& get();
 };

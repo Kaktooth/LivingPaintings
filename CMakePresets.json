@@ -17,11 +17,11 @@
         "type": "equals",
         "lhs": "${hostSystemName}",
         "rhs": "Windows"
-      },
-      "environment": {
-        "CFLAGS": "-fsanitize=address",
-        "CXXFLAGS": "-fsanitize=address"
       }
+      //"environment": {
+      //  "CFLAGS": "-fsanitize=address",
+      //  "CXXFLAGS": "-fsanitize=address"
+      //}
     },
     {
       "name": "x64-debug",

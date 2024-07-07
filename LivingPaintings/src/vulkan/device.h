@@ -4,27 +4,34 @@
 
 #pragma once
 #include "consts.h"
-#include "physical_device.h"
 #include "queue.h"
+#include "queue_family.h"
 #include "vulkan/vulkan.h"
 
 class Device {
 
-    VkPhysicalDevice physicalDevice;
-    VkDevice device;
+    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
     Queue graphicsQueue;
     Queue presentationQueue;
     Queue transferQueue;
+    QueueFamily queueFamily;
 
-    VkDeviceQueueCreateInfo createQueueCreateInfo(uint32_t queueFamily, float queuePriority);
+    VkDeviceQueueCreateInfo createQueueCreateInfo(const uint32_t queueFamily, const float queuePriority);
+    int getDeviceScore(VkPhysicalDevice& physicalDevice, Surface& surface);
+    bool checkDeviceExtensionSupport(VkPhysicalDevice& physicalDevice);
+    VkPhysicalDeviceFeatures selectedDeviceFeatures();
 
 public:
-    void create(VkPhysicalDevice& physicalDevice, QueueFamily::Indices& queueFamilyIndicies,
-        VkPhysicalDeviceFeatures const& deviceFeatures);
+    VkDevice& create(VkInstance& instance, Surface& surface);
+    void selectPhysicalDevice(VkInstance& instance, Surface& surface);
     void destroy();
     VkDevice& get();
     VkPhysicalDevice& getPhysicalDevice();
-    Queue getGraphicsQueue();
-    Queue getPresentationQueue();
-    Queue getTransferQueue();
+    VkSurfaceKHR getSurface();
+    Queue& getGraphicsQueue();
+    Queue& getPresentationQueue();
+    Queue& getTransferQueue();
+    QueueFamily& getQueueFamily();
 };

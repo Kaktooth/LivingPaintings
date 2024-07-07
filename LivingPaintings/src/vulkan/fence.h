@@ -12,9 +12,9 @@ class Fence {
     VkDevice device;
 
 public:
-    void create(VkDevice device, bool signaled);
-    void wait(size_t frame);
-    void reset(size_t frame);
+    void create(VkDevice& device, const bool signaled);
+    void wait(const size_t frame);
+    void reset(const size_t frame);
     void destroy();
-    VkFence& get(size_t frame);
+    VkFence& get(const size_t frame);
 };

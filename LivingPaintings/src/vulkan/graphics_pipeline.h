@@ -10,11 +10,13 @@
 class GraphicsPipeline {
 
     ShaderManager shaderManager;
-    VkPipelineLayout layout;
-    VkPipeline graphicsPipeline;
+    VkPipelineLayout layout = VK_NULL_HANDLE;
+    VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 
 public:
-    void create(VkDevice& device, VkExtent2D swapChainExtent, VkRenderPass renderPass, VertexData vertexData, VkDescriptorSetLayout descriptorSetLayout);
+    void create(VkDevice& device, const VkExtent2D swapChainExtent,
+        VkRenderPass& renderPass,
+        VkDescriptorSetLayout& descriptorSetLayout);
     void destroy(VkDevice& device);
     VkPipelineLayout& getLayout();
     VkPipeline& get();

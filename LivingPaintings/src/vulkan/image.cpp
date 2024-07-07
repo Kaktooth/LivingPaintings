@@ -11,35 +11,37 @@
 
 using namespace std;
 
-void Image::load(VkDevice device, VkPhysicalDevice physicalDevice, const char* filePath)
+void Image::Details::createImageInfo(const char* filePath, uint32_t width, uint32_t height,
+    VkImageViewType viewType, VkFormat format,
+    VkImageTiling tiling)
 {
-    int width, height, channels;
-    stbi_uc* pixels = stbi_load(filePath, &width, &height, &channels, STBI_rgb_alpha);
-
-    VkDeviceSize imageSize = width * height * 4;
-
-    if (!pixels) {
-        throw runtime_error("Failed to load texture image.");
-    }
-
-    stagingBuffer.create(device, physicalDevice, pixels, imageSize);
-    stbi_image_free(pixels);
+    this->filePath = filePath;
+    this->width = width;
+    this->height = height;
+    this->viewType = viewType;
+    this->format = format;
+    this->tiling = tiling;
 }
 
-void Image::create(VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPool commandPool, Queue graphicsQueue, const char* filePath, int width, int height, VkFormat format, VkImageTiling tiling, VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryPropertyFlags)
+void Image::create(Device& _device, VkCommandPool& commandPool, VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryPropertyFlags)
 {
-    load(device, physicalDevice, filePath);
+
+    this->device = _device.get();
+    this->physicalDevice = _device.getPhysicalDevice();
+    this->commandPool = commandPool;
+
+    load(imageDetails.filePath);
 
     VkImageCreateInfo imageInfo {};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageInfo.extent.width = static_cast<uint32_t>(width);
-    imageInfo.extent.height = static_cast<uint32_t>(height);
+    imageInfo.extent.width = static_cast<uint32_t>(imageDetails.width);
+    imageInfo.extent.height = static_cast<uint32_t>(imageDetails.height);
     imageInfo.extent.depth = 1;
     imageInfo.mipLevels = 1;
     imageInfo.arrayLayers = 1;
-    imageInfo.format = format;
-    imageInfo.tiling = tiling;
+    imageInfo.format = imageDetails.format;
+    imageInfo.tiling = imageDetails.tiling;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo.usage = usage;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -55,7 +57,7 @@ void Image::create(VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPo
     VkPhysicalDeviceMemoryProperties memoryProperties;
     vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
 
-    auto memoryType = [&]() {
+    const uint32_t memoryType = [&]() {
         for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++) {
             if ((memoryRequirements.memoryTypeBits & (1 << i)) && (memoryProperties.memoryTypes[i].propertyFlags & memoryPropertyFlags) == memoryPropertyFlags) {
                 return i;
@@ -75,20 +77,37 @@ void Image::create(VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPo
 
     vkBindImageMemory(device, textureImage, imageMemory, 0);
 
-    transitionLayout(device, commandPool, graphicsQueue, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    copyBufferToImage(device, commandPool, graphicsQueue, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
-    transitionLayout(device, commandPool, graphicsQueue, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    Queue& graphicsQueue = _device.getGraphicsQueue();
+    const uint32_t width = static_cast<uint32_t>(imageDetails.width);
+    const uint32_t height = static_cast<uint32_t>(imageDetails.height);
+    transitionLayout(graphicsQueue, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    copyBufferToImage(graphicsQueue, width, height);
+    transitionLayout(graphicsQueue, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-    stagingBuffer.destroy(device);
+    stagingBuffer.destroy();
 
-    createImageView(device);
+    createImageView(imageDetails.viewType, imageDetails.format);
 }
 
-void Image::transitionLayout(VkDevice device, VkCommandPool commandPool, Queue queue, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
+void Image::load(const char* filePath)
+{
+    int width, height, channels;
+    stbi_uc* pixels = stbi_load(filePath, &width, &height, &channels, STBI_rgb_alpha);
+
+    VkDeviceSize imageSize = width * height * 4;
+
+    if (!pixels) {
+        throw runtime_error("Failed to load texture image.");
+    }
+
+    stagingBuffer.create(device, physicalDevice, pixels, imageSize);
+    stbi_image_free(pixels);
+}
+
+void Image::transitionLayout(Queue& queue, VkImageLayout oldLayout, VkImageLayout newLayout)
 {
     VkPipelineStageFlags sourceStage;
     VkPipelineStageFlags destinationStage;
-
     VkCommandBuffer cmd = CommandBuffer::beginSingleTimeCommands(device, commandPool);
 
     VkImageMemoryBarrier barrier {};
@@ -124,7 +143,7 @@ void Image::transitionLayout(VkDevice device, VkCommandPool commandPool, Queue q
     CommandBuffer::endSingleTimeCommands(device, commandPool, cmd, queue);
 }
 
-void Image::copyBufferToImage(VkDevice device, VkCommandPool commandPool, Queue queue, uint32_t width, uint32_t height)
+void Image::copyBufferToImage(Queue& queue, uint32_t width, uint32_t height)
 {
     VkCommandBuffer cmd = CommandBuffer::beginSingleTimeCommands(device, commandPool);
 
@@ -141,20 +160,19 @@ void Image::copyBufferToImage(VkDevice device, VkCommandPool commandPool, Queue 
     region.imageOffset = { 0, 0, 0 };
     region.imageExtent = { width, height, 1 };
 
-    auto buffer = stagingBuffer.get();
+    const VkBuffer buffer = stagingBuffer.get();
     vkCmdCopyBufferToImage(cmd, buffer, textureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
     CommandBuffer::endSingleTimeCommands(device, commandPool, cmd, queue);
 }
 
-// TODO refactor and create init file with all init methods
-void Image::createImageView(VkDevice device)
+void Image::createImageView(VkImageViewType viewType, VkFormat format)
 {
     VkImageViewCreateInfo imageViewInfo {};
     imageViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     imageViewInfo.image = textureImage;
-    imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    imageViewInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+    imageViewInfo.viewType = viewType;
+    imageViewInfo.format = format;
     imageViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     imageViewInfo.subresourceRange.baseMipLevel = 0;
     imageViewInfo.subresourceRange.levelCount = 1;
@@ -166,20 +184,19 @@ void Image::createImageView(VkDevice device)
     }
 }
 
-void Image::destroy(VkDevice device)
+void Image::destroy()
 {
     vkDestroyImageView(device, imageView, nullptr);
-
     vkDestroyImage(device, textureImage, nullptr);
     vkFreeMemory(device, imageMemory, nullptr);
 }
 
-VkImage Image::get()
+VkImage& Image::get()
 {
     return textureImage;
 }
 
-VkImageView Image::getView()
+VkImageView& Image::getView()
 {
     return imageView;
 }

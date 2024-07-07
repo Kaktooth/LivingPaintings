@@ -7,32 +7,41 @@
 #include "consts.h"
 #include "queue.h"
 #include "vertex_data.h"
-#include "vulkan/vulkan.h"
 
 #define GLM_FORCE_RADIANS
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include <chrono>
 #include <stb_image.h>
+#include <stdexcept>
 #include <vector>
 
 class Buffer {
 
-    VkBuffer buffer;
-    VkDeviceMemory deviceMemory;
+    VkBuffer buffer = VK_NULL_HANDLE;
+    VkDeviceMemory deviceMemory = VK_NULL_HANDLE;
+
+protected:
+    VkDevice device = VK_NULL_HANDLE;
 
 public:
-    void create(VkDevice device, VkPhysicalDevice physicalDevice, unsigned long long size, VkBufferUsageFlags usage, VkSharingMode sharingMode, VkMemoryPropertyFlags memoryPropertyFlags);
-    void copyBuffer(VkDevice device, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkCommandPool commandPool, Queue transferQueue);
-    void destroy(VkDevice device);
-    VkBuffer get();
-    VkDeviceMemory getDeviceMemory();
+    void create(VkDevice& device, VkPhysicalDevice& physicalDevice,
+        const unsigned long long size, const VkBufferUsageFlags usage,
+        const VkSharingMode sharingMode,
+        const VkMemoryPropertyFlags memoryPropertyFlags);
+    void copyBuffer(VkCommandPool& commandPool, const VkBuffer srcBuffer,
+        const VkBuffer dstBuffer, const VkDeviceSize size,
+        Queue& transferQueue);
+    void destroy();
+    VkBuffer& get();
+    VkDeviceMemory& getDeviceMemory();
 };
 
 class StagingBuffer : public Buffer {
 
 public:
-    void create(VkDevice device, VkPhysicalDevice physicalDevice, stbi_uc* pixels, VkDeviceSize size);
+    void create(VkDevice& device, VkPhysicalDevice& physicalDevice,
+        const stbi_uc* pixels, VkDeviceSize& size);
 };
 
 class VertexBuffer : public Buffer {
@@ -40,7 +49,10 @@ class VertexBuffer : public Buffer {
     Buffer stagingBuffer;
 
 public:
-    void create(VkDevice device, VkPhysicalDevice physicalDevice, std::vector<VertexData::Vertex> vertecies, VkCommandPool commandPool, CommandBuffer commandBuffer, Queue transferQueue);
+    void create(VkDevice& device, VkPhysicalDevice& physicalDevice,
+        VkCommandPool& commandPool,
+        const std::vector<Data::GraphicsObject::Vertex>& vertecies,
+        Queue& transferQueue);
 };
 
 class IndexBuffer : public Buffer {
@@ -48,7 +60,9 @@ class IndexBuffer : public Buffer {
     Buffer stagingBuffer;
 
 public:
-    void create(VkDevice device, VkPhysicalDevice physicalDevice, std::vector<uint16_t> indicies, VkCommandPool commandPool, CommandBuffer commandBuffer, Queue transferQueue);
+    void create(VkDevice& device, VkPhysicalDevice& physicalDevice,
+        VkCommandPool& commandPool, const std::vector<uint16_t>& indicies,
+        Queue& transferQueue);
 };
 
 class UniformBuffer : public Buffer {
@@ -56,6 +70,7 @@ class UniformBuffer : public Buffer {
     void* mapped;
 
 public:
-    void create(VkDevice device, VkPhysicalDevice physicalDevice, VkDeviceSize size);
-    void update(VertexData::UniformBufferObject uniformObject);
+    void create(VkDevice& device, VkPhysicalDevice& physicalDevice,
+        const VkDeviceSize size);
+    void update(const Data::GraphicsObject::UniformBufferObject& uniformObject);
 };

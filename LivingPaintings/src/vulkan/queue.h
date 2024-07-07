@@ -12,7 +12,11 @@ class Queue {
     VkQueue queue;
 
 public:
-    void submit(VkCommandBuffer commandBuffer, Fence fence, std::vector<VkSemaphore> waitSemafores, std::vector<VkSemaphore> signalSemafores, std::vector<VkPipelineStageFlags> waitStages, size_t currentFrame);
-    void submit(VkCommandBuffer commandBuffer);
+    void submit(VkCommandBuffer& commandBuffer, Fence& fence,
+        const std::vector<VkSemaphore> waitSemafores,
+        const std::vector<VkSemaphore> signalSemafores,
+        const std::vector<VkPipelineStageFlags> waitStages,
+        const size_t currentFrame);
+    void submit(VkCommandBuffer& commandBuffer);
     VkQueue& get();
 };

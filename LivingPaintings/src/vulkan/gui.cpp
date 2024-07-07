@@ -7,32 +7,37 @@
 
 using namespace std;
 
-void Gui::init(VkInstance instance, Device device, QueueFamily::Indices queueFamilyIndicies, RenderPass renderPass, SwapChain swapChain, VkCommandPool commandPool, VkDescriptorPool descriptorPool, Queue queue, GLFWwindow* window)
+void Gui::init(VkInstance& instance, Device& _device, VkCommandPool& commandPool, VkRenderPass& renderPass, Swapchain& swapChain, VkDescriptorPool& descriptorPool, GLFWwindow* window)
 {
+    Queue& graphicsQueue = _device.getGraphicsQueue();
+
+    this->device = _device.get();
+    this->commandPool = commandPool;
+
     ImGui::CreateContext();
 
     ImGui_ImplGlfw_InitForVulkan(window, true);
 
     ImGui_ImplVulkan_InitInfo initInfo {};
     initInfo.Instance = instance;
-    initInfo.PhysicalDevice = device.getPhysicalDevice();
-    initInfo.Device = device.get();
-    initInfo.QueueFamily = queueFamilyIndicies.graphicsFamily.value();
-    initInfo.Queue = device.getGraphicsQueue().get();
+    initInfo.PhysicalDevice = _device.getPhysicalDevice();
+    initInfo.Device = device;
+    initInfo.QueueFamily = _device.getQueueFamily().indicies.graphicsFamily.value();
+    initInfo.Queue = graphicsQueue.get();
     initInfo.DescriptorPool = descriptorPool;
     initInfo.MinImageCount = swapChain.getMinImageCount();
     initInfo.ImageCount = Constants::MAX_FRAMES_IN_FLIGHT;
     initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     initInfo.ColorAttachmentFormat = swapChain.getImageFormat();
 
-    ImGui_ImplVulkan_Init(&initInfo, renderPass.get());
+    ImGui_ImplVulkan_Init(&initInfo, renderPass);
 
-    uploadFonts(commandPool, queue, device.get());
+    uploadFonts(graphicsQueue);
 }
 
-void Gui::uploadFonts(VkCommandPool commandPool, Queue queue, VkDevice device)
+void Gui::uploadFonts(Queue queue)
 {
-    auto cmd = CommandBuffer::beginSingleTimeCommands(device, commandPool);
+    VkCommandBuffer cmd = CommandBuffer::beginSingleTimeCommands(device, commandPool);
     ImGui_ImplVulkan_CreateFontsTexture(cmd);
     CommandBuffer::endSingleTimeCommands(device, commandPool, cmd, queue);
     vkDeviceWaitIdle(device);
@@ -120,7 +125,7 @@ void Gui::draw()
     ImGui::Render();
 }
 
-void Gui::renderDrawData(VkCommandBuffer commandBuffer)
+void Gui::renderDrawData(VkCommandBuffer& commandBuffer)
 {
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
 }

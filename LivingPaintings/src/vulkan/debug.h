@@ -12,19 +12,16 @@
 
 class VulkanDebugMessenger {
 
-    VkDebugUtilsMessengerEXT debugMessenger;
+    VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
+    VkInstance instance = VK_NULL_HANDLE;
 
 public:
-    VulkanDebugMessenger() = default;
-
-    void setup(VkInstance& instance, VkDebugUtilsMessengerCreateInfoEXT& debugCreateInfo);
+    VkDebugUtilsMessengerEXT setup(VkInstance& instance, VkDebugUtilsMessengerCreateInfoEXT& debugCreateInfo);
     VkDebugUtilsMessengerCreateInfoEXT makeDebugMessengerCreateInfo();
-    VkResult createDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
-        const VkAllocationCallbacks* pAllocator,
-        VkDebugUtilsMessengerEXT* pDebugMessenger);
-    void destroyIfLayersEnabled(VkInstance& instance);
-    void destroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger,
+    VkResult createDebugUtilsMessengerEXT(VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
         const VkAllocationCallbacks* pAllocator);
+    void destroyIfLayersEnabled();
+    void destroyDebugUtilsMessengerEXT(const VkAllocationCallbacks* pAllocator);
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
         VkDebugUtilsMessageTypeFlagsEXT messageType,
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,

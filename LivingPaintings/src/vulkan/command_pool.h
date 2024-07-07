@@ -3,15 +3,16 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #pragma once
-#include "queue_family.h"
+#include "device.h"
 #include "vulkan/vulkan.h"
 
 class CommandPool {
 
-    VkCommandPool commandPool;
+    VkCommandPool commandPool = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
 
 public:
-    void create(VkDevice device, QueueFamily::Indices indicies);
-    void destroy(VkDevice device);
-    VkCommandPool get();
+    VkCommandPool& create(Device& device);
+    void destroy();
+    VkCommandPool& get();
 };

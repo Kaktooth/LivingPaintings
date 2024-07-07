@@ -22,120 +22,114 @@ void Engine::init()
 {
     initWindow(Constants::WINDOW_WIDTH, Constants::WINDOW_HEIGHT);
 
-    auto debugInfo = Engine::debugMessenger.makeDebugMessengerCreateInfo();
-    Engine::instance.create(debugInfo);
+    quad.constructQuad();
 
-    auto& instance = Engine::instance.get();
-    Engine::debugMessenger.setup(instance, debugInfo);
+    VkDebugUtilsMessengerCreateInfoEXT debugInfo = debugMessenger.makeDebugMessengerCreateInfo();
+    INIT(vulkan.instance, instance.create(debugInfo));
+    INIT(vulkan.debugMessenger, debugMessenger.setup(vulkan.instance, debugInfo));
 
-    Engine::surface.create(instance, pWindow);
+    INIT(vulkan.surface, surface.create(vulkan.instance, pWindow));
+    INIT(vulkan.device, device.create(vulkan.instance, surface));
+    INIT(vulkan.physicalDevice, device.getPhysicalDevice());
+    surface.findSurfaceDetails(vulkan.physicalDevice);
 
-    Engine::physicalDevice.select(instance, surface, queueFamily);
+    inFlightFence.create(vulkan.device, true);
+    imageAvailable.create(vulkan.device);
+    renderFinished.create(vulkan.device);
 
-    auto physicalDevice = Engine::physicalDevice.get();
-    auto queueFamilyIndicies = queueFamily.findQueueFamilies(physicalDevice, surface.get());
-    auto deviceFeatures = Engine::physicalDevice.selectedDeviceFeatures();
-    Engine::device.create(physicalDevice, queueFamilyIndicies, deviceFeatures);
+    swapchain.setDeviceContext(device, surface);
+    swapchain.create();
+    swapchain.createImageViews();
 
-    auto device = Engine::device.get();
+    INIT(vulkan.renderPass, renderPass.create(vulkan.device, swapchain.getImageFormat()));
+    swapchain.createFramebuffers(vulkan.renderPass);
 
-    inFlightFence.create(device, true);
-    imageAvailable.create(device);
-    renderFinished.create(device);
+    INIT(vulkan.commandPool, commandPool.create(device));
+    commandBuffer.create(vulkan.device, vulkan.commandPool);
 
-    Engine::swapChain.create(device, physicalDevice, surface, queueFamilyIndicies);
-    Engine::swapChain.createImageViews(device);
-
-    Engine::renderPass.create(device, swapChain.getImageFormat());
-
-    auto renderPass = Engine::renderPass.get();
-    Engine::swapChain.createFramebuffers(device, renderPass);
-
-    Engine::commandPool.create(device, queueFamilyIndicies);
-
-    Engine::commandBuffer.create(device, commandPool.get());
-
-    auto extent = swapChain.getExtent();
-    Engine::vertexBuffer.create(device, physicalDevice, vertexData.verticies, commandPool.get(), commandBuffer, Engine::device.getTransferQueue());
-    Engine::indexBuffer.create(device, physicalDevice, vertexData.indicies, commandPool.get(), commandBuffer, Engine::device.getTransferQueue());
+    Queue& transferQueue = device.getTransferQueue();
+    vertexBuffer.create(vulkan.device, vulkan.physicalDevice,
+        vulkan.commandPool, quad.verticies, transferQueue);
+    indexBuffer.create(vulkan.device, vulkan.physicalDevice, vulkan.commandPool,
+        quad.indicies, transferQueue);
 
     uniformBuffers.resize(Constants::MAX_FRAMES_IN_FLIGHT);
-    VkDeviceSize size = sizeof(VertexData::UniformBufferObject);
-    for (auto& uniformBuffer : uniformBuffers) {
-        uniformBuffer.create(device, physicalDevice, size);
+    const VkDeviceSize size = sizeof(Data::GraphicsObject::UniformBufferObject);
+    for (UniformBuffer& uniformBuffer : uniformBuffers) {
+        uniformBuffer.create(vulkan.device, vulkan.physicalDevice, size);
     }
 
     // TEXTURE_FILE_PATH variable is retrieved from Cmake with macros in file config.hpp.in
-    string texturePath = RETRIEVE_STRING(TEXTURE_FILE_PATH);
-    Engine::textureImage.create(device, physicalDevice, commandPool.get(), Engine::device.getGraphicsQueue(), texturePath.c_str(), 1920, 1081, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    const string texturePath = RETRIEVE_STRING(TEXTURE_FILE_PATH);
+    textureImage.imageDetails.createImageInfo(texturePath.c_str(), 1920, 1081,
+        VK_IMAGE_VIEW_TYPE_2D,Constants::IMAGE_FORMAT ,
+        VK_IMAGE_TILING_OPTIMAL);
+    textureImage.create(device, vulkan.commandPool,
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    Engine::textureSampler.create(device, physicalDevice);
+    textureSampler.create(vulkan.device, vulkan.physicalDevice);
 
-    Engine::descriptor.create(device, uniformBuffers, textureImage, textureSampler);
+    descriptor.create(vulkan.device, uniformBuffers, textureImage, textureSampler);
 
-    auto commandBuffer = Engine::commandBuffer.get();
-    Engine::graphicsPipeline.create(device, extent, renderPass, vertexData, descriptor.getSetLayout());
+    const VkExtent2D extent = swapchain.getExtent();
+    graphicsPipeline.create(vulkan.device, extent, vulkan.renderPass, descriptor.getSetLayout());
 
-    gui.init(instance, Engine::device, queueFamilyIndicies, Engine::renderPass, swapChain, commandPool.get(), descriptor.getPool(), Engine::device.getGraphicsQueue(), pWindow);
+    gui.init(vulkan.instance, device, vulkan.commandPool, vulkan.renderPass, swapchain, descriptor.getPool(), pWindow);
 }
 
 void Engine::update()
 {
-    // TODO refactor each class method parameters, instead use constructors.
     // TODO recreate renderPass because imageFormat can also change when switching surface.
 
-    auto& device = Engine::device.get();
-    const auto& physicalDevice = Engine::physicalDevice.get();
-    auto& surface = Engine::surface.get();
-    auto& renderPass = Engine::renderPass.get();
-    auto& framebuffers = Engine::swapChain.getFramebuffers();
-    auto& graphicsPipeline = Engine::graphicsPipeline.get();
-    auto& pipelineLayout = Engine::graphicsPipeline.getLayout();
-    auto& presentationQueue = Engine::device.getPresentationQueue().get();
+    const VkExtent2D& extent = swapchain.getExtent();
+    std::vector<VkFramebuffer>& framebuffers = swapchain.getFramebuffers();
+    Queue& presentationQueue = device.getPresentationQueue();
+    const vector<VkPipelineStageFlags> waitStages = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
-    auto queueFamilyIndicies = queueFamily.findQueueFamilies(physicalDevice, surface);
+    forwardRenderAction.setContext(graphicsPipeline, extent);
 
     while (!glfwWindowShouldClose(pWindow)) {
         glfwPollEvents();
 
-        auto& currentFrame = swapChain.getCurrentFrame();
-
-        inFlightFence.wait(currentFrame);
+        const uint32_t& currentFrame = swapchain.getCurrentFrame();
+        VkCommandBuffer& cmd = commandBuffer.get(currentFrame);
+        const std::vector<VkSemaphore> waitSemaphores = vector { imageAvailable.get(currentFrame) };
+        const std::vector<VkSemaphore> signalSemaphores = vector { renderFinished.get(currentFrame) };
 
         {
-            auto objectParams = gui.getObjectParams();
-            auto cameraParams = gui.getCameraParams();
-            uniformObject.move(objectParams);
-            uniformObject.rotate(objectParams);
-            uniformObject.scale(objectParams);
-            uniformObject.transform(gui.getAnimatedObjectParams(), gui.getAnimationParams());
-            uniformObject.cameraView(cameraParams, swapChain.getExtent());
-            uniformBuffers[currentFrame].update(uniformObject);
+            ObjectParams objectParams = gui.getObjectParams();
+            CameraParams cameraParams = gui.getCameraParams();
+            quad.uniform.move(objectParams);
+            quad.uniform.rotate(objectParams);
+            quad.uniform.scale(objectParams);
+            quad.uniform.transform(gui.getAnimatedObjectParams(),
+                gui.getAnimationParams());
+            quad.uniform.cameraView(cameraParams, extent);
+            uniformBuffers[currentFrame].update(quad.uniform);
         }
 
-        swapChain.asquireNextImage(device, physicalDevice, renderPass, Engine::surface, queueFamilyIndicies, imageAvailable, pWindow);
+        inFlightFence.wait(currentFrame);
+        inFlightFence.reset(currentFrame);
+
+        swapchain.asquireNextImage(vulkan.renderPass, imageAvailable, pWindow);
 
         commandBuffer.begin(currentFrame);
         gui.draw();
-        forwardRenderAction.beginRenderPass(commandBuffer, graphicsPipeline, framebuffers, renderPass, swapChain);
-        forwardRenderAction.recordCommandBuffer(commandBuffer, swapChain, pipelineLayout, descriptor.getSet(currentFrame), vertexBuffer, indexBuffer, vertexData);
-        gui.renderDrawData(commandBuffer.get(currentFrame));
-        forwardRenderAction.endRenderPass(commandBuffer, swapChain);
+        forwardRenderAction.beginRenderPass(cmd, vulkan.renderPass, framebuffers, currentFrame);
+        forwardRenderAction.recordCommandBuffer(cmd, descriptor.getSet(currentFrame),
+            vertexBuffer, indexBuffer, quad);
+        gui.renderDrawData(cmd);
+        forwardRenderAction.endRenderPass(cmd);
         commandBuffer.end(currentFrame);
 
-        inFlightFence.reset(currentFrame);
-
-        // TODO try to sync for every command buffer
-        auto waitSemaphores = vector { imageAvailable.get(currentFrame) };
-        auto signalSemaphores = vector { renderFinished.get(currentFrame) };
-
-        vector<VkPipelineStageFlags> waitStages = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-        Engine::device.getPresentationQueue()
-            .submit(commandBuffer.get(currentFrame), inFlightFence, waitSemaphores, signalSemaphores, waitStages, currentFrame);
-        swapChain.presentImage(device, physicalDevice, renderPass, Engine::surface, queueFamilyIndicies, presentationQueue, signalSemaphores, pWindow);
+        presentationQueue.submit(cmd, inFlightFence, waitSemaphores,
+            signalSemaphores, waitStages, currentFrame);
+        swapchain.presentImage(vulkan.renderPass, presentationQueue.get(),
+            signalSemaphores, pWindow);
     }
 
-    vkDeviceWaitIdle(device);
+    vkDeviceWaitIdle(vulkan.device);
 }
 
 void Engine::cleanup()
@@ -146,50 +140,42 @@ void Engine::cleanup()
     imageAvailable.destroy();
     renderFinished.destroy();
 
-    {
-        auto device = Engine::device.get();
+    graphicsPipeline.destroy(vulkan.device);
+    descriptor.destroy(vulkan.device);
+    textureSampler.destroy();
+    textureImage.destroy();
 
-        graphicsPipeline.destroy(device);
-        descriptor.destroy(device);
-        textureSampler.destroy(device);
-        textureImage.destroy(device);
-
-        for (auto& uniformBuffer : uniformBuffers) {
-            uniformBuffer.destroy(device);
-        }
-
-        vertexBuffer.destroy(device);
-        indexBuffer.destroy(device);
-        renderPass.destroy(device, graphicsPipeline.getLayout());
-        commandPool.destroy(device);
-        swapChain.destroy(device);
+    for (UniformBuffer& uniformBuffer : uniformBuffers) {
+        uniformBuffer.destroy();
     }
-    Engine::device.destroy();
 
-    {
-        auto instance = Engine::instance.get();
-        surface.destory(instance);
-        debugMessenger.destroyIfLayersEnabled(instance);
-    }
-    Engine::instance.destroy();
+    vertexBuffer.destroy();
+    indexBuffer.destroy();
+    renderPass.destroy();
+    commandPool.destroy();
+    swapchain.destroy();
+
+    device.destroy();
+    surface.destory();
+
+    debugMessenger.destroyIfLayersEnabled();
+    instance.destroy();
 
     glfwDestroyWindow(pWindow);
 
     glfwTerminate();
 }
 
-static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
-{
-    auto pEngine = reinterpret_cast<Engine*>(glfwGetWindowUserPointer(window));
-    pEngine->swapChain.resizeFramebuffer();
-}
-
-void Engine::initWindow(int width, int height)
+void Engine::initWindow(const uint16_t width, const uint16_t height)
 {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     pWindow = glfwCreateWindow(width, height, "Window", nullptr, nullptr);
     glfwSetWindowUserPointer(pWindow, this);
     glfwMakeContextCurrent(pWindow);
-    glfwSetFramebufferSizeCallback(pWindow, framebufferResizeCallback);
+    glfwSetFramebufferSizeCallback(
+        pWindow, [](GLFWwindow* window, int width, int height) {
+            Engine* pEngine = reinterpret_cast<Engine*>(glfwGetWindowUserPointer(window));
+            pEngine->swapchain.resizeFramebuffer();
+        });
 }

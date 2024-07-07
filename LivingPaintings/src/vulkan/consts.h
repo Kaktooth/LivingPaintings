@@ -15,8 +15,8 @@ struct Constants {
 #else
     static const bool ENABLE_VALIDATION_LAYERS = true;
 #endif
-    static const uint32_t WINDOW_WIDTH = 800;
-    static const uint32_t WINDOW_HEIGHT = 600;
+    static const uint16_t WINDOW_WIDTH = 1920;
+    static const uint16_t WINDOW_HEIGHT = 1080;
 
     inline static const char* APP_NAME = { "Animated Paintings" };
     inline static const char* ENGINE_NAME = { "Engine" };
@@ -24,5 +24,8 @@ struct Constants {
     inline static const std::vector<const char*> VALIDATION_LAYERS = { "VK_LAYER_KHRONOS_validation" };
     inline static const std::vector<const char*> DEVICE_EXTENTIONS = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
-    static const int MAX_FRAMES_IN_FLIGHT = 3;
+    static const uint8_t MAX_FRAMES_IN_FLIGHT = 2;
+
+    static const VkFormat IMAGE_FORMAT = VK_FORMAT_R8G8B8A8_SRGB;
+    static const VkColorSpaceKHR COLOR_SPACE = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
 };

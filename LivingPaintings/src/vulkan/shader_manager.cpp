@@ -19,15 +19,15 @@ const map<string, VkShaderStageFlagBits> shaderTypes {
 
 void ShaderManager::createShaderModules(VkDevice& device)
 {
-    auto shaderPath = RETRIEVE_STRING(RESOURCE_SHADER_PATH);
+    const char* shaderPath = RETRIEVE_STRING(RESOURCE_SHADER_PATH);
     shaderCompiler.compileIfChanged(shaderPath);
 
-    for (const auto& shader : shaderCompiler.getCompiledShaders()) {
-        auto shaderModule = ShaderManager::createShaderModule(device, shader.second);
-        auto spvExt = 4;
-        auto shaderExt = 5;
-        auto index = shader.first.size() - spvExt;
-        auto ext = shader.first.substr(index - shaderExt, shaderExt);
+    for (std::pair<const std::string, const std::vector<char>> shader : shaderCompiler.getCompiledShaders()) {
+        VkShaderModule shaderModule = ShaderManager::createShaderModule(device, shader.second);
+        int spvExt = 4;
+        int shaderExt = 5;
+        unsigned long index = shader.first.size() - spvExt;
+        std::string ext = shader.first.substr(index - shaderExt, shaderExt);
         shaderModules.insert({ shaderModule, shaderTypes.find(ext)->second });
     }
 }

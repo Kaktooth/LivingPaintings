@@ -9,10 +9,11 @@
 
 class RenderPass {
 
-    VkRenderPass renderPass;
+    VkRenderPass renderPass = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
 
 public:
-    void create(VkDevice device, VkFormat imageFormat);
-    void destroy(VkDevice device, VkPipelineLayout pipelineLayout);
+    VkRenderPass& create(VkDevice& device, VkFormat imageFormat);
+    void destroy();
     VkRenderPass& get();
 };
