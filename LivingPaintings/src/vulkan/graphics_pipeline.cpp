@@ -149,12 +149,11 @@ void GraphicsPipeline::create(VkDevice& device, VkRenderPass& renderPass,
         throw runtime_error("Failed to create graphics pipeline.");
     }
     graphicsPipelines.push_back(graphicsPipeline);
-
-    shaderManager.destroyShaderModules();
 }
 
 void GraphicsPipeline::destroy()
 {
+    shaderManager.destroyShaderModules();
     for (int i = 0; i < layouts.size(); i++) {
         vkDestroyPipeline(device, graphicsPipelines[i], nullptr);
         vkDestroyPipelineLayout(device, layouts[i], nullptr);
