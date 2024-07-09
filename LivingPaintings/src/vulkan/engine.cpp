@@ -3,7 +3,6 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #include "engine.h"
-#include "../config.hpp"
 
 using namespace std;
 
@@ -62,7 +61,7 @@ void Engine::init()
     // TEXTURE_FILE_PATH variable is retrieved from Cmake with macros in file config.hpp.in
     const string texturePath = RETRIEVE_STRING(TEXTURE_FILE_PATH);
     textureImage.imageDetails.createImageInfo(texturePath.c_str(), 1920, 1081,
-        VK_IMAGE_VIEW_TYPE_2D,Constants::IMAGE_FORMAT ,
+        VK_IMAGE_VIEW_TYPE_2D, Constants::IMAGE_FORMAT,
         VK_IMAGE_TILING_OPTIMAL);
     textureImage.create(device, vulkan.commandPool,
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -72,8 +71,7 @@ void Engine::init()
 
     descriptor.create(vulkan.device, uniformBuffers, textureImage, textureSampler);
 
-    const VkExtent2D extent = swapchain.getExtent();
-    graphicsPipeline.create(vulkan.device, extent, vulkan.renderPass, descriptor.getSetLayout());
+    graphicsPipeline.create(vulkan.device, vulkan.renderPass, descriptor.getSetLayout(), swapchain.getExtent());
 
     gui.init(vulkan.instance, device, vulkan.commandPool, vulkan.renderPass, swapchain, descriptor.getPool(), pWindow);
 }
@@ -87,14 +85,15 @@ void Engine::update()
     Queue& presentationQueue = device.getPresentationQueue();
     const vector<VkPipelineStageFlags> waitStages = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
-    forwardRenderAction.setContext(graphicsPipeline, extent);
+    forwardRenderAction.setContext(graphicsPipeline, extent, 0);
 
     while (!glfwWindowShouldClose(pWindow)) {
         glfwPollEvents();
 
         const uint32_t& currentFrame = swapchain.getCurrentFrame();
         VkCommandBuffer& cmd = commandBuffer.get(currentFrame);
-        const std::vector<VkSemaphore> waitSemaphores = vector { imageAvailable.get(currentFrame) };
+        VkSemaphore& currentImageAvailable = imageAvailable.get(currentFrame);
+        const std::vector<VkSemaphore> waitSemaphores = vector { currentImageAvailable };
         const std::vector<VkSemaphore> signalSemaphores = vector { renderFinished.get(currentFrame) };
 
         {
@@ -112,10 +111,15 @@ void Engine::update()
         inFlightFence.wait(currentFrame);
         inFlightFence.reset(currentFrame);
 
-        swapchain.asquireNextImage(vulkan.renderPass, imageAvailable, pWindow);
+        swapchain.asquireNextImage(vulkan.renderPass, currentImageAvailable, pWindow);
 
         commandBuffer.begin(currentFrame);
-        gui.draw();
+        gui.draw(graphicsPipeline.getPipelineHistorySize());
+
+        if (graphicsPipeline.recreateifShadersChanged()) {
+            gui.selectPipelineindex(graphicsPipeline.getPipelineHistorySize() - 1);
+        }
+        forwardRenderAction.setContext(graphicsPipeline, extent, gui.getSelectedPipelineIndex());
         forwardRenderAction.beginRenderPass(cmd, vulkan.renderPass, framebuffers, currentFrame);
         forwardRenderAction.recordCommandBuffer(cmd, descriptor.getSet(currentFrame),
             vertexBuffer, indexBuffer, quad);
@@ -140,7 +144,7 @@ void Engine::cleanup()
     imageAvailable.destroy();
     renderFinished.destroy();
 
-    graphicsPipeline.destroy(vulkan.device);
+    graphicsPipeline.destroy();
     descriptor.destroy(vulkan.device);
     textureSampler.destroy();
     textureImage.destroy();
@@ -170,7 +174,7 @@ void Engine::initWindow(const uint16_t width, const uint16_t height)
 {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    pWindow = glfwCreateWindow(width, height, "Window", nullptr, nullptr);
+    pWindow = glfwCreateWindow(width, height, "Living Paintings", nullptr, nullptr);
     glfwSetWindowUserPointer(pWindow, this);
     glfwMakeContextCurrent(pWindow);
     glfwSetFramebufferSizeCallback(

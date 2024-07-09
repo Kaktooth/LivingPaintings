@@ -5,6 +5,7 @@
 #pragma once
 #include "surface.h"
 #include <optional>
+#include <stdexcept>
 #include <vector>
 
 struct QueueFamily {

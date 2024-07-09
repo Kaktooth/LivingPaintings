@@ -3,8 +3,6 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #include "command_buffer.h"
-#include <stdexcept>
-#include <vector>
 
 using namespace std;
 

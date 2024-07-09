@@ -3,8 +3,6 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #include "queue_family.h"
-#include <stdexcept>
-#include <vector>
 
 using namespace std;
 

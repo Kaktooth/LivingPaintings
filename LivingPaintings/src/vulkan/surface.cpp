@@ -3,9 +3,6 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #include "surface.h"
-#include "consts.h"
-#include <algorithm>
-#include <stdexcept>
 
 using namespace std;
 
@@ -84,12 +81,12 @@ VkSurfaceFormatKHR Surface::chooseSurfaceFormat()
 
 VkPresentModeKHR Surface::choosePresentationMode()
 {
-    for (const VkPresentModeKHR& presentationMode : details.presentationModes) {
+    for (VkPresentModeKHR presentationMode : details.presentationModes) {
         if (presentationMode == VK_PRESENT_MODE_MAILBOX_KHR) {
             return VK_PRESENT_MODE_MAILBOX_KHR;
         }
     }
-    return VK_PRESENT_MODE_FIFO_KHR;
+    return VK_PRESENT_MODE_IMMEDIATE_KHR;
 }
 
 void Surface::destory()

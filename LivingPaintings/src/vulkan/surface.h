@@ -4,8 +4,11 @@
 
 #pragma once
 #define GLFW_INCLUDE_VULKAN
+#include "consts.h"
 #include "vulkan/vulkan.h"
 #include <GLFW/glfw3.h>
+#include <algorithm>
+#include <stdexcept>
 #include <vector>
 
 class Surface {

@@ -5,6 +5,7 @@
 #pragma once
 #include "fence.h"
 #include "vulkan/vulkan.h"
+#include <stdexcept>
 #include <vector>
 
 class Queue {

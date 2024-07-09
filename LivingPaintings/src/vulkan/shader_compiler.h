@@ -4,17 +4,25 @@
 
 #pragma once
 #include "shaderc/shaderc.hpp"
+#include <algorithm>
+#include <condition_variable>
 #include <filesystem>
+#include <fstream>
+#include <iostream>
 #include <map>
+#include <mutex>
+#include <stdexcept>
 #include <string>
 
 class ShaderCompiler {
 
-    std::map<std::string, std::filesystem::directory_entry> listModifiedFiles(const std::string& shadersPath);
-    std::vector<char> readFile(const std::string& shaderPath);
-    void compile(const std::filesystem::path shaderPath, const std::string& shaderCode);
+    static std::map<std::string, std::filesystem::directory_entry>
+    listModifiedFiles(const std::string& shadersPath);
+    static std::vector<char> readShaderFile(const std::string& shaderPath, bool spvShader);
+    static void compile(const std::filesystem::path shaderPath,
+        const std::string& shaderCode);
 
 public:
-    void compileIfChanged(const std::string& shaderPath);
-    std::map<std::string, const std::vector<char>> getCompiledShaders();
+    static void compileIfChanged(const std::string& shaderPath);
+    static std::map<std::string, std::vector<char>> getCompiledShaders();
 };

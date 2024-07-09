@@ -3,7 +3,6 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #include "gui.h"
-#include <stdexcept>
 
 using namespace std;
 
@@ -44,13 +43,13 @@ void Gui::uploadFonts(Queue queue)
     ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 
-void Gui::draw()
+void Gui::draw(size_t pipelineHistorySize)
 {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
     {
-        ImGui::Begin("DeepPicture");
+        ImGui::Begin("Living Paintings");
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("New")) { }
             if (ImGui::MenuItem("Open", "Ctrl+O")) { }
@@ -109,10 +108,22 @@ void Gui::draw()
 
             ImGui::SeparatorText("Easing equetions");
             ImGui::Checkbox("Use Easing Function", &animationParams.useEasingFunction);
-            if (ImGui::TreeNode("list of easing equetions")) {
+            if (ImGui::TreeNode("List of easing equetions")) {
                 for (int i = 0; i < (int)animationParams.easingEquations.size(); i++) {
                     if (ImGui::Selectable(animationParams.easingEquations[i].c_str(), i == animationParams.selectedEasingEquation)) {
                         animationParams.selectedEasingEquation = i;
+                    }
+                }
+                ImGui::TreePop();
+            }
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Debug")) {
+            if (ImGui::TreeNode("Pipeline History")) {
+                for (int i = 0; i < pipelineHistorySize; i++) {
+                    std::string name = "Graphics Pipeline " + std::to_string(i);
+                    if (ImGui::Selectable(name.c_str(), i == selectedPipelineIndex)) {
+                        selectedPipelineIndex = i;
                     }
                 }
                 ImGui::TreePop();
@@ -155,4 +166,14 @@ CameraParams Gui::getCameraParams()
 AnimationParams Gui::getAnimationParams()
 {
     return animationParams;
+}
+
+size_t Gui::getSelectedPipelineIndex()
+{
+    return selectedPipelineIndex;
+}
+
+void Gui::selectPipelineindex(const size_t pipelineIndex)
+{
+    selectedPipelineIndex = pipelineIndex;
 }

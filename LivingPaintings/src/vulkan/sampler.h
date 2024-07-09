@@ -4,6 +4,7 @@
 
 #pragma once
 #include "vulkan/vulkan.h"
+#include <stdexcept>
 
 class Sampler {
 

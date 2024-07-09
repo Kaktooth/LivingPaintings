@@ -8,6 +8,7 @@
 #include "image.h"
 #include "sampler.h"
 #include "vulkan/vulkan.h"
+#include <stdexcept>
 
 class Descriptor {
 

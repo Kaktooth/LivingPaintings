@@ -106,9 +106,8 @@ void VertexBuffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
     const unsigned long long size = sizeof(vertecies[0]) * vertecies.size();
     stagingBuffer.create(device, physicalDevice, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_SHARING_MODE_EXCLUSIVE, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-    auto stagingBufferDeviceMemory = stagingBuffer.getDeviceMemory();
-
     void* data;
+    const VkDeviceMemory stagingBufferDeviceMemory = stagingBuffer.getDeviceMemory();
     vkMapMemory(device, stagingBufferDeviceMemory, 0, size, 0, &data);
     memcpy(data, vertecies.data(), (size_t)size);
     vkUnmapMemory(device, stagingBufferDeviceMemory);
@@ -131,7 +130,6 @@ void IndexBuffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
     this->device = device;
 
     const unsigned long long size = sizeof(indicies[0]) * indicies.size();
-
     stagingBuffer.create(device, physicalDevice, size,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VK_SHARING_MODE_EXCLUSIVE,

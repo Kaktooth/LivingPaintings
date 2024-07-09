@@ -4,7 +4,8 @@
 
 #pragma once
 #include "buffer.h"
-#include "vulkan/vulkan.h"
+#include <stdexcept>
+#include <string>
 
 class Image {
 

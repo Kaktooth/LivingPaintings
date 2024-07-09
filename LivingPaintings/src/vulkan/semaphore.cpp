@@ -3,7 +3,6 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #include "semaphore.h"
-#include <stdexcept>
 
 using namespace std;
 
@@ -25,7 +24,7 @@ void Semaphore::create(VkDevice& device)
 
 void Semaphore::destroy()
 {
-    for (const VkSemaphore& semaphore : semaphores) {
+    for (VkSemaphore& semaphore : semaphores) {
         vkDestroySemaphore(device, semaphore, nullptr);
     }
 }

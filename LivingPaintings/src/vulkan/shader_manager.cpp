@@ -3,12 +3,18 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #include "shader_manager.h"
-#include "../config.hpp"
+
 using namespace std;
 
-map<VkShaderModule, VkShaderStageFlagBits> shaderModules {};
+const char* shaderPath = RETRIEVE_STRING(RESOURCE_SHADER_PATH);
 
-const map<string, VkShaderStageFlagBits> shaderTypes {
+const int8_t spvExtNameLength = 4;
+const int8_t shaderExtNameLength = 5;
+
+VkDevice ShaderManager::device = VK_NULL_HANDLE;
+bool ShaderManager::recreateGraphicsPipeline = false;
+
+const std::map<string, VkShaderStageFlagBits> shaderTypes {
     { ".vert", VK_SHADER_STAGE_VERTEX_BIT },
     { ".frag", VK_SHADER_STAGE_FRAGMENT_BIT },
     { ".comp", VK_SHADER_STAGE_COMPUTE_BIT },
@@ -17,24 +23,63 @@ const map<string, VkShaderStageFlagBits> shaderTypes {
     { ".tese", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT }
 };
 
-void ShaderManager::createShaderModules(VkDevice& device)
-{
-    const char* shaderPath = RETRIEVE_STRING(RESOURCE_SHADER_PATH);
-    shaderCompiler.compileIfChanged(shaderPath);
+std::map<VkShaderStageFlagBits, VkShaderModule> shaderModules {};
 
-    for (std::pair<const std::string, const std::vector<char>> shader : shaderCompiler.getCompiledShaders()) {
-        VkShaderModule shaderModule = ShaderManager::createShaderModule(device, shader.second);
-        int spvExt = 4;
-        int shaderExt = 5;
-        unsigned long index = shader.first.size() - spvExt;
-        std::string ext = shader.first.substr(index - shaderExt, shaderExt);
-        shaderModules.insert({ shaderModule, shaderTypes.find(ext)->second });
+HANDLE hShaderFileChange;
+DWORD dwWaitStatus;
+std::thread fileChangeNotifyThread(ShaderManager::notifyShaderFileChange);
+
+ShaderManager::~ShaderManager()
+{
+    if (fileChangeNotifyThread.joinable()) {
+        fileChangeNotifyThread.join();
     }
 }
 
-VkShaderModule ShaderManager::createShaderModule(VkDevice& device, vector<char> shaderCode)
+// TODO fix recieving second notification when file changes
+void ShaderManager::notifyShaderFileChange()
 {
+    cout << "\n[Shader Notifier] Started. Waiting for change notification...\n";
 
+    while (TRUE) {
+        hShaderFileChange = FindFirstChangeNotificationA(shaderPath, false, FILE_NOTIFY_CHANGE_LAST_WRITE);
+
+        WaitForSingleObject(hShaderFileChange, INFINITE);
+        std::this_thread::sleep_for(100ms);
+        if (FindNextChangeNotification(hShaderFileChange)) {
+            cout << "\n[Shader Notifier] Shader files directory changed.\n";
+            recreateGraphicsPipeline = true;
+            FindCloseChangeNotification(hShaderFileChange);
+        } else {
+            cout << "\n[Shader Notifier] Stopping. Failed to notify.\n";
+            FindCloseChangeNotification(hShaderFileChange);
+            break;
+        }
+    }
+}
+
+void ShaderManager::createShaderModules(VkDevice& device)
+{
+    ShaderManager::device = device;
+
+    ShaderCompiler::compileIfChanged(shaderPath);
+
+    for (std::pair<std::string, std::vector<char>> shader : ShaderCompiler::getCompiledShaders()) {
+        VkShaderModule shaderModule = createShaderModule(shader.second);
+        unsigned long index = shader.first.size() - spvExtNameLength;
+        std::string ext = shader.first.substr(index - shaderExtNameLength,
+            shaderExtNameLength);
+        VkShaderStageFlagBits shaderType = shaderTypes.find(ext)->second;
+        if (shaderModules.contains(shaderType)) {
+            shaderModules[shaderType] = shaderModule;
+        } else {
+            shaderModules.insert({ shaderType, shaderModule });
+        }
+    }
+}
+
+VkShaderModule ShaderManager::createShaderModule(vector<char> shaderCode)
+{
     VkShaderModuleCreateInfo shaderModuleInfo {};
     shaderModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     shaderModuleInfo.codeSize = shaderCode.size();
@@ -48,14 +93,14 @@ VkShaderModule ShaderManager::createShaderModule(VkDevice& device, vector<char> 
     return shaderModule;
 }
 
-void ShaderManager::destroyShaderModules(VkDevice& device)
+void ShaderManager::destroyShaderModules()
 {
-    for (const auto& shaderModule : shaderModules) {
-        vkDestroyShaderModule(device, shaderModule.first, nullptr);
+    for (const std::pair<VkShaderStageFlagBits, VkShaderModule>& shaderModule : shaderModules) {
+        vkDestroyShaderModule(device, shaderModule.second, nullptr);
     }
 }
 
-map<VkShaderModule, VkShaderStageFlagBits> ShaderManager::getShaderModules()
+map<VkShaderStageFlagBits, VkShaderModule> ShaderManager::getShaderModules()
 {
     return shaderModules;
 }

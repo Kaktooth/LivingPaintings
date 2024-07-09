@@ -59,9 +59,9 @@ void Data::GraphicsObject::UniformBufferObject::transform(
     ObjectParams params, AnimationParams animationParams)
 {
     if (animationParams.play) {
-        static auto startTime = chrono::high_resolution_clock::now();
+        static steady_clock::time_point startTime = chrono::high_resolution_clock::now();
 
-        auto currentTime = chrono::high_resolution_clock::now();
+        steady_clock::time_point currentTime = chrono::high_resolution_clock::now();
         float duration_ms = chrono::duration<float, chrono::milliseconds::period>(currentTime - startTime).count();
 
         if (duration_ms > animationParams.end_ms) {
@@ -128,7 +128,7 @@ void Data::GraphicsObject::UniformBufferObject::cameraView(CameraParams& params,
             glm::vec3(params.cameraTarget[0], params.cameraTarget[1], params.cameraTarget[2]),
             glm::vec3(params.upVector[0], params.upVector[1], params.upVector[2]));
     } else {
-        auto cameraPos = glm::vec3(params.cameraPos[0], params.cameraPos[1], params.cameraPos[2]);
+        glm::vec3 cameraPos = glm::vec3(params.cameraPos[0], params.cameraPos[1], params.cameraPos[2]);
         float dist = glm::distance(cameraPos, glm::vec3(0, 0, 0));
         view = glm::lookAt(cameraPos, glm::vec3(dist, 0, dist),
             glm::vec3(params.upVector[0], params.upVector[1], params.upVector[2]));

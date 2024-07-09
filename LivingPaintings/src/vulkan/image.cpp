@@ -3,8 +3,6 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #include "image.h"
-#include <stdexcept>
-#include <string>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -25,7 +23,6 @@ void Image::Details::createImageInfo(const char* filePath, uint32_t width, uint3
 
 void Image::create(Device& _device, VkCommandPool& commandPool, VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryPropertyFlags)
 {
-
     this->device = _device.get();
     this->physicalDevice = _device.getPhysicalDevice();
     this->commandPool = commandPool;

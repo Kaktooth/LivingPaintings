@@ -5,6 +5,7 @@
 #pragma once
 #include "device.h"
 #include "vulkan/vulkan.h"
+#include <stdexcept>
 
 class CommandPool {
 

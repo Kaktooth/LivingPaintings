@@ -3,13 +3,6 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #include "device.h"
-#include <algorithm>
-#include <cstdint>
-#include <limits>
-#include <map>
-#include <set>
-#include <stdexcept>
-#include <vector>
 
 using namespace std;
 
@@ -127,7 +120,7 @@ bool Device::checkDeviceExtensionSupport(VkPhysicalDevice& physicalDevice)
     vector<VkExtensionProperties> availableExtensions(extensionCount);
     vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, availableExtensions.data());
 
-    for (const auto& extension : availableExtensions) {
+    for (VkExtensionProperties& extension : availableExtensions) {
         requiredExtensions.erase(extension.extensionName);
     }
 

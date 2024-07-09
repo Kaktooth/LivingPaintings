@@ -6,6 +6,8 @@
 #include "command_pool.h"
 #include "consts.h"
 #include "queue.h"
+#include <stdexcept>
+#include <vector>
 
 class CommandBuffer {
 

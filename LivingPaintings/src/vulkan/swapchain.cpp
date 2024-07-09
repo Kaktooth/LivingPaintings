@@ -3,8 +3,6 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #include "swapchain.h"
-#include <stdexcept>
-#include <vector>
 
 using namespace std;
 
@@ -26,7 +24,7 @@ void Swapchain::create()
     const VkPresentModeKHR presentMode = surface.choosePresentationMode();
     imageFormat = surfaceFormat.format;
     extent = surface.chooseResolution();
-    minImageCount = surface.details.capabilities.minImageCount;
+    minImageCount = surface.details.capabilities.minImageCount + 1;
     if (surface.details.capabilities.maxImageCount > 0 && minImageCount > surface.details.capabilities.maxImageCount) {
         minImageCount = surface.details.capabilities.maxImageCount;
     }
@@ -114,10 +112,10 @@ void Swapchain::createFramebuffers(VkRenderPass& renderPass)
     }
 }
 
-uint32_t Swapchain::asquireNextImage(VkRenderPass& renderPass, Semaphore& imageAvailable, GLFWwindow* window)
+uint32_t Swapchain::asquireNextImage(VkRenderPass& renderPass, VkSemaphore& imageAvailable, GLFWwindow* window)
 {
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, imageAvailable.get(currentFrame), VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, imageAvailable, VK_NULL_HANDLE, &imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         recreate(renderPass, window);
@@ -163,11 +161,11 @@ void Swapchain::nextFrame()
 
 void Swapchain::destroy()
 {
-    for (auto imageView : imageViews) {
+    for (VkImageView imageView : imageViews) {
         vkDestroyImageView(device, imageView, nullptr);
     }
 
-    for (const auto framebuffer : framebuffers) {
+    for (VkFramebuffer framebuffer : framebuffers) {
         vkDestroyFramebuffer(device, framebuffer, nullptr);
     }
 

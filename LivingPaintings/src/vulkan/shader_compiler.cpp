@@ -3,15 +3,10 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #include "shader_compiler.h"
-#include <algorithm>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <stdexcept>
 
 using namespace std;
 
-map<string, const vector<char>> compiledShaders {};
+map<string, vector<char>> compiledShaders {};
 
 const map<string, shaderc_shader_kind> shaderTypes {
     { ".vert", shaderc_glsl_vertex_shader },
@@ -29,11 +24,16 @@ void ShaderCompiler::compileIfChanged(const string& shadersPath)
         const std::filesystem::path shaderPath = shaderEntry.second.path();
         const std::string filename = shaderEntry.first + ".spv";
         const std::string spvPath = shaderPath.string() + ".spv";
-        std::vector<char> buffer = readFile(shaderPath.string());
+        std::vector<char> buffer = readShaderFile(shaderPath.string(), false);
         compile(shaderPath, buffer.data());
+        cout << "Shader compiled: " + shaderPath.string();
 
-        const auto compiledShader = readFile(spvPath);
-        compiledShaders.insert({ filename, compiledShader });
+        const std::vector<char> compiledShader = readShaderFile(spvPath, true);
+        if (compiledShaders.contains(filename)) {
+            compiledShaders[filename] = compiledShader;
+        } else {
+            compiledShaders.insert({ filename, compiledShader });
+        }
     }
 }
 
@@ -44,11 +44,12 @@ void ShaderCompiler::compile(const filesystem::path shaderPath, const string& sh
 
     const char* filename = (const char*)shaderPath.filename().c_str();
     const std::string ext = shaderPath.extension().string();
-    auto path = filesystem::absolute(shaderPath).string();
+    std::string path = filesystem::absolute(shaderPath).string();
     shaderc::SpvCompilationResult shaderModule = compiler.CompileGlslToSpv(shaderCode, shaderTypes.find(ext)->second, filename, options);
 
     if (shaderModule.GetCompilationStatus() != shaderc_compilation_status_success) {
         std::cerr << shaderModule.GetErrorMessage();
+        throw format_error(shaderModule.GetErrorMessage());
     }
     vector<uint32_t> compiled { shaderModule.cbegin(), shaderModule.cend() };
 
@@ -79,7 +80,7 @@ map<string, filesystem::directory_entry> ShaderCompiler::listModifiedFiles(const
 
             if (filePaths.contains(spv) && entry.second.last_write_time() < filePaths[spv].last_write_time()) {
                 std::string spvPath = entry.second.path().string() + ".spv";
-                std::vector<char> compiledShader = readFile(spvPath);
+                std::vector<char> compiledShader = readShaderFile(spvPath, true);
                 compiledShaders.insert({ spv, compiledShader });
             } else {
                 compilePaths.insert(entry);
@@ -89,22 +90,24 @@ map<string, filesystem::directory_entry> ShaderCompiler::listModifiedFiles(const
     return compilePaths;
 }
 
-vector<char> ShaderCompiler::readFile(const string& shaderPath)
+vector<char> ShaderCompiler::readShaderFile(const string& shaderPath, bool spvShader)
 {
     ifstream shaderFile(shaderPath, ios::ate | ios::binary);
+
     if (!shaderFile.is_open()) {
-        throw runtime_error("Failed to open shader file");
+        throw runtime_error("Failed to open shader file.");
     }
+
     size_t fileSize = (size_t)shaderFile.tellg();
-    vector<char> buffer(fileSize);
+    vector<char> buffer(fileSize + !spvShader);
     shaderFile.seekg(0);
     shaderFile.read(buffer.data(), fileSize);
     shaderFile.close();
-
+    spvShader ?: buffer[fileSize] = '\0';
     return buffer;
 }
 
-map<string, const vector<char>> ShaderCompiler::getCompiledShaders()
+map<string, vector<char>> ShaderCompiler::getCompiledShaders()
 {
     return compiledShaders;
 }

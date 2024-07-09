@@ -7,6 +7,7 @@
 #include "semaphore.h"
 #include "surface.h"
 #include "vulkan/vulkan.h"
+#include <stdexcept>
 #include <vector>
 
 class Swapchain {
@@ -31,7 +32,8 @@ public:
     void createImageViews();
     void createFramebuffers(VkRenderPass& renderPass);
     void presentImage(VkRenderPass& renderPass, VkQueue& presentationQueue, const std::vector<VkSemaphore> signalSemafores, GLFWwindow* window);
-    uint32_t asquireNextImage(VkRenderPass& renderPass, Semaphore& imageAvailable, GLFWwindow* window);
+    uint32_t asquireNextImage(VkRenderPass& renderPass,
+        VkSemaphore& imageAvailable, GLFWwindow* window);
     void nextFrame();
     void recreate(VkRenderPass& renderPass, GLFWwindow* window);
     void destroy();

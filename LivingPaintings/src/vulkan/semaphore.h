@@ -5,6 +5,7 @@
 #pragma once
 #include "consts.h"
 #include "vulkan/vulkan.h"
+#include <stdexcept>
 #include <vector>
 
 class Semaphore {

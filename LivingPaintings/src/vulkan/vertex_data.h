@@ -12,6 +12,7 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/glm.hpp>
 #include <vector>
+
 namespace Data {
 struct GraphicsObject {
 

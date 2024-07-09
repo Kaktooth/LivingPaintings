@@ -20,7 +20,7 @@ class ForwardRenderingAction {
     VkExtent2D extent {};
 
 public:
-    void setContext(GraphicsPipeline& graphicsPipeline, const VkExtent2D extent);
+    void setContext(GraphicsPipeline& graphicsPipeline, const VkExtent2D extent, const size_t selectedPipelineIndex);
     void beginRenderPass(VkCommandBuffer& commandBuffer, VkRenderPass& renderPass,
         const std::vector<VkFramebuffer>& framebuffers,
         const uint32_t currentFrame);

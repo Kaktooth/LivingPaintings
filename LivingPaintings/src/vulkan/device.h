@@ -7,6 +7,13 @@
 #include "queue.h"
 #include "queue_family.h"
 #include "vulkan/vulkan.h"
+#include <algorithm>
+#include <cstdint>
+#include <limits>
+#include <map>
+#include <set>
+#include <stdexcept>
+#include <vector>
 
 class Device {
 

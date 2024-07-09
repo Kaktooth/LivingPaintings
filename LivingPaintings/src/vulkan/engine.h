@@ -3,6 +3,7 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #pragma once
+#include "../config.hpp"
 #include "command_buffer.h"
 #include "command_pool.h"
 #include "consts.h"

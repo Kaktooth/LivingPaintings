@@ -3,7 +3,6 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #include "fence.h"
-#include <stdexcept>
 
 using namespace std;
 
@@ -36,7 +35,7 @@ void Fence::reset(const size_t frame)
 
 void Fence::destroy()
 {
-    for (const VkFence& fence : fences) {
+    for (VkFence fence : fences) {
         vkDestroyFence(device, fence, nullptr);
     }
 }

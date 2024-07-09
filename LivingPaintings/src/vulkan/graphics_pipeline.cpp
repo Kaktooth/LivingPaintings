@@ -3,26 +3,34 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #include "graphics_pipeline.h"
-#include <vector>
 
 using namespace std;
 
-void GraphicsPipeline::create(VkDevice& device, VkExtent2D swapChainExtent,
-    VkRenderPass& renderPass,
-    VkDescriptorSetLayout& descriptorSetLayout)
+void GraphicsPipeline::create(VkDevice& device, VkRenderPass& renderPass,
+    VkDescriptorSetLayout& descriptorSetLayout,
+    const VkExtent2D extent)
 {
+    this->device = device;
+    this->renderPass = renderPass;
+    this->descriptorSetLayout = descriptorSetLayout;
+    this->extent = extent;
+
     const vector<VkDynamicState> dynamicStates = {
         VK_DYNAMIC_STATE_VIEWPORT,
         VK_DYNAMIC_STATE_SCISSOR
     };
 
-    shaderManager.createShaderModules(device);
+    try {
+        shaderManager.createShaderModules(device);
+    } catch (format_error er) {
+        rollbackPipeline();
+    }
     vector<VkPipelineShaderStageCreateInfo> shaderModuleInfos {};
-    for (const std::pair<VkShaderModule_T* const, VkShaderStageFlagBits>& shaderModule : shaderManager.getShaderModules()) {
+    for (const std::pair<VkShaderStageFlagBits, VkShaderModule>& shaderModule : shaderManager.getShaderModules()) {
         VkPipelineShaderStageCreateInfo shaderModuleInfo {};
         shaderModuleInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        shaderModuleInfo.module = shaderModule.first;
-        shaderModuleInfo.stage = shaderModule.second;
+        shaderModuleInfo.stage = shaderModule.first;
+        shaderModuleInfo.module = shaderModule.second;
         shaderModuleInfo.pName = "main";
         shaderModuleInfo.pSpecializationInfo = nullptr;
         shaderModuleInfos.push_back(shaderModuleInfo);
@@ -31,14 +39,14 @@ void GraphicsPipeline::create(VkDevice& device, VkExtent2D swapChainExtent,
     VkViewport viewport {};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = (float)swapChainExtent.width;
-    viewport.height = (float)swapChainExtent.height;
+    viewport.width = (float)extent.width;
+    viewport.height = (float)extent.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
     VkRect2D scissor {};
     scissor.offset = { 0, 0 };
-    scissor.extent = swapChainExtent;
+    scissor.extent = extent;
 
     VkPipelineDynamicStateCreateInfo dynamicStateInfo {};
     dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -112,9 +120,11 @@ void GraphicsPipeline::create(VkDevice& device, VkExtent2D swapChainExtent,
     // pipelineLayoutInfo.pushConstantRangeCount = 0;
     // pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
+    VkPipelineLayout layout;
     if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &layout) != VK_SUCCESS) {
         throw runtime_error("Failed to create pipeline layout.");
     }
+    layouts.push_back(layout);
 
     VkGraphicsPipelineCreateInfo graphicsPipelineInfo {};
     graphicsPipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -134,24 +144,59 @@ void GraphicsPipeline::create(VkDevice& device, VkExtent2D swapChainExtent,
     graphicsPipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     graphicsPipelineInfo.basePipelineIndex = -1;
 
+    VkPipeline graphicsPipeline;
     if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphicsPipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
         throw runtime_error("Failed to create graphics pipeline.");
     }
+    graphicsPipelines.push_back(graphicsPipeline);
+
+    shaderManager.destroyShaderModules();
 }
 
-void GraphicsPipeline::destroy(VkDevice& device)
+void GraphicsPipeline::destroy()
 {
-    shaderManager.destroyShaderModules(device);
-    vkDestroyPipeline(device, graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(device, layout, nullptr);
+    for (int i = 0; i < layouts.size(); i++) {
+        vkDestroyPipeline(device, graphicsPipelines[i], nullptr);
+        vkDestroyPipelineLayout(device, layouts[i], nullptr);
+    }
 }
 
-VkPipelineLayout& GraphicsPipeline::getLayout()
+bool GraphicsPipeline::recreateifShadersChanged()
 {
-    return layout;
+    if (ShaderManager::recreateGraphicsPipeline) {
+        GraphicsPipeline::create(device, renderPass, descriptorSetLayout,
+            extent);
+        ShaderManager::recreateGraphicsPipeline = false;
+        return true;
+    }
+
+    return false;
 }
 
-VkPipeline& GraphicsPipeline::get()
+void GraphicsPipeline::rollbackPipeline()
 {
-    return graphicsPipeline;
+    layouts.pop_back();
+    graphicsPipelines.pop_back();
 }
+
+VkPipelineLayout& GraphicsPipeline::getLastLayout()
+{
+    return layouts[layouts.size() - 1];
+}
+
+VkPipeline& GraphicsPipeline::getLast()
+{
+    return graphicsPipelines[layouts.size() - 1];
+}
+
+VkPipelineLayout& GraphicsPipeline::getLayout(const size_t index)
+{
+    return layouts[index];
+}
+
+VkPipeline& GraphicsPipeline::get(const size_t index)
+{
+    return graphicsPipelines[index];
+}
+
+size_t GraphicsPipeline::getPipelineHistorySize() { return graphicsPipelines.size(); }

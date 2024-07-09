@@ -5,6 +5,7 @@
 #pragma once
 #include "swapchain.h"
 #include "vulkan/vulkan.h"
+#include <stdexcept>
 #include <vector>
 
 class RenderPass {

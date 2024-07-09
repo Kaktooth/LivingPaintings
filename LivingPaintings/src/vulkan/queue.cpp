@@ -3,7 +3,6 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #include "queue.h"
-#include <stdexcept>
 
 using namespace std;
 

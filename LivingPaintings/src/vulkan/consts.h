@@ -24,8 +24,8 @@ struct Constants {
     inline static const std::vector<const char*> VALIDATION_LAYERS = { "VK_LAYER_KHRONOS_validation" };
     inline static const std::vector<const char*> DEVICE_EXTENTIONS = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
-    static const uint8_t MAX_FRAMES_IN_FLIGHT = 2;
+    static const uint8_t MAX_FRAMES_IN_FLIGHT = 3;
 
     static const VkFormat IMAGE_FORMAT = VK_FORMAT_R8G8B8A8_SRGB;
-    static const VkColorSpaceKHR COLOR_SPACE = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+    static const VkColorSpaceKHR COLOR_SPACE = VK_COLOR_SPACE_HDR10_HLG_EXT;
 };

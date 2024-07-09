@@ -15,6 +15,7 @@
 #include "render_pass.h"
 #include "swapchain.h"
 #include "vulkan/vulkan.h"
+#include <stdexcept>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -57,6 +58,8 @@ class Gui {
         0
     };
 
+    size_t selectedPipelineIndex = 0;
+
     VkDevice device = VK_NULL_HANDLE;
     VkCommandPool commandPool = VK_NULL_HANDLE;
 
@@ -66,11 +69,13 @@ public:
     void init(VkInstance& instance, Device& device, VkCommandPool& commandPool,
         VkRenderPass& renderPass, Swapchain& swapChain,
         VkDescriptorPool& descriptorPool, GLFWwindow* window);
-    void draw();
+    void draw(size_t pipelineHistorySize);
     void renderDrawData(VkCommandBuffer& commandBuffer);
     void destroy();
     ObjectParams getObjectParams();
     ObjectParams getAnimatedObjectParams();
     CameraParams getCameraParams();
     AnimationParams getAnimationParams();
+    size_t getSelectedPipelineIndex();
+    void selectPipelineindex(const size_t pipelineIndex);
 };
