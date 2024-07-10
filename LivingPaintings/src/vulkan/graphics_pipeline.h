@@ -19,13 +19,11 @@ class GraphicsPipeline {
     VkExtent2D extent;
 
 public:
-    void
-    create(VkDevice& device, VkRenderPass& renderPass,
+    void create(VkDevice& device, VkRenderPass& renderPass,
         VkDescriptorSetLayout& descriptorSetLayout,
         const VkExtent2D extent);
     void destroy();
     bool recreateifShadersChanged();
-    void rollbackPipeline();
     VkPipelineLayout& getLastLayout();
     VkPipeline& getLast();
     VkPipelineLayout& getLayout(const size_t index);

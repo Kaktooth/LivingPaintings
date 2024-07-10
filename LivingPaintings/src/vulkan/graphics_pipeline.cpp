@@ -15,17 +15,14 @@ void GraphicsPipeline::create(VkDevice& device, VkRenderPass& renderPass,
     this->descriptorSetLayout = descriptorSetLayout;
     this->extent = extent;
 
-    const vector<VkDynamicState> dynamicStates = {
-        VK_DYNAMIC_STATE_VIEWPORT,
-        VK_DYNAMIC_STATE_SCISSOR
-    };
-
     try {
         shaderManager.createShaderModules(device);
     } catch (format_error er) {
-        rollbackPipeline();
+        cout << "[Graphics Pipeline] Fail graphics pipeline creation due to failed shader compilation.";
+        return;
     }
-    vector<VkPipelineShaderStageCreateInfo> shaderModuleInfos {};
+
+    std::vector<VkPipelineShaderStageCreateInfo> shaderModuleInfos {};
     for (const std::pair<VkShaderStageFlagBits, VkShaderModule>& shaderModule : shaderManager.getShaderModules()) {
         VkPipelineShaderStageCreateInfo shaderModuleInfo {};
         shaderModuleInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -48,6 +45,7 @@ void GraphicsPipeline::create(VkDevice& device, VkRenderPass& renderPass,
     scissor.offset = { 0, 0 };
     scissor.extent = extent;
 
+    const vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     VkPipelineDynamicStateCreateInfo dynamicStateInfo {};
     dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     dynamicStateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
@@ -149,11 +147,12 @@ void GraphicsPipeline::create(VkDevice& device, VkRenderPass& renderPass,
         throw runtime_error("Failed to create graphics pipeline.");
     }
     graphicsPipelines.push_back(graphicsPipeline);
+
+    shaderManager.destroyShaderModules();
 }
 
 void GraphicsPipeline::destroy()
 {
-    shaderManager.destroyShaderModules();
     for (int i = 0; i < layouts.size(); i++) {
         vkDestroyPipeline(device, graphicsPipelines[i], nullptr);
         vkDestroyPipelineLayout(device, layouts[i], nullptr);
@@ -170,12 +169,6 @@ bool GraphicsPipeline::recreateifShadersChanged()
     }
 
     return false;
-}
-
-void GraphicsPipeline::rollbackPipeline()
-{
-    layouts.pop_back();
-    graphicsPipelines.pop_back();
 }
 
 VkPipelineLayout& GraphicsPipeline::getLastLayout()

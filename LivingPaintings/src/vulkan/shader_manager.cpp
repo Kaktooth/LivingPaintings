@@ -42,13 +42,25 @@ void ShaderManager::notifyShaderFileChange()
     cout << "\n[Shader Notifier] Started. Waiting for change notification...\n";
 
     while (TRUE) {
-        hShaderFileChange = FindFirstChangeNotificationA(shaderPath, false, FILE_NOTIFY_CHANGE_LAST_WRITE);
 
-        WaitForSingleObject(hShaderFileChange, INFINITE);
+        hShaderFileChange = FindFirstChangeNotificationA(
+            shaderPath, false, FILE_NOTIFY_CHANGE_LAST_WRITE);
+
+        dwWaitStatus = WaitForSingleObject(hShaderFileChange, INFINITE);
         std::this_thread::sleep_for(100ms);
         if (FindNextChangeNotification(hShaderFileChange)) {
             cout << "\n[Shader Notifier] Shader files directory changed.\n";
             recreateGraphicsPipeline = true;
+            bool gettingNotified = true;
+            while (gettingNotified) {
+                hShaderFileChange = FindFirstChangeNotificationA(
+                    shaderPath, false, FILE_NOTIFY_CHANGE_LAST_WRITE);
+
+                dwWaitStatus = WaitForSingleObject(hShaderFileChange, 1000);
+                if (FindNextChangeNotification(hShaderFileChange) == FALSE || dwWaitStatus == WAIT_TIMEOUT) {
+                    gettingNotified = false;
+                }
+            }
             FindCloseChangeNotification(hShaderFileChange);
         } else {
             cout << "\n[Shader Notifier] Stopping. Failed to notify.\n";
