@@ -7,7 +7,8 @@
 #include "command_buffer.h"
 #include "device.h"
 #include "fence.h"
-#include "graphics_pipeline.h"
+#include "image.h"
+#include "pipeline.h"
 #include "swapchain.h"
 #include "vulkan/vulkan.h"
 #include <stdexcept>
@@ -15,13 +16,14 @@
 
 class ForwardRenderingAction {
 
-    VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+    VkPipelineLayout graphicsPipelineLayout = VK_NULL_HANDLE;
     VkPipeline graphicsPipeline = VK_NULL_HANDLE;
     VkExtent2D extent {};
 
 public:
-    void setContext(GraphicsPipeline& graphicsPipeline, const VkExtent2D extent, const size_t selectedPipelineIndex);
-    void beginRenderPass(VkCommandBuffer& commandBuffer, VkRenderPass& renderPass,
+    void setContext(Pipeline& pipeline, const VkExtent2D extent, const size_t selectedPipelineIndex);
+    void beginRenderPass(VkCommandBuffer& cmdGraphics,
+        VkRenderPass& renderPass,
         const std::vector<VkFramebuffer>& framebuffers,
         const uint32_t currentFrame);
     void recordCommandBuffer(VkCommandBuffer& commandBuffer,

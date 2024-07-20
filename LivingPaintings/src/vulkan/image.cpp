@@ -9,15 +9,20 @@
 
 using namespace std;
 
-void Image::Details::createImageInfo(const char* filePath, uint32_t width, uint32_t height,
+void Image::Details::createImageInfo(const char* filePath, uint16_t width,
+    uint16_t height, uint8_t channels, VkImageLayout imageLayout,
     VkImageViewType viewType, VkFormat format,
+    int stageUsage,
     VkImageTiling tiling)
 {
     this->filePath = filePath;
     this->width = width;
     this->height = height;
+    this->layout = imageLayout;
+    this->channels = channels;
     this->viewType = viewType;
     this->format = format;
+    this->stageUsage = stageUsage;
     this->tiling = tiling;
 }
 
@@ -27,7 +32,14 @@ void Image::create(Device& _device, VkCommandPool& commandPool, VkBufferUsageFla
     this->physicalDevice = _device.getPhysicalDevice();
     this->commandPool = commandPool;
 
-    load(imageDetails.filePath);
+    bool imageFound = imageDetails.filePath != "";
+    if (imageFound) {
+        load(imageDetails.filePath);
+    } else {
+        VkDeviceSize bufferSize = imageDetails.width * imageDetails.height * imageDetails.channels;
+        stbi_uc* emptyBuffer = (stbi_uc*)calloc(1, bufferSize);
+        stagingBuffer.create(device, physicalDevice, emptyBuffer, bufferSize);
+    }
 
     VkImageCreateInfo imageInfo {};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -75,11 +87,13 @@ void Image::create(Device& _device, VkCommandPool& commandPool, VkBufferUsageFla
     vkBindImageMemory(device, textureImage, imageMemory, 0);
 
     Queue& graphicsQueue = _device.getGraphicsQueue();
-    const uint32_t width = static_cast<uint32_t>(imageDetails.width);
-    const uint32_t height = static_cast<uint32_t>(imageDetails.height);
-    transitionLayout(graphicsQueue, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    copyBufferToImage(graphicsQueue, width, height);
-    transitionLayout(graphicsQueue, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    transitionLayout(graphicsQueue, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+    copyBufferToImage(graphicsQueue);
+
+    transitionLayout(graphicsQueue, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        imageDetails.layout, imageDetails.stageUsage);
 
     stagingBuffer.destroy();
 
@@ -90,8 +104,7 @@ void Image::load(const char* filePath)
 {
     int width, height, channels;
     stbi_uc* pixels = stbi_load(filePath, &width, &height, &channels, STBI_rgb_alpha);
-
-    VkDeviceSize imageSize = width * height * 4;
+    VkDeviceSize imageSize = imageDetails.width * imageDetails.height * imageDetails.channels;
 
     if (!pixels) {
         throw runtime_error("Failed to load texture image.");
@@ -101,10 +114,11 @@ void Image::load(const char* filePath)
     stbi_image_free(pixels);
 }
 
-void Image::transitionLayout(Queue& queue, VkImageLayout oldLayout, VkImageLayout newLayout)
+void Image::transitionLayout(Queue& queue, VkImageLayout oldLayout,
+    VkImageLayout newLayout,
+    VkPipelineStageFlags destinationStage)
 {
     VkPipelineStageFlags sourceStage;
-    VkPipelineStageFlags destinationStage;
     VkCommandBuffer cmd = CommandBuffer::beginSingleTimeCommands(device, commandPool);
 
     VkImageMemoryBarrier barrier {};
@@ -124,13 +138,16 @@ void Image::transitionLayout(Queue& queue, VkImageLayout oldLayout, VkImageLayou
         barrier.srcAccessMask = 0;
         barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     } else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
         sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    } else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_GENERAL) {
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+
+        sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     } else {
         throw invalid_argument("Unsupported layout transition.");
     }
@@ -140,7 +157,7 @@ void Image::transitionLayout(Queue& queue, VkImageLayout oldLayout, VkImageLayou
     CommandBuffer::endSingleTimeCommands(device, commandPool, cmd, queue);
 }
 
-void Image::copyBufferToImage(Queue& queue, uint32_t width, uint32_t height)
+void Image::copyBufferToImage(Queue& queue)
 {
     VkCommandBuffer cmd = CommandBuffer::beginSingleTimeCommands(device, commandPool);
 
@@ -155,7 +172,7 @@ void Image::copyBufferToImage(Queue& queue, uint32_t width, uint32_t height)
     region.imageSubresource.layerCount = 1;
 
     region.imageOffset = { 0, 0, 0 };
-    region.imageExtent = { width, height, 1 };
+    region.imageExtent = { imageDetails.width, imageDetails.height, 1 };
 
     const VkBuffer buffer = stagingBuffer.get();
     vkCmdCopyBufferToImage(cmd, buffer, textureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
@@ -196,4 +213,14 @@ VkImage& Image::get()
 VkImageView& Image::getView()
 {
     return imageView;
+}
+
+StagingBuffer& Image::getBuffer()
+{
+    return stagingBuffer;
+}
+
+Image::Details& Image::getDetails()
+{
+    return imageDetails;
 }

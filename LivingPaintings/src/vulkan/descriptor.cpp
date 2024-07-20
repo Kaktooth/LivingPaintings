@@ -7,8 +7,9 @@
 using namespace std;
 
 void Descriptor::create(VkDevice& device,
-    vector<UniformBuffer>& uniformBuffers,
-    Image& textureImage, Sampler& textureSampler)
+    std::vector<UniformBuffer>& uniformBuffers,
+    Image& paintingTexture, Image& heightMapTexture,
+    Sampler& textureSampler)
 {
     VkDescriptorSetLayoutBinding uniformLayoutBinding {};
     uniformLayoutBinding.binding = 0;
@@ -22,9 +23,27 @@ void Descriptor::create(VkDevice& device,
     samplerLayoutBinding.descriptorCount = 1;
     samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     samplerLayoutBinding.pImmutableSamplers = nullptr;
-    samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    samplerLayoutBinding.stageFlags = paintingTexture.getDetails().stageUsage;
 
-    vector<VkDescriptorSetLayoutBinding> bindings = { uniformLayoutBinding, samplerLayoutBinding };
+    VkDescriptorSetLayoutBinding bumpTextureBinding {};
+    bumpTextureBinding.binding = 2;
+    bumpTextureBinding.descriptorCount = 1;
+    bumpTextureBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    bumpTextureBinding.pImmutableSamplers = nullptr;
+    bumpTextureBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    VkDescriptorSetLayoutBinding bumpTextureSamplerBinding {};
+    bumpTextureSamplerBinding.binding = 3;
+    bumpTextureSamplerBinding.descriptorCount = 1;
+    bumpTextureSamplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    bumpTextureSamplerBinding.pImmutableSamplers = nullptr;
+    bumpTextureSamplerBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    const vector<VkDescriptorSetLayoutBinding> bindings = {
+        uniformLayoutBinding, samplerLayoutBinding, bumpTextureBinding,
+        bumpTextureSamplerBinding
+    };
+
     VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo {};
     descriptorSetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptorSetLayoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
@@ -39,6 +58,10 @@ void Descriptor::create(VkDevice& device,
     poolSizes[0].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT);
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     poolSizes[1].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT) * 2;
+    poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    poolSizes[2].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT) * 2;
+    poolSizes[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    poolSizes[3].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT) * 2;
 
     VkDescriptorPoolCreateInfo poolInfo {};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -69,10 +92,19 @@ void Descriptor::create(VkDevice& device,
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(Data::GraphicsObject::UniformBufferObject);
 
-        VkDescriptorImageInfo descriptorImageinfo {};
-        descriptorImageinfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        descriptorImageinfo.imageView = textureImage.getView();
-        descriptorImageinfo.sampler = textureSampler.get();
+        VkDescriptorImageInfo paintingTextureinfo {};
+        paintingTextureinfo.imageLayout = paintingTexture.getDetails().layout;
+        paintingTextureinfo.imageView = paintingTexture.getView();
+        paintingTextureinfo.sampler = textureSampler.get();
+
+        VkDescriptorImageInfo bumpTextureInfo {};
+        bumpTextureInfo.imageLayout = heightMapTexture.getDetails().layout;
+        bumpTextureInfo.imageView = heightMapTexture.getView();
+
+        VkDescriptorImageInfo bumpTextureSamplerInfo {};
+        bumpTextureSamplerInfo.imageLayout = heightMapTexture.getDetails().layout;
+        bumpTextureSamplerInfo.imageView = heightMapTexture.getView();
+        bumpTextureSamplerInfo.sampler = textureSampler.get();
 
         vector<VkWriteDescriptorSet> writeDescriptorSets(bindings.size());
         writeDescriptorSets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -89,7 +121,23 @@ void Descriptor::create(VkDevice& device,
         writeDescriptorSets[1].dstArrayElement = 0;
         writeDescriptorSets[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         writeDescriptorSets[1].descriptorCount = 1;
-        writeDescriptorSets[1].pImageInfo = &descriptorImageinfo;
+        writeDescriptorSets[1].pImageInfo = &paintingTextureinfo;
+
+        writeDescriptorSets[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writeDescriptorSets[2].dstSet = sets[i];
+        writeDescriptorSets[2].dstBinding = 2;
+        writeDescriptorSets[2].dstArrayElement = 0;
+        writeDescriptorSets[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        writeDescriptorSets[2].descriptorCount = 1;
+        writeDescriptorSets[2].pImageInfo = &bumpTextureInfo;
+
+        writeDescriptorSets[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writeDescriptorSets[3].dstSet = sets[i];
+        writeDescriptorSets[3].dstBinding = 3;
+        writeDescriptorSets[3].dstArrayElement = 0;
+        writeDescriptorSets[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        writeDescriptorSets[3].descriptorCount = 1;
+        writeDescriptorSets[3].pImageInfo = &bumpTextureSamplerInfo;
 
         vkUpdateDescriptorSets(device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
     }

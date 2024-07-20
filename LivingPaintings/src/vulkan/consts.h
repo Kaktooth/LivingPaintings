@@ -26,6 +26,8 @@ struct Constants {
 
     static const uint8_t MAX_FRAMES_IN_FLIGHT = 3;
 
-    static const VkFormat IMAGE_FORMAT = VK_FORMAT_R8G8B8A8_SRGB;
+    static const VkFormat IMAGE_TEXTURE_FORMAT = VK_FORMAT_R8G8B8A8_SRGB;
+    static const VkFormat BUMP_TEXTURE_FORMAT = VK_FORMAT_R8_UNORM;
+
     static const VkColorSpaceKHR COLOR_SPACE = VK_COLOR_SPACE_HDR10_HLG_EXT;
 };

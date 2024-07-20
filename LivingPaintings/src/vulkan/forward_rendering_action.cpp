@@ -6,19 +6,19 @@
 
 using namespace std;
 
-const VkClearValue clearColor = { { { 1.0f, 1.0f, 1.0f, 1.0f } } };
+const VkClearValue clearColor = { { { 0.0f, 0.0f, 0.0f, 0.0f } } };
 
-void ForwardRenderingAction::setContext(GraphicsPipeline& graphicsPipeline,
+void ForwardRenderingAction::setContext(Pipeline& pipeline,
     const VkExtent2D extent,
     const size_t selectedPipelineIndex)
 {
-    this->pipelineLayout = graphicsPipeline.getLayout(selectedPipelineIndex);
-    this->graphicsPipeline = graphicsPipeline.get(selectedPipelineIndex);
+    this->graphicsPipelineLayout = pipeline.getLayout(selectedPipelineIndex);
+    this->graphicsPipeline = pipeline.get(selectedPipelineIndex);
     this->extent = extent;
 }
 
-void ForwardRenderingAction::beginRenderPass(VkCommandBuffer& commandBuffer,
-    VkRenderPass& renderPass,
+void ForwardRenderingAction::beginRenderPass(
+    VkCommandBuffer& cmdGraphics, VkRenderPass& renderPass,
     const std::vector<VkFramebuffer>& framebuffers,
     const uint32_t currentFrame)
 {
@@ -32,9 +32,11 @@ void ForwardRenderingAction::beginRenderPass(VkCommandBuffer& commandBuffer,
     renderPassBegin.clearValueCount = 1;
     renderPassBegin.pClearValues = &clearColor;
 
-    vkCmdBeginRenderPass(commandBuffer, &renderPassBegin, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(cmdGraphics, &renderPassBegin,
+        VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+    vkCmdBindPipeline(cmdGraphics, VK_PIPELINE_BIND_POINT_GRAPHICS,
+        graphicsPipeline);
 }
 
 void ForwardRenderingAction::recordCommandBuffer(VkCommandBuffer& commandBuffer,
@@ -43,7 +45,6 @@ void ForwardRenderingAction::recordCommandBuffer(VkCommandBuffer& commandBuffer,
     IndexBuffer& indexBuffer,
     Data::GraphicsObject& graphicsObject)
 {
-
     const VkBuffer vertexBuffers[] = { vertexBuffer.get() };
     const VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
@@ -64,7 +65,8 @@ void ForwardRenderingAction::recordCommandBuffer(VkCommandBuffer& commandBuffer,
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-        pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+        graphicsPipelineLayout, 0, 1, &descriptorSet, 0,
+        nullptr);
 
     vkCmdDrawIndexed(commandBuffer,
         static_cast<uint32_t>(graphicsObject.indicies.size()),

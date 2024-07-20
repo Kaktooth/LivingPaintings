@@ -18,22 +18,30 @@ class Image {
     VkCommandPool commandPool = VK_NULL_HANDLE;
 
     void load(const char* filePath);
-    void transitionLayout(Queue& queue, VkImageLayout oldLayout, VkImageLayout newLayout);
-    void copyBufferToImage(Queue& queue, uint32_t width, uint32_t height);
+    void transitionLayout(Queue& queue, VkImageLayout oldLayout,
+        VkImageLayout newLayout,
+        VkPipelineStageFlags destinationStage);
+    void copyBufferToImage(Queue& queue);
     void createImageView(VkImageViewType viewType, VkFormat format);
 
 public:
+    const VkClearColorValue clearColor = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+
     struct Details {
         const char* filePath;
-        int width;
-        int height;
+        uint16_t width;
+        uint16_t height;
+        int8_t channels;
+        VkImageLayout layout;
         VkFormat format;
+        int stageUsage; // see VkShaderStageFlagBits, using int to combine bits
         VkImageTiling tiling;
         VkImageViewType viewType;
 
-        void createImageInfo(const char* filePath,
-            uint32_t width, uint32_t height,
+        void createImageInfo(const char* filePath, uint16_t width,
+            uint16_t height, uint8_t channels, VkImageLayout imageLayout,
             VkImageViewType viewType, VkFormat format,
+            int stageUsage,
             VkImageTiling tiling);
     } imageDetails;
 
@@ -43,4 +51,6 @@ public:
     void destroy();
     VkImage& get();
     VkImageView& getView();
+    StagingBuffer& getBuffer();
+    Details& getDetails();
 };

@@ -1,0 +1,122 @@
+#version 460
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(binding = 1) uniform sampler2D texSampler;
+layout(binding = 2, r8) uniform writeonly image2D heightMapTexture;
+
+
+const float gamma = 2.2f;
+const vec3 luma = vec3(0.2627f, 0.678f, 0.0593f);
+const vec3 ntsc = vec3(0.299f, 0.587f, 0.114f);
+
+const mat3 kernel = mat3(
+//  top Sobel
+	vec3( -1.0f,-2.0f, -1.0f), 
+	vec3( 0.0f, 0.0f, 0.0f), 
+	vec3( 1.0f, 2.0f, 1.0f)
+
+//  top Sobel–Feldman operator
+//	vec3( -3.0f, -10.0f, -3.0f), 
+//	vec3( 0.0f, 0.0f, 0.0f), 
+//	vec3( 3.0f, 10.0f, 3.0f)
+
+//  top Sobel–Feldman operator
+//	vec3( -47.0f, -162.0f, -47.0f), 
+//	vec3( 0.0f, 0.0f, 0.0f), 
+//	vec3( 47.0f, 162.0f, 47.0f)
+
+// box blur
+//	vec3( 0.111f, 0.111f, 0.111f), 
+//	vec3( 0.111f, 0.111f, 0.111f), 
+//	vec3( 0.111f, 0.111f, 0.111f)
+
+//  Gausian blur
+//	vec3( 0.0625f, 0.125f, 0.0625f), 
+//	vec3( 0.125f, 0.25f, 0.125f), 
+//	vec3( 0.0625f, 0.125f, 0.0625f)
+
+//	vec3( 0.0f, 0.0f, 0.0f), 
+//	vec3( 0.0f, 1.0f, 0.0f), 
+//	vec3( 0.0f, 0.0f, 0.0f)
+
+//	Lagrange operator
+//	vec3( 0.0f, 1.0f, 0.0f), 
+//	vec3( 1.0f, -4.0f, 1.0f), 
+//	vec3( 0.0f, 1.0f, 0.0f)
+
+//  Emboss
+//	vec3( -2.0f, -1.0f, 0.0f), 
+//	vec3( -1.0f, 1.0f, 1.0f), 
+//	vec3( 0.0f, 1.0f, 2.0f)
+);
+
+const mat3 kernel2 = mat3(
+//  right Sobel
+	vec3( -1.0f, 0.0f, 1.0f), 
+	vec3( -2.0f, 0.0f, 2.0f), 
+	vec3( -1.0f, 0.0f, 1.0f)
+
+//  right Sobel–Feldman operator
+//	vec3( -3.0f, 0.0f, 3.0f), 
+//	vec3( -10.0f, 0.0f, 10.0f), 
+//	vec3( -3.0f, 0.0f, 3.0f)
+
+//  right Sobel–Feldman operator
+//	vec3( -47.0f, 0.0f, 47.0f), 
+//	vec3( -162.0f, 0.0f, 162.0f), 
+//	vec3( -47.0f, 0.0f, 47.0f)
+);
+
+vec3 convolve(float dilation, vec2 res, vec2 texCoord) {
+
+	// Steps for all neighbours (horizontal, vertical, diagonal and inverted diagonal)
+	vec2 stp = vec2(1. / res.x, 1. / res.y);
+	vec2 stpHor = vec2(0.0f, stp.y * dilation);
+	vec2 stpVert = vec2(stp.x * dilation, 0.0f);
+  	vec2 stpDiag = vec2(stp.x * dilation, stp.y * dilation);
+	vec2 stpDiagInv = vec2(stp.x * dilation, -stp.y * dilation);
+
+	// Martix specified by rows and columns. All steps is calculated from the middle element (r1c1).
+	// Calculating dot product with luminance weight to get grayscale image.
+	
+	float r0c0 = dot(texture(texSampler, texCoord - stpDiagInv).rgb, luma);
+	float r0c1 = dot(texture(texSampler, texCoord + stpHor).rgb, luma);
+	float r0c2 = dot(texture(texSampler, texCoord + stpDiag).rgb, luma);
+	float r1c0 = dot(texture(texSampler, texCoord - stpVert).rgb, luma);
+	float r1c1 = dot(texture(texSampler, texCoord).rgb, luma);
+	float r1c2 = dot(texture(texSampler, texCoord + stpVert).rgb, luma);
+	float r2c0 = dot(texture(texSampler, texCoord - stpDiag).rgb, luma);
+	float r2c1 = dot(texture(texSampler, texCoord - stpHor).rgb, luma);
+	float r2c2 = dot(texture(texSampler, texCoord + stpDiagInv).rgb, luma);
+
+	vec3 texColor = vec3(r0c0 * kernel[0].x + r0c1 * kernel[0].y + r0c2 * kernel[0].z 
+	+ r1c0 * kernel[1].x + r1c1 * kernel[1].y + r1c2 * kernel[1].z
+	+ r2c0 * kernel[2].x + r2c1 * kernel[2].y + r2c2 * kernel[2].z);
+
+	texColor = texColor + vec3(r0c0 * kernel2[0].x + r0c1 * kernel2[0].y + r0c2 * kernel2[0].z 
+	+ r1c0 * kernel2[1].x + r1c1 * kernel2[1].y + r1c2 * kernel2[1].z
+	+ r2c0 * kernel2[2].x + r2c1 * kernel2[2].y + r2c2 * kernel2[2].z);
+
+	return texColor;
+}
+
+void main() {
+
+//* Height map creation
+//	Calculating matrix convolution with 0 dilation (specified by 1.0f) 
+//	and 1 dilation (specified by 2.0f). Finding difference between the two.
+	vec2 res = textureSize(texSampler, 1);
+	ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
+	vec4 relativeCoord = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	relativeCoord.xy = vec2(float(texelCoord.x) / gl_NumWorkGroups.x,
+	float(texelCoord.y) / gl_NumWorkGroups.y);
+
+	vec3 edges = convolve(0.0f, res, relativeCoord.xy);
+	vec3 dilatedEdges = convolve(1.0f, res, relativeCoord.xy);
+	vec3 edgeDifference = edges - dilatedEdges; 
+
+	edgeDifference = pow(edgeDifference, vec3(1.0f / gamma));
+	float grayscaleColor = ntsc.x * edgeDifference.x + ntsc.y * edgeDifference.g+ntsc.z * edgeDifference.b; 
+	vec4 heightMap = vec4(grayscaleColor, 0.0f, 0.0f, 1.0);
+	imageStore(heightMapTexture, texelCoord, heightMap);
+}

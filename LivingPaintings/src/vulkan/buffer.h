@@ -20,6 +20,7 @@ class Buffer {
 
     VkBuffer buffer = VK_NULL_HANDLE;
     VkDeviceMemory deviceMemory = VK_NULL_HANDLE;
+    VkDeviceSize memorySize;
 
 protected:
     VkDevice device = VK_NULL_HANDLE;
@@ -35,6 +36,7 @@ public:
     void destroy();
     VkBuffer& get();
     VkDeviceMemory& getDeviceMemory();
+    VkDeviceSize& getMemorySize();
 };
 
 class StagingBuffer : public Buffer {

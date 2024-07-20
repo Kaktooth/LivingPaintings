@@ -16,9 +16,12 @@ void Swapchain::setDeviceContext(Device& _device, Surface& _surface)
 
 void Swapchain::create()
 {
-    const uint32_t indicies[] = { queueFamilyIndicies.graphicsFamily.value(),
+    const uint32_t indicies[] = {
+        queueFamilyIndicies.graphicsFamily.value(),
         queueFamilyIndicies.presentationFamily.value(),
-        queueFamilyIndicies.transferFamily.value() };
+        queueFamilyIndicies.transferFamily.value(),
+        queueFamilyIndicies.computeFamily.value()
+    };
 
     const VkSurfaceFormatKHR surfaceFormat = surface.chooseSurfaceFormat();
     const VkPresentModeKHR presentMode = surface.choosePresentationMode();
@@ -39,7 +42,9 @@ void Swapchain::create()
     swapchainInfo.imageArrayLayers = 1;
     swapchainInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    if (queueFamilyIndicies.graphicsFamily != queueFamilyIndicies.presentationFamily || queueFamilyIndicies.presentationFamily != queueFamilyIndicies.transferFamily) {
+    if (queueFamilyIndicies.graphicsFamily != queueFamilyIndicies.presentationFamily
+        || queueFamilyIndicies.presentationFamily != queueFamilyIndicies.transferFamily
+        || queueFamilyIndicies.graphicsFamily != queueFamilyIndicies.computeFamily) {
         swapchainInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         swapchainInfo.queueFamilyIndexCount = 3;
         swapchainInfo.pQueueFamilyIndices = indicies;

@@ -19,5 +19,6 @@ public:
         const std::vector<VkPipelineStageFlags> waitStages,
         const size_t currentFrame);
     void submit(VkCommandBuffer& commandBuffer);
+    void signal(VkSemaphore& semaphore);
     VkQueue& get();
 };

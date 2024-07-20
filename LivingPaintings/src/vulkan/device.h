@@ -23,6 +23,7 @@ class Device {
     Queue graphicsQueue;
     Queue presentationQueue;
     Queue transferQueue;
+    Queue computeQueue;
     QueueFamily queueFamily;
 
     VkDeviceQueueCreateInfo createQueueCreateInfo(const uint32_t queueFamily, const float queuePriority);
@@ -40,5 +41,6 @@ public:
     Queue& getGraphicsQueue();
     Queue& getPresentationQueue();
     Queue& getTransferQueue();
+    Queue& getComputeQueue();
     QueueFamily& getQueueFamily();
 };

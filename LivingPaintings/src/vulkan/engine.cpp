@@ -21,8 +21,6 @@ void Engine::init()
 {
     initWindow(Constants::WINDOW_WIDTH, Constants::WINDOW_HEIGHT);
 
-    quad.constructQuad();
-
     VkDebugUtilsMessengerCreateInfoEXT debugInfo = debugMessenger.makeDebugMessengerCreateInfo();
     INIT(vulkan.instance, instance.create(debugInfo));
     INIT(vulkan.debugMessenger, debugMessenger.setup(vulkan.instance, debugInfo));
@@ -35,6 +33,8 @@ void Engine::init()
     inFlightFence.create(vulkan.device, true);
     imageAvailable.create(vulkan.device);
     renderFinished.create(vulkan.device);
+    computeIsReady.create(vulkan.device);
+    graphicsIsReady.create(vulkan.device);
 
     swapchain.setDeviceContext(device, surface);
     swapchain.create();
@@ -44,57 +44,83 @@ void Engine::init()
     swapchain.createFramebuffers(vulkan.renderPass);
 
     INIT(vulkan.commandPool, commandPool.create(device));
-    commandBuffer.create(vulkan.device, vulkan.commandPool);
+    graphicsCmds.create(vulkan.device, vulkan.commandPool);
+
+    vkQueueWaitIdle(device.getComputeQueue().get());
+    computeCmds.create(vulkan.device, vulkan.commandPool);
 
     Queue& transferQueue = device.getTransferQueue();
+    quad.constructQuadWithAspectRatio(1920, 1081);
     vertexBuffer.create(vulkan.device, vulkan.physicalDevice,
         vulkan.commandPool, quad.verticies, transferQueue);
     indexBuffer.create(vulkan.device, vulkan.physicalDevice, vulkan.commandPool,
         quad.indicies, transferQueue);
 
     uniformBuffers.resize(Constants::MAX_FRAMES_IN_FLIGHT);
-    const VkDeviceSize size = sizeof(Data::GraphicsObject::UniformBufferObject);
+    const VkDeviceSize uniformSize = sizeof(Data::GraphicsObject::UniformBufferObject);
     for (UniformBuffer& uniformBuffer : uniformBuffers) {
-        uniformBuffer.create(vulkan.device, vulkan.physicalDevice, size);
+        uniformBuffer.create(vulkan.device, vulkan.physicalDevice, uniformSize);
     }
 
     // TEXTURE_FILE_PATH variable is retrieved from Cmake with macros in file config.hpp.in
     const string texturePath = RETRIEVE_STRING(TEXTURE_FILE_PATH);
-    textureImage.imageDetails.createImageInfo(texturePath.c_str(), 1920, 1081,
-        VK_IMAGE_VIEW_TYPE_2D, Constants::IMAGE_FORMAT,
+    paintingTexture.imageDetails.createImageInfo(
+        texturePath.c_str(), 1920, 1081, 4,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D,
+        Constants::IMAGE_TEXTURE_FORMAT,
+        VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
         VK_IMAGE_TILING_OPTIMAL);
-    textureImage.create(device, vulkan.commandPool,
+    paintingTexture.create(device, vulkan.commandPool,
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    heightMapTexture.imageDetails.createImageInfo(
+        "", 1920, 1081, 1, VK_IMAGE_LAYOUT_GENERAL,
+        VK_IMAGE_VIEW_TYPE_2D, Constants::BUMP_TEXTURE_FORMAT,
+        VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
+        VK_IMAGE_TILING_OPTIMAL);
+    heightMapTexture.create(device, vulkan.commandPool,
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     textureSampler.create(vulkan.device, vulkan.physicalDevice);
 
-    descriptor.create(vulkan.device, uniformBuffers, textureImage, textureSampler);
+    descriptor.create(vulkan.device, uniformBuffers, paintingTexture,
+        heightMapTexture, textureSampler);
 
-    graphicsPipeline.create(vulkan.device, vulkan.renderPass, descriptor.getSetLayout(), swapchain.getExtent());
+    pipeline.create(vulkan.device, vulkan.renderPass, descriptor.getSetLayout(), swapchain.getExtent());
 
     gui.init(vulkan.instance, device, vulkan.commandPool, vulkan.renderPass, swapchain, descriptor.getPool(), pWindow);
 }
 
 void Engine::update()
 {
-    // TODO recreate renderPass because imageFormat can also change when switching surface.
 
+    const vector<VkPipelineStageFlags> waitStages = {
+        VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+    };
+    const std::vector<VkPipelineStageFlags> computeWaitStages = {
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
+    };
     const VkExtent2D& extent = swapchain.getExtent();
     std::vector<VkFramebuffer>& framebuffers = swapchain.getFramebuffers();
     Queue& presentationQueue = device.getPresentationQueue();
-    const vector<VkPipelineStageFlags> waitStages = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    Queue& computeQueue = device.getComputeQueue();
+    Image::Details imageDetails = heightMapTexture.getDetails();
+    std::vector<VkSemaphore>& computeReady = computeIsReady.get();
+    std::vector<VkSemaphore>& graphicsReady = graphicsIsReady.get();
 
-    forwardRenderAction.setContext(graphicsPipeline, extent, 0);
+    forwardRenderAction.setContext(pipeline, extent, 0);
 
     while (!glfwWindowShouldClose(pWindow)) {
         glfwPollEvents();
 
         const uint32_t& currentFrame = swapchain.getCurrentFrame();
-        VkCommandBuffer& cmd = commandBuffer.get(currentFrame);
+        VkCommandBuffer& cmdGraphics = graphicsCmds.get(currentFrame);
+        VkCommandBuffer& cmdCompute = computeCmds.get(currentFrame);
         VkSemaphore& currentImageAvailable = imageAvailable.get(currentFrame);
-        const std::vector<VkSemaphore> waitSemaphores = vector { currentImageAvailable };
-        const std::vector<VkSemaphore> signalSemaphores = vector { renderFinished.get(currentFrame) };
+        VkSemaphore& currentRenderFinished = renderFinished.get(currentFrame);
 
         {
             ObjectParams objectParams = gui.getObjectParams();
@@ -108,26 +134,53 @@ void Engine::update()
             uniformBuffers[currentFrame].update(quad.uniform);
         }
 
+        // signal semaphore that graphics is ready
+        device.getComputeQueue().signal(graphicsReady[currentFrame]);
+
         inFlightFence.wait(currentFrame);
         inFlightFence.reset(currentFrame);
 
         swapchain.asquireNextImage(vulkan.renderPass, currentImageAvailable, pWindow);
 
-        commandBuffer.begin(currentFrame);
-        gui.draw(graphicsPipeline.getPipelineHistorySize());
+        {
+            computeCmds.begin(currentFrame);
+            pipeline.bind(cmdCompute, descriptor.getSet(currentFrame));
+            vkCmdDispatch(cmdCompute, imageDetails.width, imageDetails.height, 1);
+            computeCmds.end(currentFrame);
 
-        if (graphicsPipeline.recreateifShadersChanged()) {
-            gui.selectPipelineindex(graphicsPipeline.getPipelineHistorySize() - 1);
+            const std::vector<VkSemaphore> computeWaitSemaphores { graphicsReady[currentFrame] };
+            const std::vector<VkSemaphore> computeSignalSemaphores { computeReady[currentFrame] };
+            computeQueue.submit(cmdCompute, inFlightFence,
+                computeWaitSemaphores, computeSignalSemaphores,
+                computeWaitStages, currentFrame);
         }
-        forwardRenderAction.setContext(graphicsPipeline, extent, gui.getSelectedPipelineIndex());
-        forwardRenderAction.beginRenderPass(cmd, vulkan.renderPass, framebuffers, currentFrame);
-        forwardRenderAction.recordCommandBuffer(cmd, descriptor.getSet(currentFrame),
-            vertexBuffer, indexBuffer, quad);
-        gui.renderDrawData(cmd);
-        forwardRenderAction.endRenderPass(cmd);
-        commandBuffer.end(currentFrame);
 
-        presentationQueue.submit(cmd, inFlightFence, waitSemaphores,
+        inFlightFence.wait(currentFrame);
+        inFlightFence.reset(currentFrame);
+
+        graphicsCmds.begin(currentFrame);
+
+        gui.draw(pipeline.getPipelineHistorySize());
+
+        if (pipeline.recreateifShadersChanged()) {
+            gui.selectPipelineindex(pipeline.getPipelineHistorySize() - 1);
+        }
+
+        forwardRenderAction.setContext(pipeline, extent,
+            gui.getSelectedPipelineIndex());
+        forwardRenderAction.beginRenderPass(cmdGraphics, vulkan.renderPass,
+            framebuffers, currentFrame);
+
+        forwardRenderAction.recordCommandBuffer(
+            cmdGraphics, descriptor.getSet(currentFrame), vertexBuffer,
+            indexBuffer, quad);
+        gui.renderDrawData(cmdGraphics);
+        forwardRenderAction.endRenderPass(cmdGraphics);
+        graphicsCmds.end(currentFrame);
+
+        const std::vector<VkSemaphore> waitSemaphores { computeReady[currentFrame], currentImageAvailable };
+        const std::vector<VkSemaphore> signalSemaphores { graphicsReady[currentFrame], currentRenderFinished };
+        presentationQueue.submit(cmdGraphics, inFlightFence, waitSemaphores,
             signalSemaphores, waitStages, currentFrame);
         swapchain.presentImage(vulkan.renderPass, presentationQueue.get(),
             signalSemaphores, pWindow);
@@ -143,11 +196,14 @@ void Engine::cleanup()
     inFlightFence.destroy();
     imageAvailable.destroy();
     renderFinished.destroy();
+    computeIsReady.destroy();
+    graphicsIsReady.destroy();
 
-    graphicsPipeline.destroy();
+    pipeline.destroy();
     descriptor.destroy(vulkan.device);
     textureSampler.destroy();
-    textureImage.destroy();
+    paintingTexture.destroy();
+    heightMapTexture.destroy();
 
     for (UniformBuffer& uniformBuffer : uniformBuffers) {
         uniformBuffer.destroy();

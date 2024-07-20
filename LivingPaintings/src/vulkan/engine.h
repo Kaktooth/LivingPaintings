@@ -12,10 +12,10 @@
 #include "device.h"
 #include "fence.h"
 #include "forward_rendering_action.h"
-#include "graphics_pipeline.h"
 #include "gui.h"
 #include "image.h"
 #include "instance.h"
+#include "pipeline.h"
 #include "queue_family.h"
 #include "render_pass.h"
 #include "sampler.h"
@@ -51,20 +51,24 @@ class Engine {
     Device device;
     Surface surface;
     Swapchain swapchain;
-    GraphicsPipeline graphicsPipeline;
+    Pipeline pipeline;
     RenderPass renderPass;
     CommandPool commandPool;
-    CommandBuffer commandBuffer;
+    CommandBuffer graphicsCmds;
+    CommandBuffer computeCmds;
     ForwardRenderingAction forwardRenderAction;
     Semaphore imageAvailable;
     Semaphore renderFinished;
+    Semaphore computeIsReady;
+    Semaphore graphicsIsReady;
     Fence inFlightFence;
     VertexBuffer vertexBuffer;
     IndexBuffer indexBuffer;
     Descriptor descriptor;
     Data::GraphicsObject quad;
     std::vector<UniformBuffer> uniformBuffers;
-    Image textureImage;
+    Image paintingTexture;
+    Image heightMapTexture;
     Sampler textureSampler;
     Gui gui;
 

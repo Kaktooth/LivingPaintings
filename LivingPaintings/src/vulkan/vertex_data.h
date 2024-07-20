@@ -33,7 +33,6 @@ struct GraphicsObject {
 
     struct Vertex {
         glm::vec2 pos;
-        glm::vec3 color;
         glm::vec2 texCoord;
 
         static VkVertexInputBindingDescription getBindingDescription();
@@ -45,5 +44,6 @@ struct GraphicsObject {
     std::vector<uint16_t> indicies;
 
     void constructQuad();
+    void constructQuadWithAspectRatio(uint16_t width, uint16_t height);
 };
 } // namespace Data

@@ -18,7 +18,8 @@ VkDevice& Device::create(VkInstance& instance, Surface& surface)
     set<uint32_t> queueFamilies = {
         queueFamily.indicies.graphicsFamily.value(),
         queueFamily.indicies.presentationFamily.value(),
-        queueFamily.indicies.transferFamily.value()
+        queueFamily.indicies.transferFamily.value(),
+        queueFamily.indicies.computeFamily.value()
     };
 
     for (const uint32_t queueFamily : queueFamilies) {
@@ -52,6 +53,8 @@ VkDevice& Device::create(VkInstance& instance, Surface& surface)
         &presentationQueue.get());
     vkGetDeviceQueue(device, queueFamily.indicies.transferFamily.value(), 0,
         &transferQueue.get());
+    vkGetDeviceQueue(device, queueFamily.indicies.computeFamily.value(), 0,
+        &computeQueue.get());
 
     return device;
 }
@@ -102,7 +105,8 @@ int Device::getDeviceScore(VkPhysicalDevice& physicalDevice, Surface& surface)
 
     bool extensionsSupported = checkDeviceExtensionSupport(physicalDevice);
     bool supportedSurfaceCapabilities = !surface.details.formats.empty() && !surface.details.presentationModes.empty();
-    if (!(deviceFeatures.geometryShader || queueFamily.indicies.isAvailable() || supportedSurfaceCapabilities || extensionsSupported)) {
+    if (!(deviceFeatures.geometryShader || queueFamily.indicies.isAvailable()
+            || supportedSurfaceCapabilities || extensionsSupported)) {
         return 0;
     }
 
@@ -179,6 +183,11 @@ Queue& Device::getPresentationQueue()
 Queue& Device::getTransferQueue()
 {
     return transferQueue;
+}
+
+Queue& Device::getComputeQueue()
+{
+    return computeQueue;
 }
 
 QueueFamily& Device::getQueueFamily()

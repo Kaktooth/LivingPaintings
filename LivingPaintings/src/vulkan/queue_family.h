@@ -13,6 +13,7 @@ struct QueueFamily {
         std::optional<uint32_t> graphicsFamily;
         std::optional<uint32_t> presentationFamily;
         std::optional<uint32_t> transferFamily;
+        std::optional<uint32_t> computeFamily;
 
         bool isAvailable();
     } indicies;

@@ -12,6 +12,7 @@ void Buffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
     VkMemoryPropertyFlags memoryPropertyFlags)
 {
     this->device = device;
+    this->memorySize = size;
 
     VkBufferCreateInfo bufferInfo {};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -79,14 +80,18 @@ VkDeviceMemory& Buffer::getDeviceMemory()
     return deviceMemory;
 }
 
-// TODO create stagebuffer and use templates to use different param for memcpy
+VkDeviceSize& Buffer::getMemorySize()
+{
+    return memorySize;
+}
+
 void StagingBuffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
     const stbi_uc* pixels, VkDeviceSize& size)
 {
     this->device = device;
 
-    Buffer::create(device, physicalDevice, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_SHARING_MODE_EXCLUSIVE,
+    Buffer::create(device, physicalDevice, size,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_SHARING_MODE_EXCLUSIVE,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     void* data;
@@ -131,8 +136,7 @@ void IndexBuffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
 
     const unsigned long long size = sizeof(indicies[0]) * indicies.size();
     stagingBuffer.create(device, physicalDevice, size,
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_SHARING_MODE_EXCLUSIVE,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_SHARING_MODE_EXCLUSIVE,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     void* data;

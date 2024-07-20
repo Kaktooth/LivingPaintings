@@ -40,6 +40,17 @@ void Queue::submit(VkCommandBuffer& commandBuffer)
     vkQueueWaitIdle(queue);
 }
 
+void Queue::signal(VkSemaphore& semaphore)
+{
+    VkSubmitInfo submitInfo {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = &semaphore;
+
+    vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(queue);
+}
+
 VkQueue& Queue::get()
 {
     return queue;

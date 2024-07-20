@@ -17,7 +17,9 @@ class Descriptor {
     std::vector<VkDescriptorSet> sets;
 
 public:
-    void create(VkDevice& device, std::vector<UniformBuffer>& uniformBuffers, Image& textureImage, Sampler& textureSampler);
+    void create(VkDevice& device, std::vector<UniformBuffer>& uniformBuffers,
+        Image& paintingTexture, Image& heightMapTexture,
+        Sampler& textureSampler);
     void destroy(VkDevice& device);
     VkDescriptorSetLayout& getSetLayout();
     VkDescriptorPool& getPool();

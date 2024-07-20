@@ -6,13 +6,15 @@
 #include "shader_manager.h"
 #include "vertex_data.h"
 #include <vector>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.h>
 
-class GraphicsPipeline {
+class Pipeline {
 
     ShaderManager shaderManager;
     std::vector<VkPipelineLayout> layouts;
     std::vector<VkPipeline> graphicsPipelines;
+    std::vector<VkPipeline> computePipelines;
+    VkPipelineLayout computePipelineLayout;
     VkDevice device = VK_NULL_HANDLE;
     VkRenderPass renderPass = VK_NULL_HANDLE;
     VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
@@ -24,6 +26,7 @@ public:
         const VkExtent2D extent);
     void destroy();
     bool recreateifShadersChanged();
+    void bind(VkCommandBuffer& cmdCompute, VkDescriptorSet& computeDescriptorSet);
     VkPipelineLayout& getLastLayout();
     VkPipeline& getLast();
     VkPipelineLayout& getLayout(const size_t index);
