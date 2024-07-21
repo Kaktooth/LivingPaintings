@@ -15,8 +15,8 @@ const vec3 luma = vec3(0.2627f, 0.678f, 0.0593f);
 // scale factor that is used to vary the range of the height values
 const float heightRange = 1.5f;
 
-const float surfaceColorModifier = 0.45f;
-const vec3 colorPallete [2] = { vec3(0.05f, 0.052f, 0.074f), vec3(0.0047f, 0.0094f, 0.026f) };
+const float surfaceColorModifier = 0.15f;
+const vec3 colorPallete [2] = { vec3(0.06f, 0.052f, 0.074f), vec3(0.0047f, 0.0094f, 0.026f) };
 
 void main() {
 

@@ -103,13 +103,11 @@ vec3 convolve(float dilation, vec2 res, vec2 texCoord) {
 void main() {
 
 //* Height map creation
-//	Calculating matrix convolution with 0 dilation (specified by 1.0f) 
-//	and 1 dilation (specified by 2.0f). Finding difference between the two.
+//	Calculating matrix convolution with 0 dilation and 1 dilation. Creating height map from finding difference between the two calculated colors.
 	vec2 res = textureSize(texSampler, 1);
 	ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
 	vec4 relativeCoord = vec4(0.0f, 0.0f, 0.0f, 1.0f);
-	relativeCoord.xy = vec2(float(texelCoord.x) / gl_NumWorkGroups.x,
-	float(texelCoord.y) / gl_NumWorkGroups.y);
+	relativeCoord.xy = vec2(float(texelCoord.x) / gl_NumWorkGroups.x, float(texelCoord.y) / gl_NumWorkGroups.y);
 
 	vec3 edges = convolve(0.0f, res, relativeCoord.xy);
 	vec3 dilatedEdges = convolve(1.0f, res, relativeCoord.xy);
