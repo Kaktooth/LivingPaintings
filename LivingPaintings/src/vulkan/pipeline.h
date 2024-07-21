@@ -14,7 +14,7 @@ class Pipeline {
     std::vector<VkPipelineLayout> layouts;
     std::vector<VkPipeline> graphicsPipelines;
     std::vector<VkPipeline> computePipelines;
-    VkPipelineLayout computePipelineLayout;
+    std::vector<VkPipelineLayout> computePipelineLayouts;
     VkDevice device = VK_NULL_HANDLE;
     VkRenderPass renderPass = VK_NULL_HANDLE;
     VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;

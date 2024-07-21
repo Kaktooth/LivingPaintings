@@ -33,8 +33,6 @@ void Engine::init()
     inFlightFence.create(vulkan.device, true);
     imageAvailable.create(vulkan.device);
     renderFinished.create(vulkan.device);
-    computeIsReady.create(vulkan.device);
-    graphicsIsReady.create(vulkan.device);
 
     swapchain.setDeviceContext(device, surface);
     swapchain.create();
@@ -95,7 +93,6 @@ void Engine::init()
 
 void Engine::update()
 {
-
     const vector<VkPipelineStageFlags> waitStages = {
         VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
@@ -103,24 +100,41 @@ void Engine::update()
     const std::vector<VkPipelineStageFlags> computeWaitStages = {
         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
     };
+    const std::vector<VkSemaphore> computeWaitSemaphores {};
+    const std::vector<VkSemaphore> computeSignalSemaphores {};
     const VkExtent2D& extent = swapchain.getExtent();
+
     std::vector<VkFramebuffer>& framebuffers = swapchain.getFramebuffers();
     Queue& presentationQueue = device.getPresentationQueue();
     Queue& computeQueue = device.getComputeQueue();
     Image::Details imageDetails = heightMapTexture.getDetails();
-    std::vector<VkSemaphore>& computeReady = computeIsReady.get();
-    std::vector<VkSemaphore>& graphicsReady = graphicsIsReady.get();
 
     forwardRenderAction.setContext(pipeline, extent, 0);
+
+    // run compute only once for a frame
+    for (int currentFrame = 0; currentFrame < Constants::MAX_FRAMES_IN_FLIGHT; currentFrame++) {
+        VkCommandBuffer& cmdCompute = computeCmds.get(currentFrame);
+
+        computeCmds.begin(currentFrame);
+        pipeline.bind(cmdCompute, descriptor.getSet(currentFrame));
+        vkCmdDispatch(cmdCompute, imageDetails.width / 16,
+            imageDetails.height / 16, 1);
+        computeCmds.end(currentFrame);
+
+        computeQueue.submit(cmdCompute, inFlightFence, computeWaitSemaphores,
+            computeSignalSemaphores, computeWaitStages,
+            currentFrame);
+    }
 
     while (!glfwWindowShouldClose(pWindow)) {
         glfwPollEvents();
 
         const uint32_t& currentFrame = swapchain.getCurrentFrame();
         VkCommandBuffer& cmdGraphics = graphicsCmds.get(currentFrame);
-        VkCommandBuffer& cmdCompute = computeCmds.get(currentFrame);
         VkSemaphore& currentImageAvailable = imageAvailable.get(currentFrame);
         VkSemaphore& currentRenderFinished = renderFinished.get(currentFrame);
+        const std::vector<VkSemaphore> waitSemaphores { currentImageAvailable };
+        const std::vector<VkSemaphore> signalSemaphores { currentRenderFinished };
 
         {
             ObjectParams objectParams = gui.getObjectParams();
@@ -134,29 +148,10 @@ void Engine::update()
             uniformBuffers[currentFrame].update(quad.uniform);
         }
 
-        // signal semaphore that graphics is ready
-        device.getComputeQueue().signal(graphicsReady[currentFrame]);
-
         inFlightFence.wait(currentFrame);
         inFlightFence.reset(currentFrame);
 
         swapchain.asquireNextImage(vulkan.renderPass, currentImageAvailable, pWindow);
-
-        {
-            computeCmds.begin(currentFrame);
-            pipeline.bind(cmdCompute, descriptor.getSet(currentFrame));
-            vkCmdDispatch(cmdCompute, imageDetails.width, imageDetails.height, 1);
-            computeCmds.end(currentFrame);
-
-            const std::vector<VkSemaphore> computeWaitSemaphores { graphicsReady[currentFrame] };
-            const std::vector<VkSemaphore> computeSignalSemaphores { computeReady[currentFrame] };
-            computeQueue.submit(cmdCompute, inFlightFence,
-                computeWaitSemaphores, computeSignalSemaphores,
-                computeWaitStages, currentFrame);
-        }
-
-        inFlightFence.wait(currentFrame);
-        inFlightFence.reset(currentFrame);
 
         graphicsCmds.begin(currentFrame);
 
@@ -170,7 +165,6 @@ void Engine::update()
             gui.getSelectedPipelineIndex());
         forwardRenderAction.beginRenderPass(cmdGraphics, vulkan.renderPass,
             framebuffers, currentFrame);
-
         forwardRenderAction.recordCommandBuffer(
             cmdGraphics, descriptor.getSet(currentFrame), vertexBuffer,
             indexBuffer, quad);
@@ -178,8 +172,6 @@ void Engine::update()
         forwardRenderAction.endRenderPass(cmdGraphics);
         graphicsCmds.end(currentFrame);
 
-        const std::vector<VkSemaphore> waitSemaphores { computeReady[currentFrame], currentImageAvailable };
-        const std::vector<VkSemaphore> signalSemaphores { graphicsReady[currentFrame], currentRenderFinished };
         presentationQueue.submit(cmdGraphics, inFlightFence, waitSemaphores,
             signalSemaphores, waitStages, currentFrame);
         swapchain.presentImage(vulkan.renderPass, presentationQueue.get(),
@@ -196,8 +188,6 @@ void Engine::cleanup()
     inFlightFence.destroy();
     imageAvailable.destroy();
     renderFinished.destroy();
-    computeIsReady.destroy();
-    graphicsIsReady.destroy();
 
     pipeline.destroy();
     descriptor.destroy(vulkan.device);

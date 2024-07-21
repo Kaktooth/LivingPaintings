@@ -20,7 +20,7 @@ class Buffer {
 
     VkBuffer buffer = VK_NULL_HANDLE;
     VkDeviceMemory deviceMemory = VK_NULL_HANDLE;
-    VkDeviceSize memorySize;
+    VkDeviceSize memorySize = 0;
 
 protected:
     VkDevice device = VK_NULL_HANDLE;

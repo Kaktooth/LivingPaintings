@@ -36,7 +36,6 @@ ShaderManager::~ShaderManager()
     }
 }
 
-// TODO fix recieving second notification when file changes
 void ShaderManager::notifyShaderFileChange()
 {
     cout << "\n[Shader Notifier] Started. Waiting for change notification...\n";
@@ -107,7 +106,7 @@ VkShaderModule ShaderManager::createShaderModule(vector<char> shaderCode)
 
 void ShaderManager::destroyShaderModules()
 {
-    for (const std::pair<VkShaderStageFlagBits, VkShaderModule>& shaderModule : shaderModules) {
+    for (const std::pair<const VkShaderStageFlagBits, VkShaderModule_T*>& shaderModule : shaderModules) {
         vkDestroyShaderModule(device, shaderModule.second, nullptr);
     }
 }

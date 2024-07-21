@@ -32,7 +32,7 @@ void Image::create(Device& _device, VkCommandPool& commandPool, VkBufferUsageFla
     this->physicalDevice = _device.getPhysicalDevice();
     this->commandPool = commandPool;
 
-    bool imageFound = imageDetails.filePath != "";
+    bool imageFound = strcmp(imageDetails.filePath, "") != 0;
     if (imageFound) {
         load(imageDetails.filePath);
     } else {

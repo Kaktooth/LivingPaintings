@@ -168,13 +168,15 @@ void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
         computePipelineLayoutInfo.setLayoutCount = 1;
         computePipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 
+        VkPipelineLayout computePipelineLayout;
         if (vkCreatePipelineLayout(device, &computePipelineLayoutInfo, nullptr, &computePipelineLayout) != VK_SUCCESS) {
             throw runtime_error("Failed to create compute pipeline layout.");
         }
+        computePipelineLayouts.push_back(computePipelineLayout);
 
         VkComputePipelineCreateInfo computePipelineInfo {};
         computePipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-        computePipelineInfo.layout = computePipelineLayout;
+        computePipelineInfo.layout = computePipelineLayouts[i];
         computePipelineInfo.stage = computeShaderModules[i];
 
         VkPipeline computePipeline;
@@ -195,11 +197,9 @@ void Pipeline::destroy()
     for (int i = 0; i < layouts.size(); i++) {
         vkDestroyPipeline(device, graphicsPipelines[i], nullptr);
         vkDestroyPipelineLayout(device, layouts[i], nullptr);
+        vkDestroyPipeline(device, computePipelines[i], nullptr);
+        vkDestroyPipelineLayout(device, computePipelineLayouts[i], nullptr);
     }
-    for (VkPipeline& pipeline : computePipelines) {
-        vkDestroyPipeline(device, pipeline, nullptr);
-    }
-    vkDestroyPipelineLayout(device, computePipelineLayout, nullptr);
 }
 
 bool Pipeline::recreateifShadersChanged()
@@ -215,12 +215,12 @@ bool Pipeline::recreateifShadersChanged()
 
 void Pipeline::bind(VkCommandBuffer& cmdCompute, VkDescriptorSet& computeDescriptorSet)
 {
-    for (VkPipeline& computePipeline : computePipelines) {
+    for (int i = 0; i < computePipelines.size(); i++) {
         vkCmdBindDescriptorSets(cmdCompute, VK_PIPELINE_BIND_POINT_COMPUTE,
-            computePipelineLayout, 0, 1,
+            computePipelineLayouts[i], 0, 1,
             &computeDescriptorSet, 0, 0);
         vkCmdBindPipeline(cmdCompute, VK_PIPELINE_BIND_POINT_COMPUTE,
-            computePipeline);
+            computePipelines[i]);
     }
 }
 

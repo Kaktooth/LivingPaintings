@@ -33,11 +33,6 @@ void main() {
 	float left = texture(heightMapTexSampler, vec2(fragTexCoord.x - 1, fragTexCoord.y)).r;
 	float up = texture(heightMapTexSampler, vec2(fragTexCoord.x, fragTexCoord.y - 1)).r;
 	float down = texture(heightMapTexSampler, vec2(fragTexCoord.x, fragTexCoord.y + 1)).r;
-
-//	vec3 S = vec3(1, 0, heightRange * right - heightRange * left);
-//  vec3 T = vec3(0, 1, heightRange * up - heightRange * down);
-//	vec3 product = cross(S, T);
-//	vec3 N = product / length(product);
 	vec3 N = vec3(heightRange * right - heightRange * left, heightRange * up - heightRange * down, 1);
 	N = N / length(N); 
 

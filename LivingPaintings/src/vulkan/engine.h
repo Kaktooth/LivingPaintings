@@ -59,8 +59,6 @@ class Engine {
     ForwardRenderingAction forwardRenderAction;
     Semaphore imageAvailable;
     Semaphore renderFinished;
-    Semaphore computeIsReady;
-    Semaphore graphicsIsReady;
     Fence inFlightFence;
     VertexBuffer vertexBuffer;
     IndexBuffer indexBuffer;

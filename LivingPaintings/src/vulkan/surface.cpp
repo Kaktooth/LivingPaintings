@@ -72,7 +72,6 @@ VkSurfaceFormatKHR Surface::chooseSurfaceFormat()
 {
     for (const VkSurfaceFormatKHR& availableFormat : details.formats) {
         if (availableFormat.format == Constants::IMAGE_TEXTURE_FORMAT
-            && availableFormat.format == Constants::BUMP_TEXTURE_FORMAT
             && availableFormat.colorSpace == Constants::COLOR_SPACE) {
             return availableFormat;
         }
