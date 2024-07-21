@@ -12,8 +12,8 @@ using namespace std;
 void Image::Details::createImageInfo(const char* filePath, uint16_t width,
     uint16_t height, uint8_t channels, VkImageLayout imageLayout,
     VkImageViewType viewType, VkFormat format,
-    int stageUsage,
-    VkImageTiling tiling)
+    int stageUsage, VkImageTiling tiling,
+    int aspectFlags)
 {
     this->filePath = filePath;
     this->width = width;
@@ -24,6 +24,7 @@ void Image::Details::createImageInfo(const char* filePath, uint16_t width,
     this->format = format;
     this->stageUsage = stageUsage;
     this->tiling = tiling;
+    this->aspectFlags = aspectFlags;
 }
 
 void Image::create(Device& _device, VkCommandPool& commandPool, VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryPropertyFlags)
@@ -87,13 +88,21 @@ void Image::create(Device& _device, VkCommandPool& commandPool, VkBufferUsageFla
     vkBindImageMemory(device, textureImage, imageMemory, 0);
 
     Queue& graphicsQueue = _device.getGraphicsQueue();
-    transitionLayout(graphicsQueue, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        VK_PIPELINE_STAGE_TRANSFER_BIT);
 
-    copyBufferToImage(graphicsQueue);
+    if ((usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT) == VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
+        transitionLayout(graphicsQueue, VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_PIPELINE_STAGE_TRANSFER_BIT);
 
-    transitionLayout(graphicsQueue, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        imageDetails.layout, imageDetails.stageUsage);
+        copyBufferToImage(graphicsQueue);
+
+        transitionLayout(graphicsQueue, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            imageDetails.layout, imageDetails.stageUsage);
+    } else if (usage == VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+        transitionLayout(graphicsQueue, VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
+    }
 
     stagingBuffer.destroy();
 
@@ -128,7 +137,7 @@ void Image::transitionLayout(Queue& queue, VkImageLayout oldLayout,
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.image = textureImage;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.aspectMask = imageDetails.aspectFlags;
     barrier.subresourceRange.baseMipLevel = 0;
     barrier.subresourceRange.levelCount = 1;
     barrier.subresourceRange.baseArrayLayer = 0;
@@ -148,6 +157,11 @@ void Image::transitionLayout(Queue& queue, VkImageLayout oldLayout,
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 
         sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    } else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     } else {
         throw invalid_argument("Unsupported layout transition.");
     }
@@ -166,7 +180,7 @@ void Image::copyBufferToImage(Queue& queue)
     region.bufferRowLength = 0;
     region.bufferImageHeight = 0;
 
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.aspectMask = imageDetails.aspectFlags;
     region.imageSubresource.mipLevel = 0;
     region.imageSubresource.baseArrayLayer = 0;
     region.imageSubresource.layerCount = 1;
@@ -187,7 +201,7 @@ void Image::createImageView(VkImageViewType viewType, VkFormat format)
     imageViewInfo.image = textureImage;
     imageViewInfo.viewType = viewType;
     imageViewInfo.format = format;
-    imageViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    imageViewInfo.subresourceRange.aspectMask = imageDetails.aspectFlags;
     imageViewInfo.subresourceRange.baseMipLevel = 0;
     imageViewInfo.subresourceRange.levelCount = 1;
     imageViewInfo.subresourceRange.baseArrayLayer = 0;

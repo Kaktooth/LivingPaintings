@@ -14,6 +14,7 @@
 #include <vector>
 
 namespace Data {
+
 struct GraphicsObject {
 
     struct UniformBufferObject {
@@ -32,7 +33,7 @@ struct GraphicsObject {
     } uniform;
 
     struct Vertex {
-        glm::vec2 pos;
+        glm::vec3 pos;
         glm::vec2 texCoord;
 
         static VkVertexInputBindingDescription getBindingDescription();
@@ -45,5 +46,6 @@ struct GraphicsObject {
 
     void constructQuad();
     void constructQuadWithAspectRatio(uint16_t width, uint16_t height);
+    void constructQuadsWithAspectRatio(uint16_t width, uint16_t height);
 };
 } // namespace Data

@@ -34,6 +34,10 @@ class Device {
 public:
     VkDevice& create(VkInstance& instance, Surface& surface);
     void selectPhysicalDevice(VkInstance& instance, Surface& surface);
+    VkFormat findSupportedFormat(const std::vector<VkFormat>& formats,
+        VkImageTiling tiling,
+        VkFormatFeatureFlags features);
+    bool hasStencilComponent(VkFormat format);
     void destroy();
     VkDevice& get();
     VkPhysicalDevice& getPhysicalDevice();

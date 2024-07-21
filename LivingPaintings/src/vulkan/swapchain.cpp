@@ -70,43 +70,61 @@ void Swapchain::create()
     framebufferResized = false;
 }
 
+void Swapchain::createSpecializedImageView(VkImage image, VkFormat format,
+    VkImageAspectFlags aspectFlags)
+{
+    VkImageView& imageView = createImageView(image, format, aspectFlags);
+    specializedImageViews.push_back(imageView);
+}
+
 void Swapchain::createImageViews()
 {
     imageViews.resize(images.size());
-    for (size_t i = 0; i < images.size(); i++) {
-        VkImageViewCreateInfo createInfo {};
-        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        createInfo.image = images[i];
-        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        createInfo.format = imageFormat;
-        createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        createInfo.subresourceRange.baseMipLevel = 0;
-        createInfo.subresourceRange.baseArrayLayer = 0;
-        createInfo.subresourceRange.levelCount = 1;
-        createInfo.subresourceRange.layerCount = 1;
-
-        if (vkCreateImageView(device, &createInfo, nullptr, &imageViews[i]) != VK_SUCCESS) {
-            throw runtime_error("Failed to create image view.");
-        }
+    for (int i = 0; i < images.size(); i++) {
+        imageViews[i] = createImageView(images[i], imageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
     }
+}
+
+VkImageView& Swapchain::createImageView(VkImage& image, VkFormat& format,
+    VkImageAspectFlags aspectFlags)
+{
+    VkImageViewCreateInfo imageViewInfo {};
+    imageViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    imageViewInfo.image = image;
+    imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    imageViewInfo.format = format;
+    imageViewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    imageViewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    imageViewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    imageViewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+    imageViewInfo.subresourceRange.aspectMask = aspectFlags;
+    imageViewInfo.subresourceRange.baseMipLevel = 0;
+    imageViewInfo.subresourceRange.baseArrayLayer = 0;
+    imageViewInfo.subresourceRange.levelCount = 1;
+    imageViewInfo.subresourceRange.layerCount = 1;
+
+    VkImageView imageView;
+    if (vkCreateImageView(device, &imageViewInfo, nullptr, &imageView) != VK_SUCCESS) {
+        throw runtime_error("Failed to create image view.");
+    }
+    return imageView;
 }
 
 void Swapchain::createFramebuffers(VkRenderPass& renderPass)
 {
     framebuffers.resize(imageViews.size());
 
-    for (size_t i = 0; i < imageViews.size(); i++) {
-        VkImageView attachments[] = { imageViews[i] };
+    for (int i = 0; i < imageViews.size(); i++) {
+        std::vector<VkImageView> attachments = { imageViews[i] };
+        for (VkImageView& spImageView : specializedImageViews) {
+            attachments.push_back(spImageView);
+        }
 
         VkFramebufferCreateInfo framebufferInfo {};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass = renderPass;
-        framebufferInfo.attachmentCount = 1;
-        framebufferInfo.pAttachments = attachments;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferInfo.pAttachments = attachments.data();
         framebufferInfo.width = extent.width;
         framebufferInfo.height = extent.height;
         framebufferInfo.layers = 1;
@@ -170,11 +188,16 @@ void Swapchain::destroy()
         vkDestroyImageView(device, imageView, nullptr);
     }
 
+    for (VkImageView imageView : specializedImageViews) {
+        vkDestroyImageView(device, imageView, nullptr);
+    }
+
     for (VkFramebuffer framebuffer : framebuffers) {
         vkDestroyFramebuffer(device, framebuffer, nullptr);
     }
 
     imageViews.clear();
+    specializedImageViews.clear();
     framebuffers.clear();
     vkDestroySwapchainKHR(device, swapchain, nullptr);
 }

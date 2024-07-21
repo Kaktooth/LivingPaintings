@@ -22,7 +22,7 @@ vector<VkVertexInputAttributeDescription> Data::GraphicsObject::Vertex::getAttri
 
     attributeDescriptions[0].binding = 0;
     attributeDescriptions[0].location = 0;
-    attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
     attributeDescriptions[0].offset = offsetof(Vertex, pos);
 
     attributeDescriptions[1].binding = 0;
@@ -140,12 +140,10 @@ void Data::GraphicsObject::UniformBufferObject::cameraView(CameraParams& params,
 
 void Data::GraphicsObject::constructQuad()
 {
-    verticies = {
-        { { -0.5f, -0.5f }, { 1.0f, 0.0f } },
-        { { 0.5f, -0.5f }, { 0.0f, 0.0f } },
-        { { 0.5f, 0.5f }, { 0.0f, 1.0f } },
-        { { -0.5f, 0.5f }, { 1.0f, 1.0f } }
-    };
+    verticies = { { { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f } },
+        { { 0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f } },
+        { { 0.5f, 0.5f, 0.0f }, { 0.0f, 1.0f } },
+        { { -0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f } } };
 
     indicies = { 0, 1, 2, 2, 3, 0 };
 }
@@ -156,12 +154,32 @@ void Data::GraphicsObject::constructQuadWithAspectRatio(uint16_t width,
     // find ratio to calculate verticies position
     float ratio = float(width) / height;
 
-    verticies = {
-        { { -0.5f * ratio, -0.5f }, { 1.0f, 0.0f } },
-        { { 0.5f * ratio, -0.5f }, { 0.0f, 0.0f } },
-        { { 0.5f * ratio, 0.5f }, { 0.0f, 1.0f } },
-        { { -0.5f * ratio, 0.5f }, { 1.0f, 1.0f } }
-    };
+    verticies = { { { -0.5f * ratio, -0.5f, 0.0f }, { 1.0f, 0.0f } },
+        { { 0.5f * ratio, -0.5f, 0.0f }, { 0.0f, 0.0f } },
+        { { 0.5f * ratio, 0.5f, 0.0f }, { 0.0f, 1.0f } },
+        { { -0.5f * ratio, 0.5f, 0.0f }, { 1.0f, 1.0f } } };
 
     indicies = { 0, 1, 2, 2, 3, 0 };
+}
+
+void Data::GraphicsObject::constructQuadsWithAspectRatio(uint16_t width,
+    uint16_t height)
+{
+    // find ratio to calculate verticies position
+    float ratio = float(width) / height;
+
+    verticies = { { { -0.5f * ratio, -0.5f, 0.0f }, { 1.0f, 0.0f } },
+        { { 0.5f * ratio, -0.5f, 0.0f }, { 0.0f, 0.0f } },
+        { { 0.5f * ratio, 0.5f, 0.0f }, { 0.0f, 1.0f } },
+        { { -0.5f * ratio, 0.5f, 0.0f }, { 1.0f, 1.0f } },
+
+        { { -0.5f, -0.5f, -0.5f }, { 1.0f, 0.0f } },
+        { { 0.5f, -0.5f, -0.5f }, { 0.0f, 0.0f } },
+        { { 0.5f, 0.5f, -0.5f }, { 0.0f, 1.0f } },
+        { { -0.5f, 0.5f, -0.5f }, { 1.0f, 1.0f } } };
+
+    indicies = {
+        0, 1, 2, 2, 3, 0,
+        4, 5, 6, 6, 7, 4
+    };
 }

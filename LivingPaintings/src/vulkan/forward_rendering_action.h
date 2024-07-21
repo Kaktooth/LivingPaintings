@@ -13,6 +13,7 @@
 #include "vulkan/vulkan.h"
 #include <stdexcept>
 #include <vector>
+#include <array>
 
 class ForwardRenderingAction {
 

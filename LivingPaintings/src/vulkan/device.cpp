@@ -138,6 +138,25 @@ VkPhysicalDeviceFeatures Device::selectedDeviceFeatures()
     return deviceFeatures;
 }
 
+VkFormat Device::findSupportedFormat(const std::vector<VkFormat>& formats,
+    VkImageTiling tiling,
+    VkFormatFeatureFlags features)
+{
+    for (const VkFormat format : formats) {
+        VkFormatProperties formatProperties;
+        vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &formatProperties);
+        if (tiling == VK_IMAGE_TILING_LINEAR && (formatProperties.linearTilingFeatures & features) == features
+            || tiling == VK_IMAGE_TILING_OPTIMAL && (formatProperties.optimalTilingFeatures & features) == features) {
+            return format;
+        }
+    }
+}
+
+bool Device::hasStencilComponent(VkFormat format)
+{
+    return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
+}
+
 VkDeviceQueueCreateInfo Device::createQueueCreateInfo(const uint32_t queueFamily,
     const float queuePriority)
 {

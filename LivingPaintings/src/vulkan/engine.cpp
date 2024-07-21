@@ -34,49 +34,62 @@ void Engine::init()
     imageAvailable.create(vulkan.device);
     renderFinished.create(vulkan.device);
 
-    swapchain.setDeviceContext(device, surface);
-    swapchain.create();
-    swapchain.createImageViews();
-
-    INIT(vulkan.renderPass, renderPass.create(vulkan.device, swapchain.getImageFormat()));
-    swapchain.createFramebuffers(vulkan.renderPass);
-
     INIT(vulkan.commandPool, commandPool.create(device));
     graphicsCmds.create(vulkan.device, vulkan.commandPool);
 
     vkQueueWaitIdle(device.getComputeQueue().get());
     computeCmds.create(vulkan.device, vulkan.commandPool);
 
+    swapchain.setDeviceContext(device, surface);
+    swapchain.create();
+    swapchain.createImageViews();
+    const VkExtent2D swapchainExtent = swapchain.getExtent();
+    const VkFormat depthFormat = device.findSupportedFormat(depthFormats, VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+    const int aspectFlags = device.hasStencilComponent(depthFormat)
+        ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT
+        : VK_IMAGE_ASPECT_DEPTH_BIT;
+    depthTexture.imageDetails.createImageInfo(
+        "", swapchainExtent.width, swapchainExtent.height, 4,
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D,
+        depthFormat, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        VK_IMAGE_TILING_OPTIMAL, aspectFlags);
+    depthTexture.create(device, vulkan.commandPool,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    swapchain.createSpecializedImageView(depthTexture.get(), depthFormat,
+        VK_IMAGE_ASPECT_DEPTH_BIT);
+
+    INIT(vulkan.renderPass, renderPass.create(vulkan.device, swapchain.getImageFormat(), depthFormat));
+    swapchain.createFramebuffers(vulkan.renderPass);
+
     Queue& transferQueue = device.getTransferQueue();
-    quad.constructQuadWithAspectRatio(1920, 1081);
+    quad.constructQuadsWithAspectRatio(1920, 1081);
     vertexBuffer.create(vulkan.device, vulkan.physicalDevice,
         vulkan.commandPool, quad.verticies, transferQueue);
     indexBuffer.create(vulkan.device, vulkan.physicalDevice, vulkan.commandPool,
         quad.indicies, transferQueue);
 
     uniformBuffers.resize(Constants::MAX_FRAMES_IN_FLIGHT);
-    const VkDeviceSize uniformSize = sizeof(Data::GraphicsObject::UniformBufferObject);
     for (UniformBuffer& uniformBuffer : uniformBuffers) {
         uniformBuffer.create(vulkan.device, vulkan.physicalDevice, uniformSize);
     }
 
-    // TEXTURE_FILE_PATH variable is retrieved from Cmake with macros in file config.hpp.in
-    const string texturePath = RETRIEVE_STRING(TEXTURE_FILE_PATH);
-    paintingTexture.imageDetails.createImageInfo(
-        texturePath.c_str(), 1920, 1081, 4,
+    paintingTexture.imageDetails.createImageInfo(texturePath.c_str(), 1920, 1081, 4,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D,
         Constants::IMAGE_TEXTURE_FORMAT,
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
-        VK_IMAGE_TILING_OPTIMAL);
+        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
     paintingTexture.create(device, vulkan.commandPool,
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    heightMapTexture.imageDetails.createImageInfo(
-        "", 1920, 1081, 1, VK_IMAGE_LAYOUT_GENERAL,
-        VK_IMAGE_VIEW_TYPE_2D, Constants::BUMP_TEXTURE_FORMAT,
+    heightMapTexture.imageDetails.createImageInfo("", 1920, 1081, 1,
+        VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_VIEW_TYPE_2D,
+        Constants::BUMP_TEXTURE_FORMAT,
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
-        VK_IMAGE_TILING_OPTIMAL);
+        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
     heightMapTexture.create(device, vulkan.commandPool,
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -86,7 +99,7 @@ void Engine::init()
     descriptor.create(vulkan.device, uniformBuffers, paintingTexture,
         heightMapTexture, textureSampler);
 
-    pipeline.create(vulkan.device, vulkan.renderPass, descriptor.getSetLayout(), swapchain.getExtent());
+    pipeline.create(vulkan.device, vulkan.renderPass, descriptor.getSetLayout(), swapchainExtent);
 
     gui.init(vulkan.instance, device, vulkan.commandPool, vulkan.renderPass, swapchain, descriptor.getPool(), pWindow);
 }
@@ -194,6 +207,7 @@ void Engine::cleanup()
     textureSampler.destroy();
     paintingTexture.destroy();
     heightMapTexture.destroy();
+    depthTexture.destroy();
 
     for (UniformBuffer& uniformBuffer : uniformBuffers) {
         uniformBuffer.destroy();

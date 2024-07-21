@@ -24,7 +24,7 @@ void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
 
     std::vector<VkPipelineShaderStageCreateInfo> shaderModules {};
     std::vector<VkPipelineShaderStageCreateInfo> computeShaderModules {};
-    for (const std::pair<VkShaderStageFlagBits, VkShaderModule>& shaderModule : shaderManager.getShaderModules()) {
+    for (const std::pair<VkShaderStageFlagBits, VkShaderModule_T*>& shaderModule : shaderManager.getShaderModules()) {
         if (shaderModule.first == VK_SHADER_STAGE_COMPUTE_BIT) {
             VkPipelineShaderStageCreateInfo computeShaderModuleInfo {};
             computeShaderModuleInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -78,6 +78,18 @@ void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
     colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
     colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
+    VkPipelineDepthStencilStateCreateInfo depthStencil {};
+    depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencil.depthTestEnable = VK_TRUE;
+    depthStencil.depthWriteEnable = VK_TRUE;
+    depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    depthStencil.depthBoundsTestEnable = VK_FALSE;
+    depthStencil.minDepthBounds = 0.0f;
+    depthStencil.maxDepthBounds = 1.0f;
+    depthStencil.stencilTestEnable = VK_FALSE;
+    depthStencil.front = {};
+    depthStencil.back = {};
+
     VkPipelineColorBlendStateCreateInfo colorBlending {};
     colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     colorBlending.logicOpEnable = VK_FALSE;
@@ -110,9 +122,9 @@ void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
     rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
-    /*rasterizer.depthBiasConstantFactor = 0.0f;
-    rasterizer.depthBiasClamp = 0.0f;
-    rasterizer.depthBiasSlopeFactor = 0.0f;*/
+    rasterizer.depthBiasConstantFactor = 0.1f;
+    rasterizer.depthBiasClamp = 0.1f;
+    rasterizer.depthBiasSlopeFactor = 0.1f;
 
     VkPipelineMultisampleStateCreateInfo multisampling {};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -143,11 +155,11 @@ void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
     graphicsPipelineInfo.pViewportState = &viewportInfo;
     graphicsPipelineInfo.pDynamicState = &dynamicStateInfo;
     graphicsPipelineInfo.pColorBlendState = &colorBlending;
+    graphicsPipelineInfo.pDepthStencilState = &depthStencil;
     graphicsPipelineInfo.pVertexInputState = &vertexInfo;
     graphicsPipelineInfo.pInputAssemblyState = &inputAssembly;
     graphicsPipelineInfo.pRasterizationState = &rasterizer;
     graphicsPipelineInfo.pMultisampleState = &multisampling;
-    graphicsPipelineInfo.pDepthStencilState = nullptr;
     graphicsPipelineInfo.layout = layout;
     graphicsPipelineInfo.renderPass = renderPass;
     graphicsPipelineInfo.subpass = 0;
@@ -161,7 +173,7 @@ void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
     graphicsPipelines.push_back(graphicsPipeline);
 
     // Compute Pipeline Creation
-    for (int i = 0; i < computeShaderModules.size(); i++) {
+    for (size_t i = 0; i < computeShaderModules.size(); i++) {
 
         VkPipelineLayoutCreateInfo computePipelineLayoutInfo {};
         computePipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -194,7 +206,7 @@ void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
 
 void Pipeline::destroy()
 {
-    for (int i = 0; i < layouts.size(); i++) {
+    for (size_t i = 0; i < layouts.size(); i++) {
         vkDestroyPipeline(device, graphicsPipelines[i], nullptr);
         vkDestroyPipelineLayout(device, layouts[i], nullptr);
         vkDestroyPipeline(device, computePipelines[i], nullptr);
@@ -215,7 +227,7 @@ bool Pipeline::recreateifShadersChanged()
 
 void Pipeline::bind(VkCommandBuffer& cmdCompute, VkDescriptorSet& computeDescriptorSet)
 {
-    for (int i = 0; i < computePipelines.size(); i++) {
+    for (size_t i = 0; i < computePipelines.size(); i++) {
         vkCmdBindDescriptorSets(cmdCompute, VK_PIPELINE_BIND_POINT_COMPUTE,
             computePipelineLayouts[i], 0, 1,
             &computeDescriptorSet, 0, 0);

@@ -34,6 +34,17 @@
 
 class Engine {
 
+    // TEXTURE_FILE_PATH variable is retrieved from Cmake with macros in file
+    // config.hpp.in
+    const std::string texturePath = RETRIEVE_STRING(TEXTURE_FILE_PATH);
+
+    const std::vector<VkFormat> depthFormats = {
+        VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
+        VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D16_UNORM
+    };
+
+    const VkDeviceSize uniformSize = sizeof(Data::GraphicsObject::UniformBufferObject);
+
     struct {
         VkInstance instance = VK_NULL_HANDLE;
         VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
@@ -67,6 +78,7 @@ class Engine {
     std::vector<UniformBuffer> uniformBuffers;
     Image paintingTexture;
     Image heightMapTexture;
+    Image depthTexture;
     Sampler textureSampler;
     Gui gui;
 

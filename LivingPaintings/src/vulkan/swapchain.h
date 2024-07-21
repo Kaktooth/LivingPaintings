@@ -7,6 +7,7 @@
 #include "semaphore.h"
 #include "surface.h"
 #include "vulkan/vulkan.h"
+#include <array>
 #include <stdexcept>
 #include <vector>
 
@@ -20,6 +21,7 @@ class Swapchain {
     uint32_t minImageCount;
     std::vector<VkImage> images;
     std::vector<VkImageView> imageViews;
+    std::vector<VkImageView> specializedImageViews; // depth, stencil and other
     std::vector<VkFramebuffer> framebuffers;
     VkFormat imageFormat;
     VkExtent2D extent;
@@ -29,6 +31,10 @@ class Swapchain {
 public:
     void setDeviceContext(Device& device, Surface& surface);
     void create();
+    VkImageView& createImageView(VkImage& image, VkFormat& format,
+        VkImageAspectFlags aspectFlags);
+    void createSpecializedImageView(VkImage image, VkFormat format,
+        VkImageAspectFlags aspectFlags);
     void createImageViews();
     void createFramebuffers(VkRenderPass& renderPass);
     void presentImage(VkRenderPass& renderPass, VkQueue& presentationQueue, const std::vector<VkSemaphore> signalSemafores, GLFWwindow* window);

@@ -25,8 +25,6 @@ class Image {
     void createImageView(VkImageViewType viewType, VkFormat format);
 
 public:
-    const VkClearColorValue clearColor = { { 0.0f, 0.0f, 0.0f, 0.0f } };
-
     struct Details {
         const char* filePath;
         uint16_t width;
@@ -37,12 +35,14 @@ public:
         int stageUsage; // see VkShaderStageFlagBits, using int to combine bits
         VkImageTiling tiling;
         VkImageViewType viewType;
+        int aspectFlags; // see VkImageAspectFlagBits
 
         void createImageInfo(const char* filePath, uint16_t width,
             uint16_t height, uint8_t channels, VkImageLayout imageLayout,
             VkImageViewType viewType, VkFormat format,
             int stageUsage,
-            VkImageTiling tiling);
+            VkImageTiling tiling,
+            int aspectFlags);
     } imageDetails;
 
     void create(Device& _device, VkCommandPool& commandPool,

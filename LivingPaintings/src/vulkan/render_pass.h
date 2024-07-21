@@ -5,6 +5,7 @@
 #pragma once
 #include "swapchain.h"
 #include "vulkan/vulkan.h"
+#include <array>
 #include <stdexcept>
 #include <vector>
 
@@ -14,7 +15,8 @@ class RenderPass {
     VkDevice device = VK_NULL_HANDLE;
 
 public:
-    VkRenderPass& create(VkDevice& device, VkFormat imageFormat);
+    VkRenderPass& create(VkDevice& device, VkFormat imageFormat,
+        VkFormat depthFormat);
     void destroy();
     VkRenderPass& get();
 };
