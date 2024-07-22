@@ -8,12 +8,13 @@ using namespace std;
 
 void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
     VkDescriptorSetLayout& descriptorSetLayout,
-    const VkExtent2D extent)
+    const VkExtent2D extent, VkSampleCountFlagBits samples)
 {
     this->device = device;
     this->renderPass = renderPass;
     this->descriptorSetLayout = descriptorSetLayout;
     this->extent = extent;
+    this->samples = samples;
 
     try {
         shaderManager.createShaderModules(device);
@@ -122,15 +123,15 @@ void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
     rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
-    rasterizer.depthBiasConstantFactor = 0.1f;
-    rasterizer.depthBiasClamp = 0.1f;
-    rasterizer.depthBiasSlopeFactor = 0.1f;
+    rasterizer.depthBiasConstantFactor = .1f;
+    rasterizer.depthBiasClamp = .1f;
+    rasterizer.depthBiasSlopeFactor = .1f;
 
     VkPipelineMultisampleStateCreateInfo multisampling {};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    multisampling.sampleShadingEnable = VK_FALSE;
-    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-    // multisampling.minSampleShading = 1.0f;
+    multisampling.rasterizationSamples = samples;
+    multisampling.sampleShadingEnable = VK_TRUE;
+    multisampling.minSampleShading = .1f;
     // multisampling.pSampleMask = nullptr;
     // multisampling.alphaToCoverageEnable = VK_FALSE;
     // multisampling.alphaToOneEnable = VK_FALSE;
@@ -217,7 +218,8 @@ void Pipeline::destroy()
 bool Pipeline::recreateifShadersChanged()
 {
     if (ShaderManager::recreateGraphicsPipeline) {
-        Pipeline::create(device, renderPass, descriptorSetLayout, extent);
+        Pipeline::create(device, renderPass, descriptorSetLayout, extent,
+            samples);
         ShaderManager::recreateGraphicsPipeline = false;
         return true;
     }

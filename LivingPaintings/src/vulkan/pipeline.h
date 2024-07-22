@@ -19,11 +19,12 @@ class Pipeline {
     VkRenderPass renderPass = VK_NULL_HANDLE;
     VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
     VkExtent2D extent;
+    VkSampleCountFlagBits samples;
 
 public:
     void create(VkDevice& device, VkRenderPass& renderPass,
         VkDescriptorSetLayout& descriptorSetLayout,
-        const VkExtent2D extent);
+        const VkExtent2D extent, VkSampleCountFlagBits samples);
     void destroy();
     bool recreateifShadersChanged();
     void bind(VkCommandBuffer& cmdCompute, VkDescriptorSet& computeDescriptorSet);

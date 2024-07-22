@@ -14,6 +14,7 @@
 #include <set>
 #include <stdexcept>
 #include <vector>
+#include <array>
 
 class Device {
 
@@ -25,11 +26,12 @@ class Device {
     Queue transferQueue;
     Queue computeQueue;
     QueueFamily queueFamily;
+    VkPhysicalDeviceProperties deviceProperties;
+    VkPhysicalDeviceFeatures deviceFeatures;
 
     VkDeviceQueueCreateInfo createQueueCreateInfo(const uint32_t queueFamily, const float queuePriority);
     int getDeviceScore(VkPhysicalDevice& physicalDevice, Surface& surface);
     bool checkDeviceExtensionSupport(VkPhysicalDevice& physicalDevice);
-    VkPhysicalDeviceFeatures selectedDeviceFeatures();
 
 public:
     VkDevice& create(VkInstance& instance, Surface& surface);
@@ -38,6 +40,7 @@ public:
         VkImageTiling tiling,
         VkFormatFeatureFlags features);
     bool hasStencilComponent(VkFormat format);
+    VkSampleCountFlagBits getMaxSampleCount();
     void destroy();
     VkDevice& get();
     VkPhysicalDevice& getPhysicalDevice();

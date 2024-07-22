@@ -21,7 +21,7 @@ class Swapchain {
     uint32_t minImageCount;
     std::vector<VkImage> images;
     std::vector<VkImageView> imageViews;
-    std::vector<VkImageView> specializedImageViews; // depth, stencil and other
+    std::vector<VkImageView> specializedImageViews; // currently 1. resolve 2. depth
     std::vector<VkFramebuffer> framebuffers;
     VkFormat imageFormat;
     VkExtent2D extent;

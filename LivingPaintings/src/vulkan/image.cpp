@@ -13,7 +13,7 @@ void Image::Details::createImageInfo(const char* filePath, uint16_t width,
     uint16_t height, uint8_t channels, VkImageLayout imageLayout,
     VkImageViewType viewType, VkFormat format,
     int stageUsage, VkImageTiling tiling,
-    int aspectFlags)
+    int aspectFlags, VkSampleCountFlagBits samples)
 {
     this->filePath = filePath;
     this->width = width;
@@ -25,6 +25,7 @@ void Image::Details::createImageInfo(const char* filePath, uint16_t width,
     this->stageUsage = stageUsage;
     this->tiling = tiling;
     this->aspectFlags = aspectFlags;
+    this->samples = samples;
 }
 
 void Image::create(Device& _device, VkCommandPool& commandPool, VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryPropertyFlags)
@@ -55,7 +56,7 @@ void Image::create(Device& _device, VkCommandPool& commandPool, VkBufferUsageFla
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo.usage = usage;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageInfo.samples = imageDetails.samples;
 
     if (vkCreateImage(device, &imageInfo, nullptr, &textureImage) != VK_SUCCESS) {
         throw runtime_error("Failed to create image.");

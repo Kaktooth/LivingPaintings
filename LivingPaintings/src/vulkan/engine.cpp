@@ -29,6 +29,15 @@ void Engine::init()
     INIT(vulkan.device, device.create(vulkan.instance, surface));
     INIT(vulkan.physicalDevice, device.getPhysicalDevice());
     surface.findSurfaceDetails(vulkan.physicalDevice);
+    VkSampleCountFlagBits sampleCount = device.getMaxSampleCount();
+    if (sampleCount < vulkan.sampleCount) {
+        cout << "Configuration is invalid: device does not support selected"
+             << std::to_string(vulkan.sampleCount) << "samples. "
+             << "Device supports to " << std::to_string(vulkan.sampleCount)
+             << "samples." << endl;
+
+        vulkan.sampleCount = sampleCount;
+    }
 
     inFlightFence.create(vulkan.device, true);
     imageAvailable.create(vulkan.device);
@@ -49,23 +58,36 @@ void Engine::init()
     const int aspectFlags = device.hasStencilComponent(depthFormat)
         ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT
         : VK_IMAGE_ASPECT_DEPTH_BIT;
-    depthTexture.imageDetails.createImageInfo(
+    depthImage.imageDetails.createImageInfo(
         "", swapchainExtent.width, swapchainExtent.height, 4,
         VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D,
         depthFormat, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-        VK_IMAGE_TILING_OPTIMAL, aspectFlags);
-    depthTexture.create(device, vulkan.commandPool,
+        VK_IMAGE_TILING_OPTIMAL, aspectFlags, vulkan.sampleCount);
+    depthImage.create(device, vulkan.commandPool,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    swapchain.createSpecializedImageView(depthTexture.get(), depthFormat,
+    const VkFormat colorFormat = swapchain.getImageFormat();
+    colorImage.imageDetails.createImageInfo(
+        "", swapchainExtent.width, swapchainExtent.height, 4,
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_VIEW_TYPE_2D, colorFormat,
+        VK_SHADER_STAGE_FRAGMENT_BIT, VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_ASPECT_COLOR_BIT, vulkan.sampleCount);
+    colorImage.create(device, vulkan.commandPool,
+        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    swapchain.createSpecializedImageView(colorImage.get(), colorFormat,
+        VK_IMAGE_ASPECT_COLOR_BIT);
+
+    swapchain.createSpecializedImageView(depthImage.get(), depthFormat,
         VK_IMAGE_ASPECT_DEPTH_BIT);
 
-    INIT(vulkan.renderPass, renderPass.create(vulkan.device, swapchain.getImageFormat(), depthFormat));
+    INIT(vulkan.renderPass, renderPass.create(vulkan.device, colorFormat, depthFormat, vulkan.sampleCount));
     swapchain.createFramebuffers(vulkan.renderPass);
 
     Queue& transferQueue = device.getTransferQueue();
-    quad.constructQuadsWithAspectRatio(1920, 1081);
+    quad.constructQuadWithAspectRatio(1920, 1081);
     vertexBuffer.create(vulkan.device, vulkan.physicalDevice,
         vulkan.commandPool, quad.verticies, transferQueue);
     indexBuffer.create(vulkan.device, vulkan.physicalDevice, vulkan.commandPool,
@@ -80,7 +102,8 @@ void Engine::init()
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D,
         Constants::IMAGE_TEXTURE_FORMAT,
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
-        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT,
+        VK_SAMPLE_COUNT_1_BIT);
     paintingTexture.create(device, vulkan.commandPool,
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -89,7 +112,8 @@ void Engine::init()
         VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_VIEW_TYPE_2D,
         Constants::BUMP_TEXTURE_FORMAT,
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
-        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT,
+        VK_SAMPLE_COUNT_1_BIT);
     heightMapTexture.create(device, vulkan.commandPool,
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -99,9 +123,9 @@ void Engine::init()
     descriptor.create(vulkan.device, uniformBuffers, paintingTexture,
         heightMapTexture, textureSampler);
 
-    pipeline.create(vulkan.device, vulkan.renderPass, descriptor.getSetLayout(), swapchainExtent);
+    pipeline.create(vulkan.device, vulkan.renderPass, descriptor.getSetLayout(), swapchainExtent, vulkan.sampleCount);
 
-    gui.init(vulkan.instance, device, vulkan.commandPool, vulkan.renderPass, swapchain, descriptor.getPool(), pWindow);
+    gui.init(vulkan.instance, device, vulkan.commandPool, renderPass, swapchain, descriptor.getPool(), pWindow);
 }
 
 void Engine::update()
@@ -207,7 +231,8 @@ void Engine::cleanup()
     textureSampler.destroy();
     paintingTexture.destroy();
     heightMapTexture.destroy();
-    depthTexture.destroy();
+    depthImage.destroy();
+    colorImage.destroy();
 
     for (UniformBuffer& uniformBuffer : uniformBuffers) {
         uniformBuffer.destroy();

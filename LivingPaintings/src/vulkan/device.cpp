@@ -27,7 +27,9 @@ VkDevice& Device::create(VkInstance& instance, Surface& surface)
         queueCreateInfos.push_back(queueCreateInfo);
     }
 
-    const VkPhysicalDeviceFeatures deviceFeatures = selectedDeviceFeatures();
+    vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
+    vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
+
     VkDeviceCreateInfo deviceInfo {};
     deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     deviceInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
@@ -77,6 +79,9 @@ void Device::selectPhysicalDevice(VkInstance& instance, Surface& surface)
         deviceCandidates.insert({ deviceScore, device });
     }
 
+    deviceFeatures.sampleRateShading = VK_TRUE;
+    deviceFeatures.samplerAnisotropy = VK_TRUE;
+
     physicalDevice = deviceCandidates.begin()->second;
 
     if (physicalDevice == VK_NULL_HANDLE) {
@@ -86,10 +91,6 @@ void Device::selectPhysicalDevice(VkInstance& instance, Surface& surface)
 
 int Device::getDeviceScore(VkPhysicalDevice& physicalDevice, Surface& surface)
 {
-    VkPhysicalDeviceProperties deviceProperties;
-    VkPhysicalDeviceFeatures deviceFeatures;
-    vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
-    vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
     queueFamily.findQueueFamilies(physicalDevice, surface.get());
 
     int score = 0;
@@ -105,7 +106,7 @@ int Device::getDeviceScore(VkPhysicalDevice& physicalDevice, Surface& surface)
 
     bool extensionsSupported = checkDeviceExtensionSupport(physicalDevice);
     bool supportedSurfaceCapabilities = !surface.details.formats.empty() && !surface.details.presentationModes.empty();
-    if (!(deviceFeatures.geometryShader || queueFamily.indicies.isAvailable()
+    if (!(deviceFeatures.geometryShader || deviceFeatures.sampleRateShading || deviceFeatures.samplerAnisotropy || queueFamily.indicies.isAvailable()
             || supportedSurfaceCapabilities || extensionsSupported)) {
         return 0;
     }
@@ -131,13 +132,6 @@ bool Device::checkDeviceExtensionSupport(VkPhysicalDevice& physicalDevice)
     return requiredExtensions.empty();
 }
 
-VkPhysicalDeviceFeatures Device::selectedDeviceFeatures()
-{
-    VkPhysicalDeviceFeatures deviceFeatures;
-    vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
-    return deviceFeatures;
-}
-
 VkFormat Device::findSupportedFormat(const std::vector<VkFormat>& formats,
     VkImageTiling tiling,
     VkFormatFeatureFlags features)
@@ -155,6 +149,23 @@ VkFormat Device::findSupportedFormat(const std::vector<VkFormat>& formats,
 bool Device::hasStencilComponent(VkFormat format)
 {
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
+}
+
+VkSampleCountFlagBits Device::getMaxSampleCount()
+{
+    VkSampleCountFlags sampleNumber = deviceProperties.limits.framebufferColorSampleCounts
+        & deviceProperties.limits.framebufferDepthSampleCounts;
+    std::array<VkSampleCountFlagBits, 6> sampleRates {
+        VK_SAMPLE_COUNT_64_BIT, VK_SAMPLE_COUNT_32_BIT, VK_SAMPLE_COUNT_16_BIT,
+        VK_SAMPLE_COUNT_8_BIT, VK_SAMPLE_COUNT_4_BIT, VK_SAMPLE_COUNT_2_BIT
+    };
+
+    for (auto& sampleRate : sampleRates) {
+        if (sampleRate & sampleNumber) {
+            return sampleRate;
+        }
+    }
+    return VK_SAMPLE_COUNT_1_BIT;
 }
 
 VkDeviceQueueCreateInfo Device::createQueueCreateInfo(const uint32_t queueFamily,

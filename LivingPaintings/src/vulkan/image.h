@@ -36,13 +36,13 @@ public:
         VkImageTiling tiling;
         VkImageViewType viewType;
         int aspectFlags; // see VkImageAspectFlagBits
+        VkSampleCountFlagBits samples;
 
         void createImageInfo(const char* filePath, uint16_t width,
             uint16_t height, uint8_t channels, VkImageLayout imageLayout,
             VkImageViewType viewType, VkFormat format,
-            int stageUsage,
-            VkImageTiling tiling,
-            int aspectFlags);
+            int stageUsage, VkImageTiling tiling,
+            int aspectFlags, VkSampleCountFlagBits samples);
     } imageDetails;
 
     void create(Device& _device, VkCommandPool& commandPool,

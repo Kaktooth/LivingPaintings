@@ -115,10 +115,11 @@ void Swapchain::createFramebuffers(VkRenderPass& renderPass)
     framebuffers.resize(imageViews.size());
 
     for (int i = 0; i < imageViews.size(); i++) {
-        std::vector<VkImageView> attachments = { imageViews[i] };
+        std::vector<VkImageView> attachments = {};
         for (VkImageView& spImageView : specializedImageViews) {
             attachments.push_back(spImageView);
         }
+        attachments.push_back(imageViews[i]);
 
         VkFramebufferCreateInfo framebufferInfo {};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;

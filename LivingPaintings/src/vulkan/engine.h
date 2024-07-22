@@ -53,6 +53,7 @@ class Engine {
         VkDevice device = VK_NULL_HANDLE;
         VkRenderPass renderPass = VK_NULL_HANDLE;
         VkCommandPool commandPool = VK_NULL_HANDLE;
+        VkSampleCountFlagBits sampleCount = VK_SAMPLE_COUNT_4_BIT;
     } vulkan;
 
     GLFWwindow* pWindow = NULL;
@@ -78,7 +79,8 @@ class Engine {
     std::vector<UniformBuffer> uniformBuffers;
     Image paintingTexture;
     Image heightMapTexture;
-    Image depthTexture;
+    Image depthImage;
+    Image colorImage;
     Sampler textureSampler;
     Gui gui;
 

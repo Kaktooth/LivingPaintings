@@ -67,7 +67,7 @@ class Gui {
 
 public:
     void init(VkInstance& instance, Device& device, VkCommandPool& commandPool,
-        VkRenderPass& renderPass, Swapchain& swapChain,
+        RenderPass& renderPass, Swapchain& swapChain,
         VkDescriptorPool& descriptorPool, GLFWwindow* window);
     void draw(size_t pipelineHistorySize);
     void renderDrawData(VkCommandBuffer& commandBuffer);

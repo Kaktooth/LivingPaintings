@@ -6,7 +6,7 @@
 
 using namespace std;
 
-void Gui::init(VkInstance& instance, Device& _device, VkCommandPool& commandPool, VkRenderPass& renderPass, Swapchain& swapChain, VkDescriptorPool& descriptorPool, GLFWwindow* window)
+void Gui::init(VkInstance& instance, Device& _device, VkCommandPool& commandPool, RenderPass& renderPass, Swapchain& swapChain, VkDescriptorPool& descriptorPool, GLFWwindow* window)
 {
     Queue& graphicsQueue = _device.getGraphicsQueue();
 
@@ -26,10 +26,10 @@ void Gui::init(VkInstance& instance, Device& _device, VkCommandPool& commandPool
     initInfo.DescriptorPool = descriptorPool;
     initInfo.MinImageCount = swapChain.getMinImageCount();
     initInfo.ImageCount = Constants::MAX_FRAMES_IN_FLIGHT;
-    initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+    initInfo.MSAASamples = renderPass.getSampleCount();
     initInfo.ColorAttachmentFormat = swapChain.getImageFormat();
 
-    ImGui_ImplVulkan_Init(&initInfo, renderPass);
+    ImGui_ImplVulkan_Init(&initInfo, renderPass.get());
 
     uploadFonts(graphicsQueue);
 }
