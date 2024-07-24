@@ -238,6 +238,11 @@ void Pipeline::bind(VkCommandBuffer& cmdCompute, VkDescriptorSet& computeDescrip
     }
 }
 
+void Pipeline::updateExtent(VkExtent2D& extent)
+{
+    this->extent = extent;
+}
+
 VkPipelineLayout& Pipeline::getLastLayout()
 {
     return layouts[layouts.size() - 1];

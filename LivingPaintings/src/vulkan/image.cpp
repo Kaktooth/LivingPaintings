@@ -213,11 +213,6 @@ void Image::createImageView()
     }
 }
 
-void Image::destroyImageView()
-{
-    vkDestroyImageView(device, imageView, nullptr);
-}
-
 void Image::destroy()
 {
     vkDestroyImageView(device, imageView, nullptr);

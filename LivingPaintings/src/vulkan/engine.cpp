@@ -95,8 +95,8 @@ void Engine::init()
     descriptor.create(vulkan.device, uniformBuffers, paintingTexture,
         heightMapTexture, textureSampler);
 
-    const VkExtent2D swapchainExtent = swapchain.getExtent();
-    pipeline.create(vulkan.device, vulkan.renderPass, descriptor.getSetLayout(), swapchainExtent, vulkan.sampleCount);
+    pipeline.create(vulkan.device, vulkan.renderPass, descriptor.getSetLayout(),
+        swapchain.getExtent(), vulkan.sampleCount);
 
     gui.init(vulkan.instance, device, vulkan.commandPool, renderPass, swapchain, descriptor.getPool(), pWindow);
 }
@@ -139,6 +139,8 @@ void Engine::update()
     while (!glfwWindowShouldClose(pWindow)) {
         glfwPollEvents();
 
+        pipeline.updateExtent(swapchain.getExtent());
+
         const uint32_t& currentFrame = swapchain.getCurrentFrame();
         VkCommandBuffer& cmdGraphics = graphicsCmds.get(currentFrame);
         VkSemaphore& currentImageAvailable = imageAvailable.get(currentFrame);
@@ -161,7 +163,8 @@ void Engine::update()
         inFlightFence.wait(currentFrame);
         inFlightFence.reset(currentFrame);
 
-        swapchain.asquireNextImage(vulkan.renderPass, currentImageAvailable, pWindow);
+        swapchain.asquireNextImage(device, vulkan.renderPass,
+            currentImageAvailable, pWindow);
 
         graphicsCmds.begin(currentFrame);
 
@@ -197,7 +200,7 @@ void Engine::update()
 
         presentationQueue.submit(cmdGraphics, inFlightFence, waitSemaphores,
             signalSemaphores, waitStages, currentFrame);
-        swapchain.presentImage(vulkan.renderPass, presentationQueue.get(),
+        swapchain.presentImage(device, vulkan.renderPass, presentationQueue.get(),
             signalSemaphores, pWindow);
     }
 
@@ -226,7 +229,7 @@ void Engine::cleanup()
     indexBuffer.destroy();
     renderPass.destroy();
     commandPool.destroy();
-    swapchain.destroy(true);
+    swapchain.destroy();
 
     device.destroy();
     surface.destory();

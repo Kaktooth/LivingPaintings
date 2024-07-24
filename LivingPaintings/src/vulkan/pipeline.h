@@ -28,6 +28,7 @@ public:
     void destroy();
     bool recreateifShadersChanged();
     void bind(VkCommandBuffer& cmdCompute, VkDescriptorSet& computeDescriptorSet);
+    void updateExtent(VkExtent2D& extent);
     VkPipelineLayout& getLastLayout();
     VkPipeline& getLast();
     VkPipelineLayout& getLayout(const size_t index);

@@ -48,7 +48,6 @@ public:
         VkBufferUsageFlags usage,
         VkMemoryPropertyFlags memoryPropertyFlags);
     void createImageView();
-    void destroyImageView();
     void destroy();
     VkImage& get();
     VkImageView& getView();

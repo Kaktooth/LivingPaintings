@@ -8,6 +8,7 @@
 #include "semaphore.h"
 #include "surface.h"
 #include "vulkan/vulkan.h"
+#include <algorithm>
 #include <array>
 #include <stdexcept>
 #include <vector>
@@ -44,15 +45,17 @@ public:
     void create();
     VkImageView& createImageView(VkImage& image, VkFormat& format,
         VkImageAspectFlags aspectFlags);
-    void createSpecializedImageViews();
     void createImageViews();
     void createFramebuffers(VkRenderPass& renderPass);
-    void presentImage(VkRenderPass& renderPass, VkQueue& presentationQueue, const std::vector<VkSemaphore> signalSemafores, GLFWwindow* window);
-    uint32_t asquireNextImage(VkRenderPass& renderPass,
+    void presentImage(Device& device, VkRenderPass& renderPass,
+        VkQueue& presentationQueue,
+        const std::vector<VkSemaphore> signalSemafores,
+        GLFWwindow* window);
+    uint32_t asquireNextImage(Device& device, VkRenderPass& renderPass,
         VkSemaphore& imageAvailable, GLFWwindow* window);
     void nextFrame();
-    void recreate(VkRenderPass& renderPass, GLFWwindow* window);
-    void destroy(bool destroyImages = false);
+    void recreate(Device& device, VkRenderPass& renderPass, GLFWwindow* window);
+    void destroy();
     uint32_t getMinImageCount();
     VkFormat& getImageFormat();
     VkFormat& getDepthFormat();

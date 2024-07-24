@@ -106,12 +106,6 @@ void Swapchain::create()
     framebufferResized = false;
 }
 
-void Swapchain::createSpecializedImageViews()
-{
-    depthImage.createImageView();
-    colorImage.createImageView();
-}
-
 void Swapchain::createImageViews()
 {
     imageViews.resize(images.size());
@@ -149,8 +143,8 @@ void Swapchain::createFramebuffers(VkRenderPass& renderPass)
 {
     framebuffers.resize(imageViews.size());
 
-    VkImageView depthImageView = depthImage.getView();
-    VkImageView colorImageView = colorImage.getView();
+    VkImageView& depthImageView = depthImage.getView();
+    VkImageView& colorImageView = colorImage.getView();
     for (int i = 0; i < imageViews.size(); i++) {
         std::vector<VkImageView> attachments = { colorImageView, depthImageView,
             imageViews[i] };
@@ -170,13 +164,13 @@ void Swapchain::createFramebuffers(VkRenderPass& renderPass)
     }
 }
 
-uint32_t Swapchain::asquireNextImage(VkRenderPass& renderPass, VkSemaphore& imageAvailable, GLFWwindow* window)
+uint32_t Swapchain::asquireNextImage(Device& device, VkRenderPass& renderPass, VkSemaphore& imageAvailable, GLFWwindow* pWindow)
 {
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, imageAvailable, VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(this->device, swapchain, UINT64_MAX, imageAvailable, VK_NULL_HANDLE, &imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        recreate(renderPass, window);
+        recreate(device, renderPass, pWindow);
         return 0;
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         throw runtime_error("Failed to acquire swap chain image.");
@@ -185,8 +179,8 @@ uint32_t Swapchain::asquireNextImage(VkRenderPass& renderPass, VkSemaphore& imag
     return imageIndex;
 }
 
-void Swapchain::presentImage(VkRenderPass& renderPass, VkQueue& presentationQueue,
-    const vector<VkSemaphore> signalSemafores, GLFWwindow* window)
+void Swapchain::presentImage(Device& device, VkRenderPass& renderPass, VkQueue& presentationQueue,
+    const vector<VkSemaphore> signalSemafores, GLFWwindow* pWindow)
 {
     VkSwapchainKHR swapChains[] = { swapchain };
 
@@ -201,7 +195,7 @@ void Swapchain::presentImage(VkRenderPass& renderPass, VkQueue& presentationQueu
 
     VkResult result = vkQueuePresentKHR(presentationQueue, &presentationInfo);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
-        recreate(renderPass, window);
+        recreate(device, renderPass, pWindow);
         framebufferResized = false;
         currentFrame = 0;
         return;
@@ -217,7 +211,7 @@ void Swapchain::nextFrame()
     currentFrame = (currentFrame + 1) % Constants::MAX_FRAMES_IN_FLIGHT;
 }
 
-void Swapchain::destroy(bool destroyImages)
+void Swapchain::destroy()
 {
     for (VkImageView imageView : imageViews) {
         vkDestroyImageView(device, imageView, nullptr);
@@ -231,36 +225,40 @@ void Swapchain::destroy(bool destroyImages)
     framebuffers.clear();
     vkDestroySwapchainKHR(device, swapchain, nullptr);
 
-    if (destroyImages) {
-        depthImage.destroy();
-        colorImage.destroy();
-    } else {
-        depthImage.destroyImageView();
-        colorImage.destroyImageView();
-    }
+    depthImage.destroy();
+    colorImage.destroy();
 }
 
-void Swapchain::recreate(VkRenderPass& renderPass, GLFWwindow* window)
+void Swapchain::recreate(Device& device, VkRenderPass& renderPass,
+    GLFWwindow* pWindow)
 {
     int width = 0, height = 0;
-    glfwGetFramebufferSize(window, &width, &height);
-
+    glfwGetFramebufferSize(pWindow, &width, &height);
     while (width == 0 || height == 0) {
-        if (glfwWindowShouldClose(window)) {
+        if (glfwWindowShouldClose(pWindow)) {
             return;
         }
 
-        glfwGetFramebufferSize(window, &width, &height);
+        glfwGetFramebufferSize(pWindow, &width, &height);
         glfwWaitEvents();
     }
 
-    vkDeviceWaitIdle(device);
+    glfwSetWindowSize(pWindow, width, height);
+    vkDeviceWaitIdle(this->device);
+
+    surface.findSurfaceDetails(physicalDevice);
+    extent.width = clamp(extent.width,
+        surface.details.capabilities.minImageExtent.width,
+        surface.details.capabilities.maxImageExtent.width);
+    extent.height = clamp(extent.height,
+        surface.details.capabilities.minImageExtent.height,
+        surface.details.capabilities.maxImageExtent.height);
 
     destroy();
 
     create();
     createImageViews();
-    createSpecializedImageViews();
+    createSpecializedImages(device);
     createFramebuffers(renderPass);
 }
 
