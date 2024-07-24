@@ -38,7 +38,7 @@ class Engine {
     // config.hpp.in
     const std::string texturePath = RETRIEVE_STRING(TEXTURE_FILE_PATH);
 
-    const std::vector<VkFormat> depthFormats = {
+    const std::vector<VkFormat> depthFormatCandidates = {
         VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
         VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D16_UNORM
     };
@@ -79,8 +79,6 @@ class Engine {
     std::vector<UniformBuffer> uniformBuffers;
     Image paintingTexture;
     Image heightMapTexture;
-    Image depthImage;
-    Image colorImage;
     Sampler textureSampler;
     Gui gui;
 

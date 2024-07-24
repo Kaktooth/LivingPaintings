@@ -107,7 +107,7 @@ void Image::create(Device& _device, VkCommandPool& commandPool, VkBufferUsageFla
 
     stagingBuffer.destroy();
 
-    createImageView(imageDetails.viewType, imageDetails.format);
+    createImageView();
 }
 
 void Image::load(const char* filePath)
@@ -195,13 +195,13 @@ void Image::copyBufferToImage(Queue& queue)
     CommandBuffer::endSingleTimeCommands(device, commandPool, cmd, queue);
 }
 
-void Image::createImageView(VkImageViewType viewType, VkFormat format)
+void Image::createImageView()
 {
     VkImageViewCreateInfo imageViewInfo {};
     imageViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     imageViewInfo.image = textureImage;
-    imageViewInfo.viewType = viewType;
-    imageViewInfo.format = format;
+    imageViewInfo.viewType = imageDetails.viewType;
+    imageViewInfo.format = imageDetails.format;
     imageViewInfo.subresourceRange.aspectMask = imageDetails.aspectFlags;
     imageViewInfo.subresourceRange.baseMipLevel = 0;
     imageViewInfo.subresourceRange.levelCount = 1;
@@ -211,6 +211,11 @@ void Image::createImageView(VkImageViewType viewType, VkFormat format)
     if (vkCreateImageView(device, &imageViewInfo, nullptr, &imageView) != VK_SUCCESS) {
         throw runtime_error("Failed to create texture image view.");
     }
+}
+
+void Image::destroyImageView()
+{
+    vkDestroyImageView(device, imageView, nullptr);
 }
 
 void Image::destroy()

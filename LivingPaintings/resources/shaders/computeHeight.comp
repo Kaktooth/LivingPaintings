@@ -1,6 +1,6 @@
 #version 460
 
-layout(local_size_x = 16, local_size_y = 16) in;
+layout(local_size_x = 1, local_size_y = 1) in;
 layout(binding = 1) uniform sampler2D texSampler;
 layout(binding = 2, r8) uniform writeonly image2D heightMapTexture;
 
@@ -11,9 +11,13 @@ const vec3 ntsc = vec3(0.299f, 0.587f, 0.114f);
 
 const mat3 kernel = mat3(
 //  top Sobel
-	vec3( -1.0f,-2.0f, -1.0f), 
+//	vec3( -1.0f,-2.0f, -1.0f), 
+//	vec3( 0.0f, 0.0f, 0.0f), 
+//	vec3( 1.0f, 2.0f, 1.0f)
+
+	vec3( 1.0f,2.0f, 1.0f), 
 	vec3( 0.0f, 0.0f, 0.0f), 
-	vec3( 1.0f, 2.0f, 1.0f)
+	vec3( -1.0f, -2.0f, -1.0f)
 
 //  top Sobel–Feldman operator
 //	vec3( -3.0f, -10.0f, -3.0f), 
@@ -52,9 +56,13 @@ const mat3 kernel = mat3(
 
 const mat3 kernel2 = mat3(
 //  right Sobel
-	vec3( -1.0f, 0.0f, 1.0f), 
-	vec3( -2.0f, 0.0f, 2.0f), 
-	vec3( -1.0f, 0.0f, 1.0f)
+//	vec3( -1.0f, 0.0f, 1.0f), 
+//	vec3( -2.0f, 0.0f, 2.0f), 
+//	vec3( -1.0f, 0.0f, 1.0f)
+
+	vec3( 1.0f, 0.0f, -1.0f), 
+	vec3( 2.0f, 0.0f, -2.0f), 
+	vec3( 1.0f, 0.0f, -1.0f)
 
 //  right Sobel–Feldman operator
 //	vec3( -3.0f, 0.0f, 3.0f), 
@@ -103,18 +111,17 @@ vec3 convolve(float dilation, vec2 res, vec2 texCoord) {
 void main() {
 
 //* Height map creation
-//	Calculating matrix convolution with 0 dilation and 1 dilation. Creating height map from finding difference between the two calculated colors.
+//	Calculating matrix convolution using sobel operator and creating height map.
 	vec2 res = textureSize(texSampler, 1);
 	ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
 	vec4 relativeCoord = vec4(0.0f, 0.0f, 0.0f, 1.0f);
 	relativeCoord.xy = vec2(float(texelCoord.x) / gl_NumWorkGroups.x, float(texelCoord.y) / gl_NumWorkGroups.y);
 
-	vec3 edges = convolve(0.0f, res, relativeCoord.xy);
-	vec3 dilatedEdges = convolve(1.0f, res, relativeCoord.xy);
-	vec3 edgeDifference = edges - dilatedEdges; 
-
-	edgeDifference = pow(edgeDifference, vec3(1.0f / gamma));
-	float grayscaleColor = ntsc.x * edgeDifference.x + ntsc.y * edgeDifference.g+ntsc.z * edgeDifference.b; 
-	vec4 heightMap = vec4(grayscaleColor, 0.0f, 0.0f, 1.0);
+	vec3 edges = convolve(1.0f, res, relativeCoord.xy);
+	vec3 dilatedEdges = convolve(2.0f, res, relativeCoord.xy);
+	vec3 diff = edges;
+	edges = pow(edges, vec3(1.0f / gamma));
+	float grayscaleColor = ntsc.x * diff.x + ntsc.y * diff.g + ntsc.z * diff.b; 
+	vec4 heightMap = vec4(grayscaleColor, grayscaleColor, grayscaleColor, 1.0);
 	imageStore(heightMapTexture, texelCoord, heightMap);
 }

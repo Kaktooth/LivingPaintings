@@ -49,40 +49,12 @@ void Engine::init()
     vkQueueWaitIdle(device.getComputeQueue().get());
     computeCmds.create(vulkan.device, vulkan.commandPool);
 
-    swapchain.setDeviceContext(device, surface);
+    swapchain.setContext(device, surface, vulkan.commandPool, vulkan.sampleCount, depthFormatCandidates);
     swapchain.create();
     swapchain.createImageViews();
-    const VkExtent2D swapchainExtent = swapchain.getExtent();
-    const VkFormat depthFormat = device.findSupportedFormat(depthFormats, VK_IMAGE_TILING_OPTIMAL,
-        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-    const int aspectFlags = device.hasStencilComponent(depthFormat)
-        ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT
-        : VK_IMAGE_ASPECT_DEPTH_BIT;
-    depthImage.imageDetails.createImageInfo(
-        "", swapchainExtent.width, swapchainExtent.height, 4,
-        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D,
-        depthFormat, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-        VK_IMAGE_TILING_OPTIMAL, aspectFlags, vulkan.sampleCount);
-    depthImage.create(device, vulkan.commandPool,
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     const VkFormat colorFormat = swapchain.getImageFormat();
-    colorImage.imageDetails.createImageInfo(
-        "", swapchainExtent.width, swapchainExtent.height, 4,
-        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_VIEW_TYPE_2D, colorFormat,
-        VK_SHADER_STAGE_FRAGMENT_BIT, VK_IMAGE_TILING_OPTIMAL,
-        VK_IMAGE_ASPECT_COLOR_BIT, vulkan.sampleCount);
-    colorImage.create(device, vulkan.commandPool,
-        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-    swapchain.createSpecializedImageView(colorImage.get(), colorFormat,
-        VK_IMAGE_ASPECT_COLOR_BIT);
-
-    swapchain.createSpecializedImageView(depthImage.get(), depthFormat,
-        VK_IMAGE_ASPECT_DEPTH_BIT);
-
+    const VkFormat depthFormat = swapchain.getDepthFormat();
     INIT(vulkan.renderPass, renderPass.create(vulkan.device, colorFormat, depthFormat, vulkan.sampleCount));
     swapchain.createFramebuffers(vulkan.renderPass);
 
@@ -123,6 +95,7 @@ void Engine::init()
     descriptor.create(vulkan.device, uniformBuffers, paintingTexture,
         heightMapTexture, textureSampler);
 
+    const VkExtent2D swapchainExtent = swapchain.getExtent();
     pipeline.create(vulkan.device, vulkan.renderPass, descriptor.getSetLayout(), swapchainExtent, vulkan.sampleCount);
 
     gui.init(vulkan.instance, device, vulkan.commandPool, renderPass, swapchain, descriptor.getPool(), pWindow);
@@ -154,8 +127,8 @@ void Engine::update()
 
         computeCmds.begin(currentFrame);
         pipeline.bind(cmdCompute, descriptor.getSet(currentFrame));
-        vkCmdDispatch(cmdCompute, imageDetails.width / 16,
-            imageDetails.height / 16, 1);
+        vkCmdDispatch(cmdCompute, imageDetails.width,
+            imageDetails.height, 1);
         computeCmds.end(currentFrame);
 
         computeQueue.submit(cmdCompute, inFlightFence, computeWaitSemaphores,
@@ -196,6 +169,19 @@ void Engine::update()
 
         if (pipeline.recreateifShadersChanged()) {
             gui.selectPipelineindex(pipeline.getPipelineHistorySize() - 1);
+            VkCommandBuffer& cmdCompute = computeCmds.get(currentFrame);
+
+            computeCmds.begin(currentFrame);
+            pipeline.bind(cmdCompute, descriptor.getSet(currentFrame));
+            vkCmdDispatch(cmdCompute, imageDetails.width, imageDetails.height, 1);
+            computeCmds.end(currentFrame);
+
+            computeQueue.submit(cmdCompute, inFlightFence,
+                computeWaitSemaphores, computeSignalSemaphores,
+                computeWaitStages, currentFrame);
+
+            inFlightFence.wait(currentFrame);
+            inFlightFence.reset(currentFrame);
         }
 
         forwardRenderAction.setContext(pipeline, extent,
@@ -231,8 +217,6 @@ void Engine::cleanup()
     textureSampler.destroy();
     paintingTexture.destroy();
     heightMapTexture.destroy();
-    depthImage.destroy();
-    colorImage.destroy();
 
     for (UniformBuffer& uniformBuffer : uniformBuffers) {
         uniformBuffer.destroy();
@@ -242,7 +226,7 @@ void Engine::cleanup()
     indexBuffer.destroy();
     renderPass.destroy();
     commandPool.destroy();
-    swapchain.destroy();
+    swapchain.destroy(true);
 
     device.destroy();
     surface.destory();
@@ -265,6 +249,6 @@ void Engine::initWindow(const uint16_t width, const uint16_t height)
     glfwSetFramebufferSizeCallback(
         pWindow, [](GLFWwindow* window, int width, int height) {
             Engine* pEngine = reinterpret_cast<Engine*>(glfwGetWindowUserPointer(window));
-            pEngine->swapchain.resizeFramebuffer();
+            /*           pEngine->swapchain.resizeFramebuffer();*/
         });
 }

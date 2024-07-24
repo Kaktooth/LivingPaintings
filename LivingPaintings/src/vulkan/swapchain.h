@@ -4,6 +4,7 @@
 
 #pragma once
 #include "device.h"
+#include "image.h"
 #include "semaphore.h"
 #include "surface.h"
 #include "vulkan/vulkan.h"
@@ -16,25 +17,34 @@ class Swapchain {
     VkSwapchainKHR swapchain = VK_NULL_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+    VkCommandPool commandPool = VK_NULL_HANDLE;
     Surface surface;
     QueueFamily::Indices queueFamilyIndicies;
     uint32_t minImageCount;
+    Image depthImage;
+    Image colorImage;
     std::vector<VkImage> images;
     std::vector<VkImageView> imageViews;
-    std::vector<VkImageView> specializedImageViews; // currently 1. resolve 2. depth
     std::vector<VkFramebuffer> framebuffers;
+    VkColorSpaceKHR colorSpace;
     VkFormat imageFormat;
+    VkFormat depthFormat;
+    VkSampleCountFlagBits samples;
+    int aspectFlags;
     VkExtent2D extent;
     uint32_t currentFrame;
     bool framebufferResized;
 
+    void createSpecializedImages(Device& device);
+
 public:
-    void setDeviceContext(Device& device, Surface& surface);
+    void setContext(Device& device, Surface& surface,
+        VkCommandPool commandPool, VkSampleCountFlagBits samples,
+        std::vector<VkFormat> depthFormatCandidates);
     void create();
     VkImageView& createImageView(VkImage& image, VkFormat& format,
         VkImageAspectFlags aspectFlags);
-    void createSpecializedImageView(VkImage image, VkFormat format,
-        VkImageAspectFlags aspectFlags);
+    void createSpecializedImageViews();
     void createImageViews();
     void createFramebuffers(VkRenderPass& renderPass);
     void presentImage(VkRenderPass& renderPass, VkQueue& presentationQueue, const std::vector<VkSemaphore> signalSemafores, GLFWwindow* window);
@@ -42,9 +52,10 @@ public:
         VkSemaphore& imageAvailable, GLFWwindow* window);
     void nextFrame();
     void recreate(VkRenderPass& renderPass, GLFWwindow* window);
-    void destroy();
+    void destroy(bool destroyImages = false);
     uint32_t getMinImageCount();
     VkFormat& getImageFormat();
+    VkFormat& getDepthFormat();
     VkExtent2D& getExtent();
     std::vector<VkImageView>& getImageViews();
     std::vector<VkFramebuffer>& getFramebuffers();

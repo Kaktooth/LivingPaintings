@@ -6,12 +6,50 @@
 
 using namespace std;
 
-void Swapchain::setDeviceContext(Device& _device, Surface& _surface)
+void Swapchain::setContext(Device& device, Surface& surface,
+    VkCommandPool commandPool,
+    VkSampleCountFlagBits samples,
+    std::vector<VkFormat> depthFormatCandidates)
 {
-    this->device = _device.get();
-    this->physicalDevice = _device.getPhysicalDevice();
-    this->surface = _surface;
-    this->queueFamilyIndicies = _device.getQueueFamily().indicies;
+    this->device = device.get();
+    this->physicalDevice = device.getPhysicalDevice();
+    this->surface = surface;
+    this->queueFamilyIndicies = device.getQueueFamily().indicies;
+    this->commandPool = commandPool;
+    this->samples = samples;
+
+    const VkSurfaceFormatKHR surfaceFormat = surface.chooseSurfaceFormat();
+    colorSpace = surfaceFormat.colorSpace;
+    imageFormat = surfaceFormat.format;
+    extent = surface.chooseResolution();
+    depthFormat = device.findSupportedFormat(
+        depthFormatCandidates, VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+    aspectFlags = device.hasStencilComponent(depthFormat)
+        ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT
+        : VK_IMAGE_ASPECT_DEPTH_BIT;
+
+    createSpecializedImages(device);
+}
+
+void Swapchain::createSpecializedImages(Device& device)
+{
+    depthImage.imageDetails.createImageInfo(
+        "", extent.width, extent.height, 4,
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D,
+        depthFormat, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        VK_IMAGE_TILING_OPTIMAL, aspectFlags, samples);
+    depthImage.create(device, commandPool,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    colorImage.imageDetails.createImageInfo(
+        "", extent.width, extent.height, 4, VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_VIEW_TYPE_2D, imageFormat, VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, samples);
+    colorImage.create(device, commandPool,
+        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 }
 
 void Swapchain::create()
@@ -23,10 +61,8 @@ void Swapchain::create()
         queueFamilyIndicies.computeFamily.value()
     };
 
-    const VkSurfaceFormatKHR surfaceFormat = surface.chooseSurfaceFormat();
     const VkPresentModeKHR presentMode = surface.choosePresentationMode();
-    imageFormat = surfaceFormat.format;
-    extent = surface.chooseResolution();
+
     minImageCount = surface.details.capabilities.minImageCount + 1;
     if (surface.details.capabilities.maxImageCount > 0 && minImageCount > surface.details.capabilities.maxImageCount) {
         minImageCount = surface.details.capabilities.maxImageCount;
@@ -36,8 +72,8 @@ void Swapchain::create()
     swapchainInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchainInfo.surface = surface.get();
     swapchainInfo.minImageCount = minImageCount;
-    swapchainInfo.imageFormat = surfaceFormat.format;
-    swapchainInfo.imageColorSpace = surfaceFormat.colorSpace;
+    swapchainInfo.imageFormat = imageFormat;
+    swapchainInfo.imageColorSpace = colorSpace;
     swapchainInfo.imageExtent = extent;
     swapchainInfo.imageArrayLayers = 1;
     swapchainInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -70,11 +106,10 @@ void Swapchain::create()
     framebufferResized = false;
 }
 
-void Swapchain::createSpecializedImageView(VkImage image, VkFormat format,
-    VkImageAspectFlags aspectFlags)
+void Swapchain::createSpecializedImageViews()
 {
-    VkImageView& imageView = createImageView(image, format, aspectFlags);
-    specializedImageViews.push_back(imageView);
+    depthImage.createImageView();
+    colorImage.createImageView();
 }
 
 void Swapchain::createImageViews()
@@ -114,12 +149,11 @@ void Swapchain::createFramebuffers(VkRenderPass& renderPass)
 {
     framebuffers.resize(imageViews.size());
 
+    VkImageView depthImageView = depthImage.getView();
+    VkImageView colorImageView = colorImage.getView();
     for (int i = 0; i < imageViews.size(); i++) {
-        std::vector<VkImageView> attachments = {};
-        for (VkImageView& spImageView : specializedImageViews) {
-            attachments.push_back(spImageView);
-        }
-        attachments.push_back(imageViews[i]);
+        std::vector<VkImageView> attachments = { colorImageView, depthImageView,
+            imageViews[i] };
 
         VkFramebufferCreateInfo framebufferInfo {};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -183,13 +217,9 @@ void Swapchain::nextFrame()
     currentFrame = (currentFrame + 1) % Constants::MAX_FRAMES_IN_FLIGHT;
 }
 
-void Swapchain::destroy()
+void Swapchain::destroy(bool destroyImages)
 {
     for (VkImageView imageView : imageViews) {
-        vkDestroyImageView(device, imageView, nullptr);
-    }
-
-    for (VkImageView imageView : specializedImageViews) {
         vkDestroyImageView(device, imageView, nullptr);
     }
 
@@ -198,15 +228,23 @@ void Swapchain::destroy()
     }
 
     imageViews.clear();
-    specializedImageViews.clear();
     framebuffers.clear();
     vkDestroySwapchainKHR(device, swapchain, nullptr);
+
+    if (destroyImages) {
+        depthImage.destroy();
+        colorImage.destroy();
+    } else {
+        depthImage.destroyImageView();
+        colorImage.destroyImageView();
+    }
 }
 
 void Swapchain::recreate(VkRenderPass& renderPass, GLFWwindow* window)
 {
     int width = 0, height = 0;
     glfwGetFramebufferSize(window, &width, &height);
+
     while (width == 0 || height == 0) {
         if (glfwWindowShouldClose(window)) {
             return;
@@ -222,6 +260,7 @@ void Swapchain::recreate(VkRenderPass& renderPass, GLFWwindow* window)
 
     create();
     createImageViews();
+    createSpecializedImageViews();
     createFramebuffers(renderPass);
 }
 
@@ -233,6 +272,11 @@ uint32_t Swapchain::getMinImageCount()
 VkFormat& Swapchain::getImageFormat()
 {
     return imageFormat;
+}
+
+VkFormat& Swapchain::getDepthFormat()
+{
+    return depthFormat;
 }
 
 VkExtent2D& Swapchain::getExtent()

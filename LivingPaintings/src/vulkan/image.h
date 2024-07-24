@@ -22,7 +22,6 @@ class Image {
         VkImageLayout newLayout,
         VkPipelineStageFlags destinationStage);
     void copyBufferToImage(Queue& queue);
-    void createImageView(VkImageViewType viewType, VkFormat format);
 
 public:
     struct Details {
@@ -48,6 +47,8 @@ public:
     void create(Device& _device, VkCommandPool& commandPool,
         VkBufferUsageFlags usage,
         VkMemoryPropertyFlags memoryPropertyFlags);
+    void createImageView();
+    void destroyImageView();
     void destroy();
     VkImage& get();
     VkImageView& getView();
