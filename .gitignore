@@ -13,3 +13,8 @@ _deps
 /LivingPaintings/resources/shaders/.vshistory
 /LivingPaintings/src/vulkan/.vshistory
 /out/build
+/.vshistory/vcpkg.json
+/LivingPaintings/.vshistory/CMakeLists.txt
+/LivingPaintings/src/.vshistory/LivingPaintings.cpp
+/LivingPaintings/src/segmentation/.vshistory
+/LivingPaintings/resources/textures/.vshistory/abstract-2341349_1920.jpg
