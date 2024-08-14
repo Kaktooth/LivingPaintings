@@ -8,8 +8,8 @@
 
 using namespace Constants;
 
-const std::string preprocessModelPath = RETRIEVE_STRING(PREPROCESS_SAM_HQ_PATH);
-const std::string modelPath = RETRIEVE_STRING(SAM_HQ_PATH);
+const std::string preprocessModelPath = RETRIEVE_STRING(PREPROCESS_SAM_PATH);
+const std::string modelPath = RETRIEVE_STRING(SAM_PATH);
 const int THREAD_NUMBER = std::thread::hardware_concurrency();
 
 bool runningSegmentation = true;

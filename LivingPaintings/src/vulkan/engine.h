@@ -36,7 +36,6 @@
 // TEXTURE_FILE_PATH variable is retrieved from Cmake with macros in file
 // config.hpp.in
 const std::string texturePath = RETRIEVE_STRING(TEXTURE_FILE_PATH);
-const std::string partitionPath = RETRIEVE_STRING(OUTPUT_PARTITION_FILE_PATH);
 
 class Engine {
 

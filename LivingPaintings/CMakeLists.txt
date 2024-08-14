@@ -1,4 +1,4 @@
-﻿# CMakeList.txt : CMake project for DeepPicture, include source and define
+﻿# CMakeList.txt : CMake project for LivingPaintings, include source and define
 # project specific logic here.
 #
 
@@ -21,29 +21,19 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(PVS_CMakeModule)
 include("${pvs_cmakemodule_SOURCE_DIR}/PVS-Studio.cmake")
 
-FetchContent_Declare(
-    nanobench
-    GIT_REPOSITORY https://github.com/martinus/nanobench.git
-    GIT_TAG v4.1.0
-    GIT_SHALLOW TRUE)
-
-FetchContent_MakeAvailable(nanobench)
-
 file(GLOB vulkan_engine_SRC
      "src/vulkan/*.h"
      "src/vulkan/*.cpp"
 )
 
 set(TEXTURE_FILE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/resources/textures/painting-342116_1920.jpg")
-set(OUTPUT_PARTITION_FILE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/resources/partition.png")
 set(RESOURCE_SHADER_PATH "${CMAKE_CURRENT_SOURCE_DIR}/resources/shaders/")
-set(PREPROCESS_SAM_HQ_PATH "${CMAKE_CURRENT_SOURCE_DIR}/resources/models/sam_hq_preprocess.onnx")
-set(SAM_HQ_PATH "${CMAKE_CURRENT_SOURCE_DIR}/resources/models/sam_hq_vit_h.onnx")
+set(PREPROCESS_SAM_PATH "${CMAKE_CURRENT_SOURCE_DIR}/resources/models/edge_sam_3x_encoder.onnx")
+set(SAM_PATH "${CMAKE_CURRENT_SOURCE_DIR}/resources/models/edge_sam_3x_decoder.onnx")
 add_definitions( -DTEXTURE_FILE_PATH=${TEXTURE_FILE_PATH} )
-add_definitions( -DOUTPUT_PARTITION_FILE_PATH=${OUTPUT_PARTITION_FILE_PATH} )
 add_definitions( -DRESOURCE_SHADER_PATH=${RESOURCE_SHADER_PATH} )
-add_definitions( -DPREPROCESS_SAM_HQ_PATH=${PREPROCESS_SAM_HQ_PATH} )
-add_definitions( -DSAM_HQ_PATH=${SAM_HQ_PATH} )
+add_definitions( -DPREPROCESS_SAM_PATH=${PREPROCESS_SAM_PATH} )
+add_definitions( -DSAM_PATH=${SAM_PATH} )
 
 
 configure_file("src/config.hpp.in" ${CMAKE_BINARY_DIR}/generated/config.hpp )
@@ -53,7 +43,7 @@ include_directories( ${CMAKE_BINARY_DIR}/generated/ )
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/include )
 
 add_executable (LivingPaintings "src/LivingPaintings.cpp" "src/LivingPaintings.h" ${vulkan_engine_SRC} "src/config.hpp"   "src/segmentation/segmentation_system.h" "src/segmentation/segmentation_system.cpp")
-target_link_libraries(LivingPaintings PRIVATE  gflags::gflags glfw glm::glm Vulkan::Vulkan imgui::imgui unofficial::shaderc::shaderc nanobench ${OpenCV_LIBS}
+target_link_libraries(LivingPaintings PRIVATE  gflags::gflags glfw glm::glm Vulkan::Vulkan imgui::imgui unofficial::shaderc::shaderc ${OpenCV_LIBS}
 "${CMAKE_SOURCE_DIR}/include/sam/$<CONFIG>/sam_cpp_lib.lib")
 target_include_directories(LivingPaintings PRIVATE ${onnxruntime_lib}
  ${OpenCV_LIBS} ${CMAKE_CURRENT_SOURCE_DIR}/include ${$ENV{VULKAN_SDK}/include} ${Stb_INCLUDE_DIR})
