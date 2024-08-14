@@ -5,6 +5,7 @@
 cmake_minimum_required(VERSION 3.21)
 set(CMAKE_CXX_FLAGS "-g -std=c++20 -Wall -Wextra -v")
 set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_MSVC_PARALLEL_ENABLE ON)
 
 # Enable Hot Reload for MSVC compilers if supported.
 if (POLICY CMP0141)

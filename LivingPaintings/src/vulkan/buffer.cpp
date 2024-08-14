@@ -3,6 +3,7 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #include "buffer.h"
+#include "controls.h"
 
 using namespace std;
 
@@ -86,10 +87,8 @@ VkDeviceSize& Buffer::getMemorySize()
 }
 
 void StagingBuffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
-    const stbi_uc* pixels, VkDeviceSize& size)
-{
+                           const stbi_uc* pixels, const VkDeviceSize size) {
     this->device = device;
-
     Buffer::create(device, physicalDevice, size,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_SHARING_MODE_EXCLUSIVE,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -165,7 +164,13 @@ void UniformBuffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
     vkMapMemory(device, getDeviceMemory(), 0, size, 0, &mapped);
 }
 
+template <>
 void UniformBuffer::update(const Data::GraphicsObject::UniformBufferObject& uniformObject)
 {
+    memcpy(mapped, &uniformObject, sizeof(uniformObject));
+}
+
+template <>
+void UniformBuffer::update(const Controls::MouseControl& uniformObject) {
     memcpy(mapped, &uniformObject, sizeof(uniformObject));
 }

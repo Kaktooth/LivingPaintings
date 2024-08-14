@@ -13,6 +13,13 @@
     },
     "shaderc",
     "vulkan",
-    "stb"
+    "stb",
+    {
+      "name": "opencv4",
+      "features": [
+        "contrib",
+        "default-features"
+      ]
+    }
   ]
 }

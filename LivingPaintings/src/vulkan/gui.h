@@ -30,7 +30,7 @@ class Gui {
 
     ObjectParams objectParams = {
         { 0.0f, 0.0f, 0.0f },
-        { 0.0f, 0.0f, 0.0f },
+        { 0.0f, -10.0f, 0.0f },
         { 1.0f, 1.0f, 1.0f }
     };
 
@@ -66,10 +66,14 @@ class Gui {
     void uploadFonts(Queue queue);
 
 public:
+    SpecificDrawParams drawParams = {1, false};
+
     void init(VkInstance& instance, Device& device, VkCommandPool& commandPool,
         RenderPass& renderPass, Swapchain& swapChain,
         VkDescriptorPool& descriptorPool, GLFWwindow* window);
-    void draw(size_t pipelineHistorySize);
+    void ShowEventsOverlay(bool* p_open);
+    void ShowControls(bool* p_open);
+    void draw();
     void renderDrawData(VkCommandBuffer& commandBuffer);
     void destroy();
     ObjectParams getObjectParams();

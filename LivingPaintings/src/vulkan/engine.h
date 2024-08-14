@@ -3,6 +3,7 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #pragma once
+#include "../segmentation/segmentation_system.h"
 #include "../config.hpp"
 #include "command_buffer.h"
 #include "command_pool.h"
@@ -32,18 +33,21 @@
 
 #define INIT(mainHandle, instance) (mainHandle = instance)
 
-class Engine {
+// TEXTURE_FILE_PATH variable is retrieved from Cmake with macros in file
+// config.hpp.in
+const std::string texturePath = RETRIEVE_STRING(TEXTURE_FILE_PATH);
+const std::string partitionPath = RETRIEVE_STRING(OUTPUT_PARTITION_FILE_PATH);
 
-    // TEXTURE_FILE_PATH variable is retrieved from Cmake with macros in file
-    // config.hpp.in
-    const std::string texturePath = RETRIEVE_STRING(TEXTURE_FILE_PATH);
+class Engine {
 
     const std::vector<VkFormat> depthFormatCandidates = {
         VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
         VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D16_UNORM
     };
 
-    const VkDeviceSize uniformSize = sizeof(Data::GraphicsObject::UniformBufferObject);
+    const VkDeviceSize paintingUniformSize = sizeof(Data::GraphicsObject::UniformBufferObject);
+    const VkDeviceSize mouseUniformSize = sizeof(Controls::MouseControl);
+    const VkDeviceSize selectedObjectsTextureSize = 1920 * 1081 * sizeof(char);
 
     struct {
         VkInstance instance = VK_NULL_HANDLE;
@@ -55,6 +59,8 @@ class Engine {
         VkCommandPool commandPool = VK_NULL_HANDLE;
         VkSampleCountFlagBits sampleCount = VK_SAMPLE_COUNT_4_BIT;
     } vulkan;
+
+    ImageSegmantationSystem segmentationSystem;
 
     GLFWwindow* pWindow = NULL;
     VulkanInstance instance;
@@ -76,15 +82,20 @@ class Engine {
     IndexBuffer indexBuffer;
     Descriptor descriptor;
     Data::GraphicsObject quad;
-    std::vector<UniformBuffer> uniformBuffers;
+    std::vector<UniformBuffer> paintingUniform;
+    Controls controls;
+    UniformBuffer mouseControl;
     Image paintingTexture;
     Image heightMapTexture;
     Sampler textureSampler;
     Gui gui;
+    SpecificDrawParams drawParams;
 
     void init();
     void update();
     void cleanup();
+    void keys_callback(GLFWwindow* window, int key, int scancode, int action,
+                       int mods);
     void initWindow(const uint16_t width, const uint16_t height);
 
 public:

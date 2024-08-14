@@ -8,7 +8,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-struct Constants {
+namespace Constants {
 
 #ifdef NDEBUG
     static const bool ENABLE_VALIDATION_LAYERS = false;
@@ -30,4 +30,7 @@ struct Constants {
     static const VkFormat BUMP_TEXTURE_FORMAT = VK_FORMAT_R8_UNORM;
 
     static const VkColorSpaceKHR COLOR_SPACE = VK_COLOR_SPACE_HDR10_HLG_EXT;
+
+    // from 0 - 255
+    static const uint8_t SELECTED_REGION_HIGHLIGHT = 100;
 };

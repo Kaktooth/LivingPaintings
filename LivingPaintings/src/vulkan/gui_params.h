@@ -37,4 +37,8 @@ struct CameraParams {
     float orthoSize;
 };
 
+struct SpecificDrawParams {
+    size_t pipelineHistorySize;
+    bool imageLoaded;
+};
 #endif

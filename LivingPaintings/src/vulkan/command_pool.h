@@ -13,7 +13,7 @@ class CommandPool {
     VkDevice device = VK_NULL_HANDLE;
 
 public:
-    VkCommandPool& create(Device& device);
+    VkCommandPool& create(Device& device, uint8_t queueFamilyIndex);
     void destroy();
     VkCommandPool& get();
 };

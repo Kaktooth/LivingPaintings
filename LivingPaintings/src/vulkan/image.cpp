@@ -9,12 +9,13 @@
 
 using namespace std;
 
-void Image::Details::createImageInfo(const char* filePath, uint16_t width,
-    uint16_t height, uint8_t channels, VkImageLayout imageLayout,
-    VkImageViewType viewType, VkFormat format,
-    int stageUsage, VkImageTiling tiling,
-    int aspectFlags, VkSampleCountFlagBits samples)
-{
+void Image::Details::createImageInfo(
+    const char* filePath,
+    uint16_t width, uint16_t height, uint8_t channels,
+    VkImageLayout imageLayout, VkImageViewType viewType, VkFormat format,
+    int stageUsage, VkImageTiling tiling, int aspectFlags,
+    VkSampleCountFlagBits samples, stbi_uc* pixels) {
+
     this->filePath = filePath;
     this->width = width;
     this->height = height;
@@ -26,10 +27,14 @@ void Image::Details::createImageInfo(const char* filePath, uint16_t width,
     this->tiling = tiling;
     this->aspectFlags = aspectFlags;
     this->samples = samples;
+    this->pixels = pixels;
+    this->bufferSize = width * height * channels;
 }
 
-void Image::create(Device& _device, VkCommandPool& commandPool, VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryPropertyFlags)
-{
+void Image::create(Device& _device, VkCommandPool& commandPool,
+                   VkBufferUsageFlags usage,
+                   VkMemoryPropertyFlags memoryPropertyFlags, Queue& queue) {
+
     this->device = _device.get();
     this->physicalDevice = _device.getPhysicalDevice();
     this->commandPool = commandPool;
@@ -38,9 +43,12 @@ void Image::create(Device& _device, VkCommandPool& commandPool, VkBufferUsageFla
     if (imageFound) {
         load(imageDetails.filePath);
     } else {
-        VkDeviceSize bufferSize = imageDetails.width * imageDetails.height * imageDetails.channels;
-        stbi_uc* emptyBuffer = (stbi_uc*)calloc(1, bufferSize);
-        stagingBuffer.create(device, physicalDevice, emptyBuffer, bufferSize);
+
+       if (imageDetails.pixels == (stbi_uc*)"") {
+         imageDetails.pixels = (stbi_uc*)calloc(1, imageDetails.bufferSize);
+       }
+       stagingBuffer.create(device, physicalDevice, imageDetails.pixels,
+                            imageDetails.bufferSize);
     }
 
     VkImageCreateInfo imageInfo {};
@@ -88,19 +96,19 @@ void Image::create(Device& _device, VkCommandPool& commandPool, VkBufferUsageFla
 
     vkBindImageMemory(device, textureImage, imageMemory, 0);
 
-    Queue& graphicsQueue = _device.getGraphicsQueue();
-
     if ((usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT) == VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
-        transitionLayout(graphicsQueue, VK_IMAGE_LAYOUT_UNDEFINED,
+        transitionLayout(queue, VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_PIPELINE_STAGE_TRANSFER_BIT);
 
-        copyBufferToImage(graphicsQueue);
+        copyBufferToImage(queue, stagingBuffer.get(),
+                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        
 
-        transitionLayout(graphicsQueue, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        transitionLayout(queue, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             imageDetails.layout, imageDetails.stageUsage);
     } else if (usage == VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-        transitionLayout(graphicsQueue, VK_IMAGE_LAYOUT_UNDEFINED,
+        transitionLayout(queue, VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
     }
@@ -168,12 +176,12 @@ void Image::transitionLayout(Queue& queue, VkImageLayout oldLayout,
     }
 
     vkCmdPipelineBarrier(cmd, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
+    
     CommandBuffer::endSingleTimeCommands(device, commandPool, cmd, queue);
 }
 
-void Image::copyBufferToImage(Queue& queue)
-{
+void Image::copyBufferToImage(Queue& queue, VkBuffer& buffer, VkImageLayout dstLayout) {
+
     VkCommandBuffer cmd = CommandBuffer::beginSingleTimeCommands(device, commandPool);
 
     VkBufferImageCopy region {};
@@ -189,8 +197,7 @@ void Image::copyBufferToImage(Queue& queue)
     region.imageOffset = { 0, 0, 0 };
     region.imageExtent = { imageDetails.width, imageDetails.height, 1 };
 
-    const VkBuffer buffer = stagingBuffer.get();
-    vkCmdCopyBufferToImage(cmd, buffer, textureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    vkCmdCopyBufferToImage(cmd, buffer, textureImage, dstLayout, 1, &region);
 
     CommandBuffer::endSingleTimeCommands(device, commandPool, cmd, queue);
 }

@@ -3,20 +3,20 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #include "descriptor.h"
+#include "controls.h"
 
 using namespace std;
 
-void Descriptor::create(VkDevice& device,
-    std::vector<UniformBuffer>& uniformBuffers,
-    Image& paintingTexture, Image& heightMapTexture,
-    Sampler& textureSampler)
-{
-    VkDescriptorSetLayoutBinding uniformLayoutBinding {};
-    uniformLayoutBinding.binding = 0;
-    uniformLayoutBinding.descriptorCount = 1;
-    uniformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uniformLayoutBinding.pImmutableSamplers = nullptr;
-    uniformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+void Descriptor::create(VkDevice& device, std::vector<UniformBuffer>& paintingUniform,
+    Image& paintingTexture, Image& heightMapTexture, Sampler& textureSampler, 
+    UniformBuffer& mouseUniform, Image& selectedPosMask) {
+
+    VkDescriptorSetLayoutBinding paintingLayoutBinding {};
+    paintingLayoutBinding.binding = 0;
+    paintingLayoutBinding.descriptorCount = 1;
+    paintingLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    paintingLayoutBinding.pImmutableSamplers = nullptr;
+    paintingLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
     VkDescriptorSetLayoutBinding samplerLayoutBinding {};
     samplerLayoutBinding.binding = 1;
@@ -39,9 +39,23 @@ void Descriptor::create(VkDevice& device,
     bumpTextureSamplerBinding.pImmutableSamplers = nullptr;
     bumpTextureSamplerBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
+    VkDescriptorSetLayoutBinding mousePosLayoutBinding{};
+    mousePosLayoutBinding.binding = 4;
+    mousePosLayoutBinding.descriptorCount = 1;
+    mousePosLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    mousePosLayoutBinding.pImmutableSamplers = nullptr;
+    mousePosLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    VkDescriptorSetLayoutBinding selectedPosMaskLayoutBinding{};
+    selectedPosMaskLayoutBinding.binding = 5;
+    selectedPosMaskLayoutBinding.descriptorCount = 1;
+    selectedPosMaskLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    selectedPosMaskLayoutBinding.pImmutableSamplers = nullptr;
+    selectedPosMaskLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
     const vector<VkDescriptorSetLayoutBinding> bindings = {
-        uniformLayoutBinding, samplerLayoutBinding, bumpTextureBinding,
-        bumpTextureSamplerBinding
+        paintingLayoutBinding, samplerLayoutBinding, bumpTextureBinding, bumpTextureSamplerBinding,
+        mousePosLayoutBinding, selectedPosMaskLayoutBinding
     };
 
     VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo {};
@@ -59,9 +73,13 @@ void Descriptor::create(VkDevice& device,
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     poolSizes[1].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT) * 2;
     poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    poolSizes[2].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT) * 2;
+    poolSizes[2].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT);
     poolSizes[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[3].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT) * 2;
+    poolSizes[3].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT);
+    poolSizes[4].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSizes[4].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT);
+    poolSizes[5].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    poolSizes[5].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT);
 
     VkDescriptorPoolCreateInfo poolInfo {};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -87,10 +105,10 @@ void Descriptor::create(VkDevice& device,
     }
 
     for (size_t i = 0; i < Constants::MAX_FRAMES_IN_FLIGHT; i++) {
-        VkDescriptorBufferInfo bufferInfo {};
-        bufferInfo.buffer = uniformBuffers[i].get();
-        bufferInfo.offset = 0;
-        bufferInfo.range = sizeof(Data::GraphicsObject::UniformBufferObject);
+        VkDescriptorBufferInfo paintingBufferInfo {};
+        paintingBufferInfo.buffer = paintingUniform[i].get();
+        paintingBufferInfo.offset = 0;
+        paintingBufferInfo.range = sizeof(Data::GraphicsObject::UniformBufferObject);
 
         VkDescriptorImageInfo paintingTextureinfo {};
         paintingTextureinfo.imageLayout = paintingTexture.getDetails().layout;
@@ -106,6 +124,16 @@ void Descriptor::create(VkDevice& device,
         bumpTextureSamplerInfo.imageView = heightMapTexture.getView();
         bumpTextureSamplerInfo.sampler = textureSampler.get();
 
+        VkDescriptorBufferInfo mousePosBufferInfo{};
+        mousePosBufferInfo.buffer = mouseUniform.get();
+        mousePosBufferInfo.offset = 0;
+        mousePosBufferInfo.range = sizeof(Controls::MouseControl);
+
+        VkDescriptorImageInfo selectedPosMaskInfo{};
+        selectedPosMaskInfo.imageLayout =  selectedPosMask.getDetails().layout;
+        selectedPosMaskInfo.imageView = selectedPosMask.getView();
+        selectedPosMaskInfo.sampler = textureSampler.get();
+
         vector<VkWriteDescriptorSet> writeDescriptorSets(bindings.size());
         writeDescriptorSets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         writeDescriptorSets[0].dstSet = sets[i];
@@ -113,7 +141,7 @@ void Descriptor::create(VkDevice& device,
         writeDescriptorSets[0].dstArrayElement = 0;
         writeDescriptorSets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         writeDescriptorSets[0].descriptorCount = 1;
-        writeDescriptorSets[0].pBufferInfo = &bufferInfo;
+        writeDescriptorSets[0].pBufferInfo = &paintingBufferInfo;
 
         writeDescriptorSets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         writeDescriptorSets[1].dstSet = sets[i];
@@ -138,6 +166,22 @@ void Descriptor::create(VkDevice& device,
         writeDescriptorSets[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         writeDescriptorSets[3].descriptorCount = 1;
         writeDescriptorSets[3].pImageInfo = &bumpTextureSamplerInfo;
+
+        writeDescriptorSets[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writeDescriptorSets[4].dstSet = sets[i];
+        writeDescriptorSets[4].dstBinding = 4;
+        writeDescriptorSets[4].dstArrayElement = 0;
+        writeDescriptorSets[4].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        writeDescriptorSets[4].descriptorCount = 1;
+        writeDescriptorSets[4].pBufferInfo = &mousePosBufferInfo;
+
+        writeDescriptorSets[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writeDescriptorSets[5].dstSet = sets[i];
+        writeDescriptorSets[5].dstBinding = 5;
+        writeDescriptorSets[5].dstArrayElement = 0;
+        writeDescriptorSets[5].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        writeDescriptorSets[5].descriptorCount = 1;
+        writeDescriptorSets[5].pImageInfo = &selectedPosMaskInfo;
 
         vkUpdateDescriptorSets(device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
     }

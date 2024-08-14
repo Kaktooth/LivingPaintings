@@ -19,9 +19,10 @@ class Image {
 
     void load(const char* filePath);
     void transitionLayout(Queue& queue, VkImageLayout oldLayout,
-        VkImageLayout newLayout,
-        VkPipelineStageFlags destinationStage);
-    void copyBufferToImage(Queue& queue);
+                          VkImageLayout newLayout,
+                          VkPipelineStageFlags destinationStage);
+    void copyBufferToImage(Queue& queue, VkBuffer& buffer,
+                           VkImageLayout dstLayout);
 
 public:
     struct Details {
@@ -36,17 +37,24 @@ public:
         VkImageViewType viewType;
         int aspectFlags; // see VkImageAspectFlagBits
         VkSampleCountFlagBits samples;
+        stbi_uc* pixels;
+        VkDeviceSize bufferSize;
 
-        void createImageInfo(const char* filePath, uint16_t width,
-            uint16_t height, uint8_t channels, VkImageLayout imageLayout,
+        void createImageInfo(
+            const char* filePath,
+            uint16_t width,
+            uint16_t height, uint8_t channels,
+            VkImageLayout imageLayout,
             VkImageViewType viewType, VkFormat format,
             int stageUsage, VkImageTiling tiling,
-            int aspectFlags, VkSampleCountFlagBits samples);
+            int aspectFlags,
+            VkSampleCountFlagBits samples,
+            stbi_uc* pixels = (stbi_uc*)"");
     } imageDetails;
 
     void create(Device& _device, VkCommandPool& commandPool,
-        VkBufferUsageFlags usage,
-        VkMemoryPropertyFlags memoryPropertyFlags);
+                VkBufferUsageFlags usage,
+                VkMemoryPropertyFlags memoryPropertyFlags, Queue& queue);
     void createImageView();
     void destroy();
     VkImage& get();

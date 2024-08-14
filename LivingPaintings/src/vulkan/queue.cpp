@@ -6,6 +6,11 @@
 
 using namespace std;
 
+void Queue::create(VkDevice& device, uint8_t queueFamilyIndex) {
+  this->queueFamilyIndex = queueFamilyIndex;
+  vkGetDeviceQueue(device, queueFamilyIndex, 0, &queue);
+}
+
 void Queue::submit(VkCommandBuffer& commandBuffer, Fence& fence,
     const std::vector<VkSemaphore> waitSemafores,
     const std::vector<VkSemaphore> signalSemafores,
@@ -54,4 +59,8 @@ void Queue::signal(VkSemaphore& semaphore)
 VkQueue& Queue::get()
 {
     return queue;
+}
+
+uint8_t Queue::getQueueFamilyIndex() { 
+    return queueFamilyIndex;
 }

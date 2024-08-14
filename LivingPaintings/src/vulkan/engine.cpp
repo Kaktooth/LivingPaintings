@@ -43,7 +43,8 @@ void Engine::init()
     imageAvailable.create(vulkan.device);
     renderFinished.create(vulkan.device);
 
-    INIT(vulkan.commandPool, commandPool.create(device));
+    const QueueFamily::Indices familyQueueIndicies = device.getQueueFamily().indicies;
+    INIT(vulkan.commandPool, commandPool.create(device, familyQueueIndicies.graphicsFamily.value()));
     graphicsCmds.create(vulkan.device, vulkan.commandPool);
 
     vkQueueWaitIdle(device.getComputeQueue().get());
@@ -65,12 +66,22 @@ void Engine::init()
     indexBuffer.create(vulkan.device, vulkan.physicalDevice, vulkan.commandPool,
         quad.indicies, transferQueue);
 
-    uniformBuffers.resize(Constants::MAX_FRAMES_IN_FLIGHT);
-    for (UniformBuffer& uniformBuffer : uniformBuffers) {
-        uniformBuffer.create(vulkan.device, vulkan.physicalDevice, uniformSize);
+    paintingUniform.resize(Constants::MAX_FRAMES_IN_FLIGHT);
+    for (UniformBuffer& uniformBuffer : paintingUniform) {
+        uniformBuffer.create(vulkan.device, vulkan.physicalDevice, paintingUniformSize);
     }
 
-    paintingTexture.imageDetails.createImageInfo(texturePath.c_str(), 1920, 1081, 4,
+    segmentationSystem.init(device, vulkan.commandPool, pWindow, 
+                            texturePath, 1920, 1081, controls.getMouseControls());
+
+    const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+    glm::ivec2 monitorSize = glm::ivec2(mode->width, mode->height);
+    controls.fillInMouseControlInfo(glm::dvec2(Constants::WINDOW_WIDTH, Constants::WINDOW_HEIGHT),
+        0.1f, pWindow);
+    mouseControl.create(vulkan.device, vulkan.physicalDevice, mouseUniformSize);
+
+    paintingTexture.imageDetails.createImageInfo(
+        texturePath.c_str(), 1920, 1081, 4,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D,
         Constants::IMAGE_TEXTURE_FORMAT,
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
@@ -78,9 +89,10 @@ void Engine::init()
         VK_SAMPLE_COUNT_1_BIT);
     paintingTexture.create(device, vulkan.commandPool,
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, transferQueue);
 
-    heightMapTexture.imageDetails.createImageInfo("", 1920, 1081, 1,
+    heightMapTexture.imageDetails.createImageInfo(
+        "", 1920, 1081, 1,
         VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_VIEW_TYPE_2D,
         Constants::BUMP_TEXTURE_FORMAT,
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
@@ -88,12 +100,13 @@ void Engine::init()
         VK_SAMPLE_COUNT_1_BIT);
     heightMapTexture.create(device, vulkan.commandPool,
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, transferQueue);
 
     textureSampler.create(vulkan.device, vulkan.physicalDevice);
 
-    descriptor.create(vulkan.device, uniformBuffers, paintingTexture,
-        heightMapTexture, textureSampler);
+    descriptor.create(vulkan.device, paintingUniform, paintingTexture,
+                      heightMapTexture, textureSampler, mouseControl,
+          segmentationSystem.getSelectedObjectsMask());
 
     pipeline.create(vulkan.device, vulkan.renderPass, descriptor.getSetLayout(),
         swapchain.getExtent(), vulkan.sampleCount);
@@ -101,8 +114,8 @@ void Engine::init()
     gui.init(vulkan.instance, device, vulkan.commandPool, renderPass, swapchain, descriptor.getPool(), pWindow);
 }
 
-void Engine::update()
-{
+void Engine::update() {
+
     const vector<VkPipelineStageFlags> waitStages = {
         VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
@@ -116,6 +129,7 @@ void Engine::update()
 
     std::vector<VkFramebuffer>& framebuffers = swapchain.getFramebuffers();
     Queue& presentationQueue = device.getPresentationQueue();
+    Queue& transferQueue = device.getTransferQueue();
     Queue& computeQueue = device.getComputeQueue();
     Image::Details imageDetails = heightMapTexture.getDetails();
 
@@ -139,6 +153,14 @@ void Engine::update()
     while (!glfwWindowShouldClose(pWindow)) {
         glfwPollEvents();
 
+        glm::dvec2 cursorPos{};
+        glfwGetCursorPos(pWindow, &cursorPos.x, &cursorPos.y);
+        controls.updateMousePos(cursorPos);
+        mouseControl.update(controls.getMouseControls());
+
+        segmentationSystem.updateSelectedImageMask(device, vulkan.commandPool,
+                                                   transferQueue);
+
         pipeline.updateExtent(swapchain.getExtent());
 
         const uint32_t& currentFrame = swapchain.getCurrentFrame();
@@ -157,7 +179,7 @@ void Engine::update()
             quad.uniform.transform(gui.getAnimatedObjectParams(),
                 gui.getAnimationParams());
             quad.uniform.cameraView(cameraParams, extent);
-            uniformBuffers[currentFrame].update(quad.uniform);
+            paintingUniform[currentFrame].update(quad.uniform);
         }
 
         inFlightFence.wait(currentFrame);
@@ -167,8 +189,10 @@ void Engine::update()
             currentImageAvailable, pWindow);
 
         graphicsCmds.begin(currentFrame);
-
-        gui.draw(pipeline.getPipelineHistorySize());
+        
+        gui.drawParams.pipelineHistorySize = pipeline.getPipelineHistorySize();
+        gui.drawParams.imageLoaded = segmentationSystem.isImageLoaded();
+        gui.draw();
 
         if (pipeline.recreateifShadersChanged()) {
             gui.selectPipelineindex(pipeline.getPipelineHistorySize() - 1);
@@ -209,6 +233,8 @@ void Engine::update()
 
 void Engine::cleanup()
 {
+    segmentationSystem.destroy();
+
     gui.destroy();
 
     inFlightFence.destroy();
@@ -221,10 +247,10 @@ void Engine::cleanup()
     paintingTexture.destroy();
     heightMapTexture.destroy();
 
-    for (UniformBuffer& uniformBuffer : uniformBuffers) {
+    for (UniformBuffer& uniformBuffer : paintingUniform) {
         uniformBuffer.destroy();
     }
-
+    mouseControl.destroy();
     vertexBuffer.destroy();
     indexBuffer.destroy();
     renderPass.destroy();
@@ -246,12 +272,17 @@ void Engine::initWindow(const uint16_t width, const uint16_t height)
 {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_TRUE);
     pWindow = glfwCreateWindow(width, height, "Living Paintings", nullptr, nullptr);
     glfwSetWindowUserPointer(pWindow, this);
     glfwMakeContextCurrent(pWindow);
     glfwSetFramebufferSizeCallback(
         pWindow, [](GLFWwindow* window, int width, int height) {
-            Engine* pEngine = reinterpret_cast<Engine*>(glfwGetWindowUserPointer(window));
-            /*           pEngine->swapchain.resizeFramebuffer();*/
+          glm::uvec2 windowResolution = glm::uvec2(width, height);
+          Controls* pControls = reinterpret_cast<Controls*>(glfwGetWindowUserPointer(window));
+          ImageSegmantationSystem* pSegmentationSystem =
+              reinterpret_cast<ImageSegmantationSystem*>(glfwGetWindowUserPointer(window));
+          pControls->updateWindowSize(windowResolution);
+          pSegmentationSystem->changeWindowResolution(windowResolution);
         });
 }

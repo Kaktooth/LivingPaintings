@@ -34,6 +34,7 @@ void Swapchain::setContext(Device& device, Surface& surface,
 
 void Swapchain::createSpecializedImages(Device& device)
 {
+    Queue& graphicsQueue = device.getGraphicsQueue();
     depthImage.imageDetails.createImageInfo(
         "", extent.width, extent.height, 4,
         VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D,
@@ -41,7 +42,7 @@ void Swapchain::createSpecializedImages(Device& device)
         VK_IMAGE_TILING_OPTIMAL, aspectFlags, samples);
     depthImage.create(device, commandPool,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, graphicsQueue);
 
     colorImage.imageDetails.createImageInfo(
         "", extent.width, extent.height, 4, VK_IMAGE_LAYOUT_UNDEFINED,
@@ -49,7 +50,7 @@ void Swapchain::createSpecializedImages(Device& device)
         VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, samples);
     colorImage.create(device, commandPool,
         VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, graphicsQueue);
 }
 
 void Swapchain::create()

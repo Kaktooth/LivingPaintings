@@ -49,14 +49,10 @@ VkDevice& Device::create(VkInstance& instance, Surface& surface)
         throw runtime_error("Failed to create logical device.");
     }
 
-    vkGetDeviceQueue(device, queueFamily.indicies.graphicsFamily.value(), 0,
-        &graphicsQueue.get());
-    vkGetDeviceQueue(device, queueFamily.indicies.presentationFamily.value(), 0,
-        &presentationQueue.get());
-    vkGetDeviceQueue(device, queueFamily.indicies.transferFamily.value(), 0,
-        &transferQueue.get());
-    vkGetDeviceQueue(device, queueFamily.indicies.computeFamily.value(), 0,
-        &computeQueue.get());
+    graphicsQueue.create(device, queueFamily.indicies.graphicsFamily.value());
+    presentationQueue.create(device, queueFamily.indicies.presentationFamily.value());
+    transferQueue.create(device, queueFamily.indicies.transferFamily.value());
+    computeQueue.create(device, queueFamily.indicies.computeFamily.value());
 
     return device;
 }
