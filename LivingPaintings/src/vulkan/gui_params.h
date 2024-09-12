@@ -8,6 +8,7 @@
 #define GUI_PARAMS_H
 
 struct ObjectParams {
+    uint16_t index = 0;
     float position[3];
     float rotation[3];
     float scale[3];
@@ -40,5 +41,12 @@ struct CameraParams {
 struct SpecificDrawParams {
     size_t pipelineHistorySize;
     bool imageLoaded;
+    bool constructSelectedObject;
+};
+
+struct ObjectConstructionParams {
+    /* Alpha value is a square radius by which triangles will be removed
+       near specified points of selected object. */
+    int alphaPercentage;
 };
 #endif

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "../segmentation/segmentation_system.h"
 #include "command_buffer.h"
 #include "consts.h"
 #include "device.h"
@@ -23,12 +24,14 @@
 class Gui {
 
     ObjectParams animatedObjectParams = {
+        0,
         { 0.0f, 0.0f, 0.0f },
         { 0.0f, 0.0f, 0.0f },
         { 1.0f, 1.0f, 1.0f } // initial object scale
     };
 
     ObjectParams objectParams = {
+        0,
         { 0.0f, 0.0f, 0.0f },
         { 0.0f, -10.0f, 0.0f },
         { 1.0f, 1.0f, 1.0f }
@@ -58,6 +61,10 @@ class Gui {
         0
     };
 
+    ObjectConstructionParams objectConstructionParams = {
+        1
+    };
+
     size_t selectedPipelineIndex = 0;
 
     VkDevice device = VK_NULL_HANDLE;
@@ -66,7 +73,7 @@ class Gui {
     void uploadFonts(Queue queue);
 
 public:
-    SpecificDrawParams drawParams = {1, false};
+    SpecificDrawParams drawParams = { 1, false, false };
 
     void init(VkInstance& instance, Device& device, VkCommandPool& commandPool,
         RenderPass& renderPass, Swapchain& swapChain,
@@ -76,10 +83,11 @@ public:
     void draw();
     void renderDrawData(VkCommandBuffer& commandBuffer);
     void destroy();
-    ObjectParams getObjectParams();
-    ObjectParams getAnimatedObjectParams();
-    CameraParams getCameraParams();
-    AnimationParams getAnimationParams();
+    ObjectParams& getObjectParams();
+    ObjectParams& getAnimatedObjectParams();
+    CameraParams& getCameraParams();
+    AnimationParams& getAnimationParams();
+    ObjectConstructionParams& getObjectConstructionParams();
     size_t getSelectedPipelineIndex();
     void selectPipelineindex(const size_t pipelineIndex);
 };

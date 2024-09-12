@@ -48,6 +48,7 @@ void ForwardRenderingAction::recordCommandBuffer(VkCommandBuffer& commandBuffer,
     IndexBuffer& indexBuffer,
     Data::GraphicsObject& graphicsObject)
 {
+    const uint32_t dynamicOffset = graphicsObject.instanceId * static_cast<uint32_t>(Data::AlignmentProperties::dynamicUniformAlignment);
     const VkBuffer vertexBuffers[] = { vertexBuffer.get() };
     const VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
@@ -68,11 +69,11 @@ void ForwardRenderingAction::recordCommandBuffer(VkCommandBuffer& commandBuffer,
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-        graphicsPipelineLayout, 0, 1, &descriptorSet, 0,
-        nullptr);
+        graphicsPipelineLayout, 0, 1, &descriptorSet,
+        1, &dynamicOffset);
 
     vkCmdDrawIndexed(commandBuffer,
-        static_cast<uint32_t>(graphicsObject.indicies.size()),
+        static_cast<uint32_t>(graphicsObject.indices.size()),
         1, 0, 0, 0);
 }
 

@@ -9,6 +9,18 @@
       "kind": "artifact",
       "location": "https://github.com/microsoft/vcpkg-ce-catalog/archive/refs/heads/main.zip",
       "name": "microsoft"
+    },
+    {
+      "kind": "git",
+      "repository": "https://github.com/microsoft/vcpkg",
+      "baseline": "7ef729383ab801504035a4445b6dbca18c8865c8",
+      "packages": [ "boost-modular-build-helper" ]
+    },
+    {
+      "kind": "git",
+      "repository": "https://github.com/microsoft/vcpkg",
+      "baseline": "caa7579a1c48e2ca770f6ccf98cb03db95642631",
+      "packages": [ "boost*", "boost-*" ]
     }
   ]
 }

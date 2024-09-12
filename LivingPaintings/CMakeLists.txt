@@ -10,6 +10,8 @@ find_package(Vulkan REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(unofficial-shaderc CONFIG REQUIRED)
 find_package(OpenCV CONFIG REQUIRED)
+find_package(CGAL CONFIG REQUIRED)
+
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 
 include(FetchContent)
@@ -43,7 +45,7 @@ include_directories( ${CMAKE_BINARY_DIR}/generated/ )
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/include )
 
 add_executable (LivingPaintings "src/LivingPaintings.cpp" "src/LivingPaintings.h" ${vulkan_engine_SRC} "src/config.hpp"   "src/segmentation/segmentation_system.h" "src/segmentation/segmentation_system.cpp")
-target_link_libraries(LivingPaintings PRIVATE  gflags::gflags glfw glm::glm Vulkan::Vulkan imgui::imgui unofficial::shaderc::shaderc ${OpenCV_LIBS}
+target_link_libraries(LivingPaintings PRIVATE  gflags::gflags glfw glm::glm Vulkan::Vulkan imgui::imgui unofficial::shaderc::shaderc ${OpenCV_LIBS} CGAL::CGAL
 "${CMAKE_SOURCE_DIR}/include/sam/$<CONFIG>/sam_cpp_lib.lib")
 target_include_directories(LivingPaintings PRIVATE ${onnxruntime_lib}
  ${OpenCV_LIBS} ${CMAKE_CURRENT_SOURCE_DIR}/include ${$ENV{VULKAN_SDK}/include} ${Stb_INCLUDE_DIR})

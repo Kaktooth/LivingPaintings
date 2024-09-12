@@ -1,10 +1,13 @@
 #version 460
 
-layout(binding = 0) uniform UniformBufferObject {
+layout(binding = 0) uniform InstanceUbo {
     mat4 model;
+} uboInstance;
+
+layout(binding = 1) uniform ViewUbo {
     mat4 view;
     mat4 proj;
-} ubo;
+} uboView;
 
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec2 inTexCoord;
@@ -14,8 +17,8 @@ layout(location = 1) out vec3 cameraView;
 layout(location = 2) out mat4 model;
 
 void main() {
-	gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0f);
+	gl_Position = uboView.proj * uboView.view * uboInstance.model * vec4(inPosition, 1.0f);
     texCoord = inTexCoord;
-    cameraView = ubo.view[2].xyz;
-    model = ubo.model;
+    cameraView = uboView.view[2].xyz;
+    model = uboInstance.model;
 }

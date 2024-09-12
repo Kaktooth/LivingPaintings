@@ -3,8 +3,8 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #pragma once
-#include "../segmentation/segmentation_system.h"
 #include "../config.hpp"
+#include "../segmentation/segmentation_system.h"
 #include "command_buffer.h"
 #include "command_pool.h"
 #include "consts.h"
@@ -44,7 +44,6 @@ class Engine {
         VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D16_UNORM
     };
 
-    const VkDeviceSize paintingUniformSize = sizeof(Data::GraphicsObject::UniformBufferObject);
     const VkDeviceSize mouseUniformSize = sizeof(Controls::MouseControl);
     const VkDeviceSize selectedObjectsTextureSize = 1920 * 1081 * sizeof(char);
 
@@ -77,11 +76,12 @@ class Engine {
     Semaphore imageAvailable;
     Semaphore renderFinished;
     Fence inFlightFence;
-    VertexBuffer vertexBuffer;
-    IndexBuffer indexBuffer;
     Descriptor descriptor;
-    Data::GraphicsObject quad;
-    std::vector<UniformBuffer> paintingUniform;
+    std::vector<Data::GraphicsObject> graphicsObjects;
+    std::vector<UniformBuffer> instanceUniformBuffers;
+    std::vector<UniformBuffer> viewUniformBuffers;
+    std::vector<VertexBuffer> vertexBuffers;
+    std::vector<IndexBuffer> indexBuffers;
     Controls controls;
     UniformBuffer mouseControl;
     Image paintingTexture;
@@ -93,8 +93,6 @@ class Engine {
     void init();
     void update();
     void cleanup();
-    void keys_callback(GLFWwindow* window, int key, int scancode, int action,
-                       int mods);
     void initWindow(const uint16_t width, const uint16_t height);
 
 public:

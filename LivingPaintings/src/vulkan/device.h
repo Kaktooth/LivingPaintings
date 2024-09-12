@@ -50,4 +50,6 @@ public:
     Queue& getTransferQueue();
     Queue& getComputeQueue();
     QueueFamily& getQueueFamily();
+    VkPhysicalDeviceProperties getProperties();
+    VkPhysicalDeviceFeatures getFeatures();
 };

@@ -21,9 +21,9 @@ class Buffer {
 
     VkBuffer buffer = VK_NULL_HANDLE;
     VkDeviceMemory deviceMemory = VK_NULL_HANDLE;
-    VkDeviceSize memorySize = 0;
 
-   protected:
+protected:
+    VkDeviceSize memorySize = 0;
     VkDevice device = VK_NULL_HANDLE;
 
 public:
@@ -44,7 +44,7 @@ class StagingBuffer : public Buffer {
 
 public:
     void create(VkDevice& device, VkPhysicalDevice& physicalDevice,
-             const stbi_uc* pixels, const VkDeviceSize size);
+        const stbi_uc* pixels, const VkDeviceSize size);
 };
 
 class VertexBuffer : public Buffer {
@@ -74,6 +74,7 @@ class UniformBuffer : public Buffer {
 
 public:
     void create(VkDevice& device, VkPhysicalDevice& physicalDevice,
-        const VkDeviceSize size);
+        const VkDeviceSize size,
+        VkMemoryPropertyFlags memoryProperyFlags);
     void update(const auto& uniformObject);
 };

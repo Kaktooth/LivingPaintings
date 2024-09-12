@@ -4,48 +4,80 @@
 
 #pragma once
 
+#include "../utils/alloc.h"
+
+#include "consts.h"
 #include "gui_params.h"
 #include "vulkan/vulkan.h"
+#include <algorithm>
 #include <chrono>
-// #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/glm.hpp>
+#include <glm/gtx/hash.hpp>
+#include <queue>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace Data {
 
+struct AlignmentProperties {
+    static size_t minUniformAlignment;
+    static size_t dynamicUniformAlignment;
+};
+
+struct RuntimeProperties {
+    static size_t uboMemorySize;
+};
+
 struct GraphicsObject {
+    static uint16_t s_instanceId;
 
-    struct UniformBufferObject {
-        glm::mat4 model;
-        glm::mat4 view;
-        glm::mat4 proj;
+    static struct InstanceUbo {
+        glm::mat4* model { nullptr };
 
+        void allocateInstances();
         void move(ObjectParams params);
         void rotate(ObjectParams params);
         void scale(ObjectParams params);
-        void transform(ObjectParams params, AnimationParams animationParams);
+        void transform(ObjectParams params, AnimationParams animationParams) const;
         void move(ObjectParams params, float time);
         void rotate(ObjectParams params, float time);
         void scale(ObjectParams params, float time);
+        void destroy();
+    } instanceUniform;
+
+    static struct ViewUbo {
+        glm::mat4 view;
+        glm::mat4 proj;
+
         void cameraView(CameraParams& params, VkExtent2D extent);
-    } uniform;
+    } viewUniform;
 
     struct Vertex {
         glm::vec3 pos;
         glm::vec2 texCoord;
 
+        bool operator>(const Vertex& other) const { return pos == other.pos; }
+
         static VkVertexInputBindingDescription getBindingDescription();
         static std::vector<VkVertexInputAttributeDescription>
         getAttributeDescriptions();
-    } vert;
+    };
 
-    std::vector<Vertex> verticies;
-    std::vector<uint16_t> indicies;
+    uint16_t instanceId = s_instanceId++;
+    std::vector<Vertex> vertices;
+    std::vector<uint16_t> indices;
 
     void constructQuad();
-    void constructQuadWithAspectRatio(uint16_t width, uint16_t height);
+    void constructQuadWithAspectRatio(uint16_t width, uint16_t height,
+        float depth);
     void constructQuadsWithAspectRatio(uint16_t width, uint16_t height);
+    void constructMeshFromTexture(uint16_t width, uint16_t height,
+        float selectedDepth, const unsigned char* pixels,
+        uint16_t alphaPercentage);
 };
+
+size_t setUniformDynamicAlignments(size_t minUboAlignment);
 } // namespace Data

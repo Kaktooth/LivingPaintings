@@ -8,11 +8,7 @@ using namespace std;
 
 const float PAD = 10.0f;
 
-const ImGuiWindowFlags window_flags =
-    ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking |
-    ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings |
-    ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav |
-    ImGuiWindowFlags_NoMove;
+const ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove;
 
 void Gui::init(VkInstance& instance, Device& _device, VkCommandPool& commandPool, RenderPass& renderPass, Swapchain& swapChain, VkDescriptorPool& descriptorPool, GLFWwindow* pWindow)
 {
@@ -51,7 +47,8 @@ void Gui::uploadFonts(Queue queue)
     ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 
-void Gui::ShowEventsOverlay(bool* p_open) {
+void Gui::ShowEventsOverlay(bool* p_open)
+{
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImVec2 work_pos = viewport->WorkPos;
     ImVec2 work_size = viewport->WorkSize;
@@ -65,22 +62,24 @@ void Gui::ShowEventsOverlay(bool* p_open) {
 
     ImGui::SetNextWindowBgAlpha(0.35f);
     if (ImGui::Begin("Events", p_open, window_flags)) {
-      if (drawParams.imageLoaded) {
-        ImGui::Text("Image is loaded!");
-      } else {
-        ImGui::Text("Loading image for segmentation... Cant select objects right now.");
-      }
+        if (drawParams.imageLoaded) {
+            ImGui::Text("Image is loaded!");
+        } else {
+            ImGui::Text("Loading image for segmentation... Cant select objects right now.");
+        }
     }
 
     if (ImGui::BeginPopupContextWindow()) {
-      if (p_open && ImGui::MenuItem("Close")) *p_open = false;
-      ImGui::EndPopup();
+        if (p_open && ImGui::MenuItem("Close"))
+            *p_open = false;
+        ImGui::EndPopup();
     }
 
     ImGui::End();
 }
 
-void Gui::ShowControls(bool* p_open) {
+void Gui::ShowControls(bool* p_open)
+{
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImVec2 work_pos = viewport->WorkPos;
     ImVec2 work_size = viewport->WorkSize;
@@ -91,31 +90,32 @@ void Gui::ShowControls(bool* p_open) {
     window_pos_pivot.y = 0.0f;
     ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
     ImGui::SetNextWindowViewport(viewport->ID);
-    
+
     ImGui::SetNextWindowBgAlpha(0.35f);
     if (ImGui::Begin("Controls", p_open, window_flags)) {
-      ImGui::Text("Constrols: ");
-      ImGui::Separator;
-      ImGui::Text("Ctrl + Left Mouse Click: Select object region");
-      ImGui::Text("Ctrl + Right Mouse Click: Unselect object region");
-      ImGui::Text("I: Zoom in. In zoom in state hold mouse button to select(or unselect) the pixels and release the button when done.");
+        ImGui::Text("Constrols: ");
+        ImGui::Separator;
+        ImGui::Text("Ctrl + Left Mouse Click: Select object region");
+        ImGui::Text("Ctrl + Right Mouse Click: Unselect object region");
+        ImGui::Text("I: Zoom in. In zoom in state hold mouse button to select(or unselect) the pixels and release the button when done.");
     }
 
     if (ImGui::BeginPopupContextWindow()) {
-      if (p_open && ImGui::MenuItem("Close")) *p_open = false;
-      ImGui::EndPopup();
+        if (p_open && ImGui::MenuItem("Close"))
+            *p_open = false;
+        ImGui::EndPopup();
     }
 
     ImGui::End();
 }
 
-void Gui::draw() {
+void Gui::draw()
+{
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
     {
-        bool windowCreated = 
-        ImGui::Begin("Living Paintings");
+        bool windowCreated = ImGui::Begin("Living Paintings");
 
         ShowEventsOverlay(&windowCreated);
         ShowControls(&windowCreated);
@@ -200,6 +200,13 @@ void Gui::draw() {
             }
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu("Construct Object")) {
+            ImGui::DragInt("alpha (1 - 10000)", &objectConstructionParams.alphaPercentage, 10.0f, 1, 10000, "%d%%");
+            if (ImGui::Button("Construct")) {
+                drawParams.constructSelectedObject = true;
+            }
+            ImGui::EndMenu();
+        }
         ImGui::End();
     }
 
@@ -218,24 +225,29 @@ void Gui::destroy()
     ImGui::DestroyContext();
 }
 
-ObjectParams Gui::getObjectParams()
+ObjectParams& Gui::getObjectParams()
 {
     return objectParams;
 }
 
-ObjectParams Gui::getAnimatedObjectParams()
+ObjectParams& Gui::getAnimatedObjectParams()
 {
     return animatedObjectParams;
 }
 
-CameraParams Gui::getCameraParams()
+CameraParams& Gui::getCameraParams()
 {
     return cameraParams;
 }
 
-AnimationParams Gui::getAnimationParams()
+AnimationParams& Gui::getAnimationParams()
 {
     return animationParams;
+}
+
+ObjectConstructionParams& Gui::getObjectConstructionParams()
+{
+    return objectConstructionParams;
 }
 
 size_t Gui::getSelectedPipelineIndex()

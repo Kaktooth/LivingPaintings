@@ -1,14 +1,14 @@
 #version 460
 
-layout(binding = 1) uniform sampler2D texSampler;
-layout(binding = 3) uniform sampler2D heightMapTexSampler;
-layout(binding = 4) uniform MouseControls {
+layout(binding = 2) uniform sampler2D texSampler;
+layout(binding = 4) uniform sampler2D heightMapTexSampler;
+layout(binding = 5) uniform MouseControls {
     dvec2 mousePos;
 	ivec2 windowSize;
     float squareSize;
     bool pixelScaling;
 } mouseControl;
-layout(binding = 5) uniform sampler2D selectedPositionsMask;
+layout(binding = 6) uniform sampler2D selectedPositionsMask;
 
 layout(location = 0) in vec2 fragTexCoord;
 layout(location = 1) in vec3 cameraView;

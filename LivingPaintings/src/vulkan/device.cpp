@@ -220,3 +220,12 @@ QueueFamily& Device::getQueueFamily()
 {
     return queueFamily;
 }
+
+VkPhysicalDeviceProperties Device::getProperties()
+{ 
+    return deviceProperties; 
+}
+
+VkPhysicalDeviceFeatures Device::getFeatures() { 
+    return deviceFeatures;
+}

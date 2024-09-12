@@ -229,10 +229,11 @@ bool Pipeline::recreateifShadersChanged()
 
 void Pipeline::bind(VkCommandBuffer& cmdCompute, VkDescriptorSet& computeDescriptorSet)
 {
+    const uint32_t dynamicOffset = static_cast<uint32_t>(Data::AlignmentProperties::dynamicUniformAlignment);
     for (size_t i = 0; i < computePipelines.size(); i++) {
         vkCmdBindDescriptorSets(cmdCompute, VK_PIPELINE_BIND_POINT_COMPUTE,
             computePipelineLayouts[i], 0, 1,
-            &computeDescriptorSet, 0, 0);
+            &computeDescriptorSet, 1, &dynamicOffset);
         vkCmdBindPipeline(cmdCompute, VK_PIPELINE_BIND_POINT_COMPUTE,
             computePipelines[i]);
     }
