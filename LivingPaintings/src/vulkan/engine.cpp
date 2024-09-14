@@ -184,6 +184,7 @@ void Engine::update()
         if (gui.drawParams.constructSelectedObject) {
             Data::GraphicsObject constructedObject;
             const unsigned char* mask = segmentationSystem.getSelectedPositionsMask();
+            segmentationSystem.clearSelectedPixels();
             ObjectConstructionParams objectConstructionParams = gui.getObjectConstructionParams();
 
             constructedObject.constructMeshFromTexture(TEX_WIDTH, TEX_HEIGHT, 0.0f, mask,

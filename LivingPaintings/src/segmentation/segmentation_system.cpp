@@ -340,6 +340,11 @@ void ImageSegmantationSystem::updateSelectedImageMask(
     }
 }
 
+void ImageSegmantationSystem::clearSelectedPixels()
+{
+    objectPositions.clear();
+}
+
 bool& ImageSegmantationSystem::isImageLoaded() { return imageLoaded; }
 
 unsigned char* ImageSegmantationSystem::getSelectedPositionsMask()

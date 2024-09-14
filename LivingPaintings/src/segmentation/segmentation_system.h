@@ -35,6 +35,7 @@ public:
     void removeAllPositions();
     bool selectedObjectSizeChanged();
     void updateSelectedImageMask(Device& device, VkCommandPool& commandPool, Queue& transferQueue);
+    void clearSelectedPixels();
     bool& isImageLoaded();
     unsigned char* getSelectedPositionsMask();
     Image& getSelectedObjectsMask();
