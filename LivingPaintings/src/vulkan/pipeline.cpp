@@ -1,10 +1,4 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #include "pipeline.h"
-
-using namespace std;
 
 void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
     VkDescriptorSetLayout& descriptorSetLayout,
@@ -18,8 +12,10 @@ void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
 
     try {
         shaderManager.createShaderModules(device);
-    } catch (format_error er) {
-        cout << "[Graphics Pipeline] Fail graphics pipeline creation due to failed shader compilation.";
+    } catch (std::format_error err) {
+        std::cout << "[Graphics Pipeline] Fail graphics pipeline creation due to "
+                     "failed shader compilation."
+                  << '\n';
         return;
     }
 
@@ -49,8 +45,8 @@ void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
     VkViewport viewport {};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = (float)extent.width;
-    viewport.height = (float)extent.height;
+    viewport.width = static_cast<float>(extent.width);
+    viewport.height = static_cast<float>(extent.height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
@@ -58,7 +54,7 @@ void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
     scissor.offset = { 0, 0 };
     scissor.extent = extent;
 
-    const vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    const std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     VkPipelineDynamicStateCreateInfo dynamicStateInfo {};
     dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     dynamicStateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
@@ -145,7 +141,7 @@ void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
 
     VkPipelineLayout layout;
     if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &layout) != VK_SUCCESS) {
-        throw runtime_error("Failed to create pipeline layout.");
+        throw std::runtime_error("Failed to create pipeline layout.");
     }
     layouts.push_back(layout);
 
@@ -169,7 +165,7 @@ void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
 
     VkPipeline graphicsPipeline;
     if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphicsPipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
-        throw runtime_error("Failed to create graphics pipeline.");
+        throw std::runtime_error("Failed to create graphics pipeline.");
     }
     graphicsPipelines.push_back(graphicsPipeline);
 
@@ -183,7 +179,7 @@ void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
 
         VkPipelineLayout computePipelineLayout;
         if (vkCreatePipelineLayout(device, &computePipelineLayoutInfo, nullptr, &computePipelineLayout) != VK_SUCCESS) {
-            throw runtime_error("Failed to create compute pipeline layout.");
+            throw std::runtime_error("Failed to create compute pipeline layout.");
         }
         computePipelineLayouts.push_back(computePipelineLayout);
 
@@ -194,9 +190,9 @@ void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
 
         VkPipeline computePipeline;
         if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1,
-                &computePipelineInfo, nullptr,
-                &computePipeline)) {
-            throw runtime_error("Failed to create compute pipeline.");
+                &computePipelineInfo, nullptr, &computePipeline)
+            != VK_SUCCESS) {
+            throw std::runtime_error("Failed to create compute pipeline.");
         }
 
         computePipelines.push_back(computePipeline);

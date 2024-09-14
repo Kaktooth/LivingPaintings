@@ -1,18 +1,19 @@
-﻿# CMakeList.txt : Top-level CMake project file, do global configuration
-# and include sub-projects here.
-#
+﻿cmake_minimum_required(VERSION 3.27)
 
-cmake_minimum_required(VERSION 3.21)
-set(CMAKE_CXX_FLAGS "-g -std=c++20 -Wall -Wextra -v")
-set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_CXX_FLAGS "-std=c++20 -Wall -Wextra -v")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-g -O1")
 set(CMAKE_MSVC_PARALLEL_ENABLE ON)
+set(CMAKE_CXX_CLANG_TIDY 
+clang-tidy; 
+-header-filter=.;
+-checks=-*,google-*,performance-*,portability-*;)
 
 # Enable Hot Reload for MSVC compilers if supported.
 if (POLICY CMP0141)
   cmake_policy(SET CMP0141 NEW)
 endif()
 
-project ("LivingPaintings")
+project (LivingPaintings CXX)
 
-# Include sub-projects.
-add_subdirectory ("LivingPaintings")
+add_subdirectory (LivingPaintings)

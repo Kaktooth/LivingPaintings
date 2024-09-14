@@ -1,11 +1,5 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #include "descriptor.h"
 #include "controls.h"
-
-using namespace std;
 
 void Descriptor::create(VkDevice& device,
     std::vector<UniformBuffer> uniformInstanceBuffers,
@@ -13,6 +7,7 @@ void Descriptor::create(VkDevice& device,
     Image& paintingTexture, Image& heightMapTexture, Sampler& textureSampler,
     UniformBuffer& mouseUniform, Image& selectedPosMask)
 {
+    std::vector<VkDescriptorSetLayoutBinding> bindings;
 
     VkDescriptorSetLayoutBinding instanceLayoutBinding {};
     instanceLayoutBinding.binding = 0;
@@ -20,6 +15,7 @@ void Descriptor::create(VkDevice& device,
     instanceLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     instanceLayoutBinding.pImmutableSamplers = nullptr;
     instanceLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    bindings.push_back(instanceLayoutBinding);
 
     VkDescriptorSetLayoutBinding viewLayoutBinding {};
     viewLayoutBinding.binding = 1;
@@ -27,6 +23,7 @@ void Descriptor::create(VkDevice& device,
     viewLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     viewLayoutBinding.pImmutableSamplers = nullptr;
     viewLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    bindings.push_back(viewLayoutBinding);
 
     VkDescriptorSetLayoutBinding samplerLayoutBinding {};
     samplerLayoutBinding.binding = 2;
@@ -34,6 +31,7 @@ void Descriptor::create(VkDevice& device,
     samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     samplerLayoutBinding.pImmutableSamplers = nullptr;
     samplerLayoutBinding.stageFlags = paintingTexture.getDetails().stageUsage;
+    bindings.push_back(samplerLayoutBinding);
 
     VkDescriptorSetLayoutBinding bumpTextureBinding {};
     bumpTextureBinding.binding = 3;
@@ -41,6 +39,7 @@ void Descriptor::create(VkDevice& device,
     bumpTextureBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     bumpTextureBinding.pImmutableSamplers = nullptr;
     bumpTextureBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings.push_back(bumpTextureBinding);
 
     VkDescriptorSetLayoutBinding bumpTextureSamplerBinding {};
     bumpTextureSamplerBinding.binding = 4;
@@ -48,6 +47,7 @@ void Descriptor::create(VkDevice& device,
     bumpTextureSamplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     bumpTextureSamplerBinding.pImmutableSamplers = nullptr;
     bumpTextureSamplerBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    bindings.push_back(bumpTextureSamplerBinding);
 
     VkDescriptorSetLayoutBinding mousePosLayoutBinding {};
     mousePosLayoutBinding.binding = 5;
@@ -55,6 +55,7 @@ void Descriptor::create(VkDevice& device,
     mousePosLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     mousePosLayoutBinding.pImmutableSamplers = nullptr;
     mousePosLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    bindings.push_back(mousePosLayoutBinding);
 
     VkDescriptorSetLayoutBinding selectedPosMaskLayoutBinding {};
     selectedPosMaskLayoutBinding.binding = 6;
@@ -62,11 +63,7 @@ void Descriptor::create(VkDevice& device,
     selectedPosMaskLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     selectedPosMaskLayoutBinding.pImmutableSamplers = nullptr;
     selectedPosMaskLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-    const std::vector<VkDescriptorSetLayoutBinding> bindings = {
-        instanceLayoutBinding, viewLayoutBinding, samplerLayoutBinding, bumpTextureBinding, bumpTextureSamplerBinding,
-        mousePosLayoutBinding, selectedPosMaskLayoutBinding
-    };
+    bindings.push_back(selectedPosMaskLayoutBinding);
 
     VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo {};
     descriptorSetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -74,22 +71,22 @@ void Descriptor::create(VkDevice& device,
     descriptorSetLayoutInfo.pBindings = bindings.data();
 
     if (vkCreateDescriptorSetLayout(device, &descriptorSetLayoutInfo, nullptr, &setLayout) != VK_SUCCESS) {
-        throw runtime_error("Failed to create descriptor set layout.");
+        throw std::runtime_error("Failed to create descriptor set layout.");
     }
 
-    vector<VkDescriptorPoolSize> poolSizes(bindings.size());
+    std::vector<VkDescriptorPoolSize> poolSizes(bindings.size());
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     poolSizes[0].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT);
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[1].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT);
     poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[2].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT) * 2;
+    poolSizes[2].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT)*2;
     poolSizes[3].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     poolSizes[3].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT);
     poolSizes[4].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     poolSizes[4].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT);
     poolSizes[5].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSizes[5].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT);
+    poolSizes[5].descriptorCount = 1;
     poolSizes[6].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     poolSizes[6].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT);
 
@@ -101,10 +98,11 @@ void Descriptor::create(VkDevice& device,
     poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
     if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &pool) != VK_SUCCESS) {
-        throw runtime_error("Failed to create descriptor pool.");
+        throw std::runtime_error("Failed to create descriptor pool.");
     }
 
-    vector<VkDescriptorSetLayout> layouts(Constants::MAX_FRAMES_IN_FLIGHT, setLayout);
+    std::vector<VkDescriptorSetLayout> layouts(Constants::MAX_FRAMES_IN_FLIGHT,
+        setLayout);
     VkDescriptorSetAllocateInfo descriptorSetAllocInfo {};
     descriptorSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     descriptorSetAllocInfo.descriptorPool = pool;
@@ -113,7 +111,7 @@ void Descriptor::create(VkDevice& device,
 
     sets.resize(Constants::MAX_FRAMES_IN_FLIGHT);
     if (vkAllocateDescriptorSets(device, &descriptorSetAllocInfo, sets.data()) != VK_SUCCESS) {
-        throw runtime_error("Failed to allocate descriptor sets.");
+        throw std::runtime_error("Failed to allocate descriptor sets.");
     }
 
     for (size_t i = 0; i < Constants::MAX_FRAMES_IN_FLIGHT; i++) {
@@ -151,7 +149,7 @@ void Descriptor::create(VkDevice& device,
         selectedPosMaskInfo.imageView = selectedPosMask.getView();
         selectedPosMaskInfo.sampler = textureSampler.get();
 
-        vector<VkWriteDescriptorSet> writeDescriptorSets(bindings.size());
+        std::vector<VkWriteDescriptorSet> writeDescriptorSets(bindings.size());
         writeDescriptorSets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         writeDescriptorSets[0].dstSet = sets[i];
         writeDescriptorSets[0].dstBinding = 0;
@@ -230,7 +228,7 @@ VkDescriptorPool& Descriptor::getPool()
     return pool;
 }
 
-VkDescriptorSet& Descriptor::getSet(const uint32_t frame)
+VkDescriptorSet& Descriptor::getSet(uint32_t frame)
 {
     return sets[frame];
 }

@@ -1,9 +1,9 @@
 #include "controls.h"
 
-Controls::MouseControl mouseControl;
+Controls::MouseControl mouseControl {};
 
-void key_callback(GLFWwindow* pWindow, int key, int scancode, int action,
-    int mods)
+static void key_callback(GLFWwindow* pWindow, int key, int scancode,
+    int action, int mods)
 {
     if (key == GLFW_KEY_I && action == GLFW_PRESS) {
         mouseControl.pixelScaling = !mouseControl.pixelScaling;

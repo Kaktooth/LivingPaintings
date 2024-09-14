@@ -1,10 +1,4 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #include "forward_rendering_action.h"
-
-using namespace std;
 
 const std::array<VkClearValue, 2> clearColors {
     VkClearValue { { { 0.0f, 0.0f, 0.0f, 1.0f } } },
@@ -12,8 +6,8 @@ const std::array<VkClearValue, 2> clearColors {
 };
 
 void ForwardRenderingAction::setContext(Pipeline& pipeline,
-    const VkExtent2D extent,
-    const size_t selectedPipelineIndex)
+    VkExtent2D extent,
+    size_t selectedPipelineIndex)
 {
     this->graphicsPipelineLayout = pipeline.getLayout(selectedPipelineIndex);
     this->graphicsPipeline = pipeline.get(selectedPipelineIndex);
@@ -22,8 +16,8 @@ void ForwardRenderingAction::setContext(Pipeline& pipeline,
 
 void ForwardRenderingAction::beginRenderPass(
     VkCommandBuffer& cmdGraphics, VkRenderPass& renderPass,
-    const std::vector<VkFramebuffer>& framebuffers,
-    const uint32_t currentFrame)
+    std::vector<VkFramebuffer>& framebuffers,
+    uint32_t currentFrame)
 {
 
     VkRenderPassBeginInfo renderPassBegin {};
@@ -57,8 +51,8 @@ void ForwardRenderingAction::recordCommandBuffer(VkCommandBuffer& commandBuffer,
     VkViewport viewport {};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = (float)extent.width;
-    viewport.height = (float)extent.height;
+    viewport.width = static_cast<float>(extent.width);
+    viewport.height = static_cast<float>(extent.height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
@@ -72,8 +66,7 @@ void ForwardRenderingAction::recordCommandBuffer(VkCommandBuffer& commandBuffer,
         graphicsPipelineLayout, 0, 1, &descriptorSet,
         1, &dynamicOffset);
 
-    vkCmdDrawIndexed(commandBuffer,
-        static_cast<uint32_t>(graphicsObject.indices.size()),
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(graphicsObject.indices.size()),
         1, 0, 0, 0);
 }
 

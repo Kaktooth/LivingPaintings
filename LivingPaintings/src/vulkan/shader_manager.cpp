@@ -1,12 +1,7 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #include "shader_manager.h"
 
-using namespace std;
-
-const char* shaderPath = RETRIEVE_STRING(RESOURCE_SHADER_PATH);
+using namespace std::chrono_literals;
+using Constants::SHADER_PATH;
 
 const int8_t spvExtNameLength = 4;
 const int8_t shaderExtNameLength = 5;
@@ -14,7 +9,7 @@ const int8_t shaderExtNameLength = 5;
 VkDevice ShaderManager::device = VK_NULL_HANDLE;
 bool ShaderManager::recreateGraphicsPipeline = false;
 
-const std::map<string, VkShaderStageFlagBits> shaderTypes {
+const std::map<std::string, VkShaderStageFlagBits> shaderTypes {
     { ".vert", VK_SHADER_STAGE_VERTEX_BIT },
     { ".frag", VK_SHADER_STAGE_FRAGMENT_BIT },
     { ".comp", VK_SHADER_STAGE_COMPUTE_BIT },
@@ -38,17 +33,20 @@ ShaderManager::~ShaderManager()
 
 void ShaderManager::notifyShaderFileChange()
 {
-    cout << "\n[Shader Notifier] Started. Waiting for change notification...\n";
+    std::cout << "\n[Shader Notifier] Started. Waiting for change notification..."
+              << "\n";
+    const char* shaderPath = SHADER_PATH.c_str();
 
     while (TRUE) {
-
+    
         hShaderFileChange = FindFirstChangeNotificationA(
             shaderPath, false, FILE_NOTIFY_CHANGE_LAST_WRITE);
 
         dwWaitStatus = WaitForSingleObject(hShaderFileChange, INFINITE);
         std::this_thread::sleep_for(100ms);
         if (FindNextChangeNotification(hShaderFileChange)) {
-            cout << "\n[Shader Notifier] Shader files directory changed.\n";
+            std::cout << "\n[Shader Notifier] Shader files directory changed."
+                      << "\n";
             recreateGraphicsPipeline = true;
             bool gettingNotified = true;
             while (gettingNotified) {
@@ -62,7 +60,8 @@ void ShaderManager::notifyShaderFileChange()
             }
             FindCloseChangeNotification(hShaderFileChange);
         } else {
-            cout << "\n[Shader Notifier] Stopping. Failed to notify.\n";
+            std::cout << "\n[Shader Notifier] Stopping. Failed to notify."
+                      << "\n";
             FindCloseChangeNotification(hShaderFileChange);
             break;
         }
@@ -73,11 +72,11 @@ void ShaderManager::createShaderModules(VkDevice& device)
 {
     ShaderManager::device = device;
 
-    ShaderCompiler::compileIfChanged(shaderPath);
+    ShaderCompiler::compileIfChanged();
 
     for (std::pair<std::string, std::vector<char>> shader : ShaderCompiler::getCompiledShaders()) {
         VkShaderModule shaderModule = createShaderModule(shader.second);
-        unsigned long index = shader.first.size() - spvExtNameLength;
+        uint32_t index = shader.first.size() - spvExtNameLength;
         std::string ext = shader.first.substr(index - shaderExtNameLength,
             shaderExtNameLength);
         VkShaderStageFlagBits shaderType = shaderTypes.find(ext)->second;
@@ -89,7 +88,7 @@ void ShaderManager::createShaderModules(VkDevice& device)
     }
 }
 
-VkShaderModule ShaderManager::createShaderModule(vector<char> shaderCode)
+VkShaderModule ShaderManager::createShaderModule(std::vector<char> shaderCode)
 {
     VkShaderModuleCreateInfo shaderModuleInfo {};
     shaderModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -98,7 +97,7 @@ VkShaderModule ShaderManager::createShaderModule(vector<char> shaderCode)
 
     VkShaderModule shaderModule;
     if (vkCreateShaderModule(device, &shaderModuleInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-        throw runtime_error("Failed to create shader module.");
+        throw std::runtime_error("Failed to create shader module.");
     }
 
     return shaderModule;
@@ -111,7 +110,7 @@ void ShaderManager::destroyShaderModules()
     }
 }
 
-map<VkShaderStageFlagBits, VkShaderModule> ShaderManager::getShaderModules()
+std::map<VkShaderStageFlagBits, VkShaderModule> ShaderManager::getShaderModules()
 {
     return shaderModules;
 }

@@ -1,7 +1,3 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #pragma once
 #include "command_buffer.h"
 #include "consts.h"
@@ -28,11 +24,11 @@ protected:
 
 public:
     void create(VkDevice& device, VkPhysicalDevice& physicalDevice,
-        const unsigned long long size, const VkBufferUsageFlags usage,
-        const VkSharingMode sharingMode,
-        const VkMemoryPropertyFlags memoryPropertyFlags);
-    void copyBuffer(VkCommandPool& commandPool, const VkBuffer srcBuffer,
-        const VkBuffer dstBuffer, const VkDeviceSize size,
+        uint64_t size, VkBufferUsageFlags usage,
+        VkSharingMode sharingMode,
+        VkMemoryPropertyFlags memoryPropertyFlags);
+    void copyBuffer(VkCommandPool& commandPool, VkBuffer srcBuffer,
+        VkBuffer dstBuffer, VkDeviceSize size,
         Queue& transferQueue);
     void destroy();
     VkBuffer& get();
@@ -44,7 +40,7 @@ class StagingBuffer : public Buffer {
 
 public:
     void create(VkDevice& device, VkPhysicalDevice& physicalDevice,
-        const stbi_uc* pixels, const VkDeviceSize size);
+        stbi_uc* pixels, VkDeviceSize size);
 };
 
 class VertexBuffer : public Buffer {
@@ -54,7 +50,7 @@ class VertexBuffer : public Buffer {
 public:
     void create(VkDevice& device, VkPhysicalDevice& physicalDevice,
         VkCommandPool& commandPool,
-        const std::vector<Data::GraphicsObject::Vertex>& vertecies,
+        std::vector<Data::GraphicsObject::Vertex>& vertecies,
         Queue& transferQueue);
 };
 
@@ -64,7 +60,7 @@ class IndexBuffer : public Buffer {
 
 public:
     void create(VkDevice& device, VkPhysicalDevice& physicalDevice,
-        VkCommandPool& commandPool, const std::vector<uint16_t>& indicies,
+        VkCommandPool& commandPool, std::vector<uint16_t>& indicies,
         Queue& transferQueue);
 };
 

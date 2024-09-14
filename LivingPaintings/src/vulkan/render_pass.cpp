@@ -1,10 +1,4 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #include "render_pass.h"
-
-using namespace std;
 
 VkRenderPass& RenderPass::create(VkDevice& device, VkFormat colorFormat,
     VkFormat depthFormat, VkSampleCountFlagBits samples)
@@ -82,7 +76,7 @@ VkRenderPass& RenderPass::create(VkDevice& device, VkFormat colorFormat,
     renderPassInfo.pDependencies = &subpassDependency;
 
     if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
-        throw runtime_error("Failed to create render pass.");
+        throw std::runtime_error("Failed to create render pass.");
     }
 
     return renderPass;

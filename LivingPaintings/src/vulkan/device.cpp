@@ -1,21 +1,15 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #include "device.h"
-
-using namespace std;
 
 VkDevice& Device::create(VkInstance& instance, Surface& surface)
 {
-    vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     float queuePriority = 1.0f;
 
     this->surface = surface.get();
 
     selectPhysicalDevice(instance, surface);
 
-    set<uint32_t> queueFamilies = {
+    std::set<uint32_t> queueFamilies = {
         queueFamily.indicies.graphicsFamily.value(),
         queueFamily.indicies.presentationFamily.value(),
         queueFamily.indicies.transferFamily.value(),
@@ -46,7 +40,7 @@ VkDevice& Device::create(VkInstance& instance, Surface& surface)
     }
 
     if (vkCreateDevice(physicalDevice, &deviceInfo, nullptr, &device) != VK_SUCCESS) {
-        throw runtime_error("Failed to create logical device.");
+        throw std::runtime_error("Failed to create logical device.");
     }
 
     graphicsQueue.create(device, queueFamily.indicies.graphicsFamily.value());
@@ -59,17 +53,17 @@ VkDevice& Device::create(VkInstance& instance, Surface& surface)
 
 void Device::selectPhysicalDevice(VkInstance& instance, Surface& surface)
 {
-    uint32_t deviceCount = 0;
+    uint32_t deviceCount;
     vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 
     if (!deviceCount) {
-        throw runtime_error("Failed to find any device.");
+        throw std::runtime_error("Failed to find any device.");
     }
 
-    vector<VkPhysicalDevice> devices(deviceCount);
+    std::vector<VkPhysicalDevice> devices(deviceCount);
     vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
-    multimap<int, VkPhysicalDevice> deviceCandidates;
+    std::multimap<int, VkPhysicalDevice> deviceCandidates;
     for (VkPhysicalDevice& device : devices) {
         const int deviceScore = Device::getDeviceScore(device, surface);
         deviceCandidates.insert({ deviceScore, device });
@@ -81,7 +75,7 @@ void Device::selectPhysicalDevice(VkInstance& instance, Surface& surface)
     physicalDevice = deviceCandidates.begin()->second;
 
     if (physicalDevice == VK_NULL_HANDLE) {
-        throw runtime_error("Failed to find a suitible device.");
+        throw std::runtime_error("Failed to find a suitible device.");
     }
 }
 
@@ -112,13 +106,13 @@ int Device::getDeviceScore(VkPhysicalDevice& physicalDevice, Surface& surface)
 
 bool Device::checkDeviceExtensionSupport(VkPhysicalDevice& physicalDevice)
 {
-    set<string> requiredExtensions(Constants::DEVICE_EXTENTIONS.begin(),
+    std::set<std::string> requiredExtensions(Constants::DEVICE_EXTENTIONS.begin(),
         Constants::DEVICE_EXTENTIONS.end());
 
     uint32_t extensionCount;
     vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
 
-    vector<VkExtensionProperties> availableExtensions(extensionCount);
+    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
     vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, availableExtensions.data());
 
     for (VkExtensionProperties& extension : availableExtensions) {
@@ -128,15 +122,15 @@ bool Device::checkDeviceExtensionSupport(VkPhysicalDevice& physicalDevice)
     return requiredExtensions.empty();
 }
 
-VkFormat Device::findSupportedFormat(const std::vector<VkFormat>& formats,
+VkFormat Device::findSupportedFormat(std::vector<VkFormat>& formats,
     VkImageTiling tiling,
     VkFormatFeatureFlags features)
 {
     for (const VkFormat format : formats) {
         VkFormatProperties formatProperties;
         vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &formatProperties);
-        if (tiling == VK_IMAGE_TILING_LINEAR && (formatProperties.linearTilingFeatures & features) == features
-            || tiling == VK_IMAGE_TILING_OPTIMAL && (formatProperties.optimalTilingFeatures & features) == features) {
+        if ((tiling == VK_IMAGE_TILING_LINEAR && (formatProperties.linearTilingFeatures & features) == features)
+            || (tiling == VK_IMAGE_TILING_OPTIMAL && (formatProperties.optimalTilingFeatures & features) == features)) {
             return format;
         }
     }
@@ -147,7 +141,7 @@ bool Device::hasStencilComponent(VkFormat format)
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
-VkSampleCountFlagBits Device::getMaxSampleCount()
+VkSampleCountFlagBits Device::getMaxSampleCount() const
 {
     VkSampleCountFlags sampleNumber = deviceProperties.limits.framebufferColorSampleCounts
         & deviceProperties.limits.framebufferDepthSampleCounts;
@@ -222,10 +216,11 @@ QueueFamily& Device::getQueueFamily()
 }
 
 VkPhysicalDeviceProperties Device::getProperties()
-{ 
-    return deviceProperties; 
+{
+    return deviceProperties;
 }
 
-VkPhysicalDeviceFeatures Device::getFeatures() { 
+VkPhysicalDeviceFeatures Device::getFeatures()
+{
     return deviceFeatures;
 }

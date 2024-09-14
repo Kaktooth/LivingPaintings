@@ -1,10 +1,4 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #include "swapchain.h"
-
-using namespace std;
 
 void Swapchain::setContext(Device& device, Surface& surface,
     VkCommandPool commandPool,
@@ -95,7 +89,7 @@ void Swapchain::create()
     swapchainInfo.oldSwapchain = VK_NULL_HANDLE;
 
     if (vkCreateSwapchainKHR(device, &swapchainInfo, nullptr, &swapchain) != VK_SUCCESS) {
-        throw runtime_error("Failed to create swap chain.");
+        throw std::runtime_error("Failed to create swap chain.");
     }
 
     uint32_t imageCount;
@@ -109,8 +103,9 @@ void Swapchain::create()
 
 void Swapchain::createImageViews()
 {
-    imageViews.resize(images.size());
-    for (int i = 0; i < images.size(); i++) {
+    size_t imageViewsSize = images.size();
+    imageViews.resize(imageViewsSize);
+    for (size_t i = 0; i < imageViewsSize; i++) {
         imageViews[i] = createImageView(images[i], imageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
     }
 }
@@ -135,7 +130,7 @@ VkImageView& Swapchain::createImageView(VkImage& image, VkFormat& format,
 
     VkImageView imageView;
     if (vkCreateImageView(device, &imageViewInfo, nullptr, &imageView) != VK_SUCCESS) {
-        throw runtime_error("Failed to create image view.");
+        throw std::runtime_error("Failed to create image view.");
     }
     return imageView;
 }
@@ -146,9 +141,8 @@ void Swapchain::createFramebuffers(VkRenderPass& renderPass)
 
     VkImageView& depthImageView = depthImage.getView();
     VkImageView& colorImageView = colorImage.getView();
-    for (int i = 0; i < imageViews.size(); i++) {
-        std::vector<VkImageView> attachments = { colorImageView, depthImageView,
-            imageViews[i] };
+    for (size_t i = 0; i < imageViews.size(); i++) {
+        std::vector<VkImageView> attachments = { colorImageView, depthImageView, imageViews[i] };
 
         VkFramebufferCreateInfo framebufferInfo {};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -160,7 +154,7 @@ void Swapchain::createFramebuffers(VkRenderPass& renderPass)
         framebufferInfo.layers = 1;
 
         if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {
-            throw runtime_error("Failed to create framebuffer.");
+            throw std::runtime_error("Failed to create framebuffer.");
         }
     }
 }
@@ -174,14 +168,15 @@ uint32_t Swapchain::asquireNextImage(Device& device, VkRenderPass& renderPass, V
         recreate(device, renderPass, pWindow);
         return 0;
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-        throw runtime_error("Failed to acquire swap chain image.");
+        throw std::runtime_error("Failed to acquire swap chain image.");
     }
 
     return imageIndex;
 }
 
 void Swapchain::presentImage(Device& device, VkRenderPass& renderPass, VkQueue& presentationQueue,
-    const vector<VkSemaphore> signalSemafores, GLFWwindow* pWindow)
+    std::vector<VkSemaphore> signalSemafores,
+    GLFWwindow* pWindow)
 {
     VkSwapchainKHR swapChains[] = { swapchain };
 
@@ -201,7 +196,7 @@ void Swapchain::presentImage(Device& device, VkRenderPass& renderPass, VkQueue& 
         currentFrame = 0;
         return;
     } else if (result != VK_SUCCESS) {
-        throw runtime_error("Failed to present swap chain image.");
+        throw std::runtime_error("Failed to present swap chain image.");
     }
 
     nextFrame();
@@ -248,10 +243,10 @@ void Swapchain::recreate(Device& device, VkRenderPass& renderPass,
     vkDeviceWaitIdle(this->device);
 
     surface.findSurfaceDetails(physicalDevice);
-    extent.width = clamp(extent.width,
+    extent.width = glm::clamp(extent.width,
         surface.details.capabilities.minImageExtent.width,
         surface.details.capabilities.maxImageExtent.width);
-    extent.height = clamp(extent.height,
+    extent.height = glm::clamp(extent.height,
         surface.details.capabilities.minImageExtent.height,
         surface.details.capabilities.maxImageExtent.height);
 
@@ -283,7 +278,7 @@ VkExtent2D& Swapchain::getExtent()
     return extent;
 }
 
-vector<VkImageView>& Swapchain::getImageViews()
+std::vector<VkImageView>& Swapchain::getImageViews()
 {
     return imageViews;
 }
@@ -293,7 +288,7 @@ uint32_t& Swapchain::getCurrentFrame()
     return currentFrame;
 };
 
-vector<VkFramebuffer>& Swapchain::getFramebuffers()
+std::vector<VkFramebuffer>& Swapchain::getFramebuffers()
 {
     return framebuffers;
 }

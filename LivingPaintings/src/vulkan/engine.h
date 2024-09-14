@@ -1,7 +1,3 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #pragma once
 #include "../config.hpp"
 #include "../segmentation/segmentation_system.h"
@@ -33,9 +29,10 @@
 
 #define INIT(mainHandle, instance) (mainHandle = instance)
 
-// TEXTURE_FILE_PATH variable is retrieved from Cmake with macros in file
-// config.hpp.in
-const std::string texturePath = RETRIEVE_STRING(TEXTURE_FILE_PATH);
+using Constants::APP_NAME;
+using Constants::TEXTURE_PATH;
+using Constants::TEX_WIDTH;
+using Constants::TEX_HEIGHT;
 
 class Engine {
 
@@ -45,7 +42,6 @@ class Engine {
     };
 
     const VkDeviceSize mouseUniformSize = sizeof(Controls::MouseControl);
-    const VkDeviceSize selectedObjectsTextureSize = 1920 * 1081 * sizeof(char);
 
     struct {
         VkInstance instance = VK_NULL_HANDLE;
@@ -60,7 +56,7 @@ class Engine {
 
     ImageSegmantationSystem segmentationSystem;
 
-    GLFWwindow* pWindow = NULL;
+    GLFWwindow* pWindow = nullptr;
     VulkanInstance instance;
     VulkanDebugMessenger debugMessenger;
     QueueFamily queueFamily;

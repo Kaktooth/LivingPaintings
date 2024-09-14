@@ -1,7 +1,3 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #pragma once
 #include "device.h"
 #include "image.h"
@@ -49,7 +45,7 @@ public:
     void createFramebuffers(VkRenderPass& renderPass);
     void presentImage(Device& device, VkRenderPass& renderPass,
         VkQueue& presentationQueue,
-        const std::vector<VkSemaphore> signalSemafores,
+        std::vector<VkSemaphore> signalSemafores,
         GLFWwindow* window);
     uint32_t asquireNextImage(Device& device, VkRenderPass& renderPass,
         VkSemaphore& imageAvailable, GLFWwindow* window);

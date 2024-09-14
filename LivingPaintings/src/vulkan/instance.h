@@ -1,7 +1,3 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #pragma once
 #include "consts.h"
 #include "debug.h"
@@ -20,8 +16,9 @@ class VulkanInstance {
 
 public:
     VkInstance& create(VkDebugUtilsMessengerCreateInfoEXT& debugCreateInfo);
-    void enumerateExtentions();
+    static void enumerateExtentions();
     std::vector<const char*> findRequiredExtensions() const;
+    [[nodiscard]]
     bool checkValidationLayerSupport() const;
     void destroy();
     VkInstance& get();

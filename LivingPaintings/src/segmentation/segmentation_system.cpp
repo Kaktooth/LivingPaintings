@@ -1,32 +1,29 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #include "segmentation_system.h"
 #include "../config.hpp"
 #include "../vulkan/consts.h"
 
-using namespace Constants;
+using Constants::PREPROCESS_SAM_MODEL_PATH;
+using Constants::SAM_MODEL_PATH;
+using Constants::BUMP_TEXTURE_FORMAT;
+using Constants::SELECTED_REGION_HIGHLIGHT;
 
-const std::string preprocessModelPath = RETRIEVE_STRING(PREPROCESS_SAM_PATH);
-const std::string modelPath = RETRIEVE_STRING(SAM_PATH);
 const int THREAD_NUMBER = std::thread::hardware_concurrency();
 
 bool runningSegmentation = true;
 bool imageLoaded = false;
 std::string imagePath;
 
-GLFWwindow* pWindow = NULL;
-Queue transferQueue;
-Controls::MouseControl* mouseControl = NULL;
-std::unique_ptr<Sam> samModel = NULL;
+GLFWwindow* pWindow = nullptr;
+Controls::MouseControl* mouseControl = nullptr;
+std::unique_ptr<Sam> samModel = nullptr;
 glm::uvec2 modelResolution;
 
 cv::Mat imageTexture;
 glm::uvec2 imageResolution;
 glm::uvec2 windowResolution;
+
 // Resize point using old (imageResolution) and new (windowResolution) resolutions.
-#define RESIZE_POINT_POSITION(pointPos) ((pointPos / glm::vec2(windowResolution)) * glm::vec2(imageResolution))
+#define RESIZE_POINT_POSITION(pointPos) (((pointPos) / glm::vec2(windowResolution)) * glm::vec2(imageResolution))
 
 std::unordered_set<glm::uvec2> brushPositions { { 0, 0 }, { 1, 0 }, { -1, 0 }, { 0, 1 },
     { 0, -1 }, { 1, 1 }, { -1, -1 }, { 1, -1 },
@@ -41,7 +38,7 @@ cv::Mat maskedImage;
 std::queue<glm::uvec2> inputPositions {};
 std::thread objectSelectionThread;
 
-// 1 - creating button, 2 - removing button
+// First value is for condition when user selecting pixels and second value is for unselecting pixels.
 std::pair<bool, bool> buttonHeld;
 
 static Sam::Parameter getSamParam(std::string const& preprocessModel,
@@ -54,39 +51,39 @@ static Sam::Parameter getSamParam(std::string const& preprocessModel,
     return param;
 }
 
-Sam::Parameter paramSam = getSamParam(preprocessModelPath.c_str(), modelPath.c_str(), 0, 0);
+Sam::Parameter paramSam = getSamParam(PREPROCESS_SAM_MODEL_PATH, SAM_MODEL_PATH, 0, 0);
 
 static void loadImage(Sam* sam, std::string const& inputImage)
 {
     cv::Size inputSize = sam->getInputSize();
-    std::cout << "Model resolution: " << std::endl
-              << "  width: " << inputSize.width << std::endl
-              << "  height: " << inputSize.height << std::endl;
+    std::cout << "Model resolution: " << '\n'
+              << "  width: " << inputSize.width << '\n'
+              << "  height: " << inputSize.height << '\n';
 
     modelResolution = glm::uvec2(inputSize.width, inputSize.height);
 
     if (inputSize.empty()) {
-        std::cout << "Sam initialization failed" << std::endl;
+        std::cout << "Sam initialization failed" << '\n';
     }
 
     cv::Mat image = cv::imread(inputImage, -1);
     if (image.empty()) {
-        std::cout << "Image is empty, image loading failed" << std::endl;
+        std::cout << "Image is empty, image loading failed" << '\n';
     }
 
     imageResolution = glm::uvec2(image.cols, image.rows);
-    std::cout << "Loading image with resolution: " << std::endl
-              << "  width: " << image.cols << std::endl
-              << "  height: " << image.rows << std::endl;
+    std::cout << "Loading image with resolution: " << '\n'
+              << "  width: " << image.cols << '\n'
+              << "  height: " << image.rows << '\n';
 
     windowResolution = imageResolution;
     sam->setWindowResolution(windowResolution.x, windowResolution.y);
 
     resize(image, image, inputSize);
     if (!sam->loadImage(image)) {
-        std::cout << "Image loading failed" << std::endl;
+        std::cout << "Image loading failed" << '\n';
     } else {
-        std::cout << "Image is loaded!" << std::endl;
+        std::cout << "Image is loaded!" << '\n';
     }
     imageTexture = image.clone();
 }
@@ -100,11 +97,10 @@ cv::Mat ImageSegmantationSystem::segmentImage(Sam const* sam)
     return sam->getMask(point);
 }
 
-void useBrush(glm::uvec2 pos)
+static void useBrush(glm::uvec2 pos)
 {
     if (buttonHeld.first) {
-        std::cout << "Holding. Pixel position: " << pos.x << " " << pos.y
-                  << std::endl;
+        std::cout << "Holding. Pixel position: " << pos.x << " " << pos.y << '\n';
         for (glm::uvec2 brushPos : brushPositions) {
             objectPositions.emplace(pos + brushPos, pos + brushPos);
         }
@@ -113,14 +109,14 @@ void useBrush(glm::uvec2 pos)
         for (glm::uvec2 brushPos : brushPositions) {
             if (objectPositions.contains(pos + brushPos)) {
                 std::cout << "Removing selected pixel: " << pos.x << " " << pos.y
-                          << std::endl;
+                          << '\n';
                 objectPositions.erase(pos + brushPos);
             }
         }
     }
 }
 
-void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
+static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
 
     if (buttonHeld.first || buttonHeld.second) {
@@ -129,7 +125,7 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
     }
 }
 
-void mouse_buttons_callback(GLFWwindow* window, int button, int action,
+static void mouse_buttons_callback(GLFWwindow* window, int button, int action,
     int mods)
 {
     if (imageLoaded) {
@@ -144,9 +140,9 @@ void mouse_buttons_callback(GLFWwindow* window, int button, int action,
         if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS && mods == GLFW_MOD_CONTROL) {
             glm::dvec2 cursorPos {};
             glfwGetCursorPos(window, &cursorPos.x, &cursorPos.y);
-            glm::uvec2 pos = glm::uvec2(cursorPos);
+            auto pos = glm::uvec2(cursorPos);
             std::cout << "Selected pixel position: " << pos.x << " " << pos.y
-                      << std::endl;
+                      << '\n';
             if (mouseControl->pixelScaling) {
                 buttonHeld.first = true;
                 useBrush(pos);
@@ -165,7 +161,7 @@ void mouse_buttons_callback(GLFWwindow* window, int button, int action,
             } else {
                 if (objectPositions.contains(pos)) {
                     std::cout << "Removing region that contains pixel: " << pos.x << " "
-                              << pos.y << std::endl;
+                        << pos.y << '\n';
                     glm::uvec2 pressedKeyPos = objectPositions.at(pos);
                     std::erase_if(objectPositions,
                         [&](const std::pair<glm::uvec2, glm::uvec2>& entry) {
@@ -181,14 +177,15 @@ void mouse_buttons_callback(GLFWwindow* window, int button, int action,
 void ImageSegmantationSystem::runObjectSegmentationTask()
 {
 
-    std::cout << "Starting to build Segment Anything model... " << std::endl;
+    std::cout << "Starting to build Segment Anything model... " << '\n';
     samModel = std::make_unique<Sam>(paramSam);
-    std::cout << "Building is finished!" << std::endl;
+    std::cout << "Building is finished!" << '\n';
 
     loadImage(samModel.get(), imagePath);
     imageLoaded = true;
 
-    const VkDeviceSize maskSize = imageResolution.x * imageResolution.y * sizeof(char);
+    const VkDeviceSize maskSize = static_cast<size_t>(imageResolution.x) 
+                                * static_cast<size_t>(imageResolution.y) * sizeof(char);
     while (runningSegmentation) {
         bool inputPositionsEmpty = inputPositions.empty();
         if (!inputPositionsEmpty) {
@@ -196,21 +193,21 @@ void ImageSegmantationSystem::runObjectSegmentationTask()
             inputPositions.pop();
 
             cv::Mat mask = segmentImage(samModel.get());
-            uint8_t* pMaskPixels = (uint8_t*)mask.data;
+            auto pMaskPixels = static_cast<uint8_t*>(mask.data);
             uint8_t channels = imageTexture.channels();
 
             cv::imwrite("D:\\Downloads\\mask.jpg", mask);
             maskedImage = imageTexture.clone();
-            uint8_t* pPixels = (uint8_t*)maskedImage.data;
-            for (uint32_t h = 0; h < imageTexture.rows; h++) {
-                for (uint32_t w = 0; w < imageTexture.cols; w++) {
-                    uint8_t r = pMaskPixels[h * mask.cols + w + 2];
-                    uint8_t g = pMaskPixels[h * mask.cols + w + 1];
-                    uint8_t b = pMaskPixels[h * mask.cols + w];
-                    if (r == 255 && g == 255 && b == 255) {
-                        pPixels[h * imageTexture.cols * channels + w * channels + 2] = 0;
-                        pPixels[h * imageTexture.cols * channels + w * channels + 1] = 0;
-                        pPixels[h * imageTexture.cols * channels + w * channels] = 0;
+            auto pPixels = static_cast<uint8_t*>(maskedImage.data);
+            for (int height = 0; height < imageTexture.rows; height++) {
+                for (int width = 0; width < imageTexture.cols; width++) {
+                    uint8_t red = pMaskPixels[height * mask.cols + width + 2];
+                    uint8_t green = pMaskPixels[height * mask.cols + width + 1];
+                    uint8_t blue = pMaskPixels[height * mask.cols + width];
+                    if (red == 255 && green == 255 && blue == 255) {
+                        pPixels[height * imageTexture.cols * channels + width * channels + 2] = 0;
+                        pPixels[height * imageTexture.cols * channels + width * channels + 1] = 0;
+                        pPixels[height * imageTexture.cols * channels + width * channels] = 0;
                     }
                 }
             }
@@ -220,30 +217,29 @@ void ImageSegmantationSystem::runObjectSegmentationTask()
             // cv::imwrite("D:\\Downloads\\inpaintedImage.jpg", inpaintedImage);
 
             cv::resize(mask, mask, cv::Size(imageResolution.x, imageResolution.y));
-            uint8_t* pResisedMaskPixels = (uint8_t*)mask.data;
-            cv::resize(maskedImage, maskedImage,
-                cv::Size(imageResolution.x, imageResolution.y));
+            auto pResisedMaskPixels = static_cast<uint8_t*>(mask.data);
+            cv::resize(maskedImage, maskedImage, cv::Size(imageResolution.x, imageResolution.y));
             cv::imwrite("D:\\Downloads\\maskedImage.jpg", maskedImage);
 
-            for (uint32_t h = 0; h < imageResolution.y; h++) {
-                for (uint32_t w = 0; w < imageResolution.x; w++) {
-                    uint8_t r = pResisedMaskPixels[h * mask.cols + w + 2];
-                    uint8_t g = pResisedMaskPixels[h * mask.cols + w + 1];
-                    uint8_t b = pResisedMaskPixels[h * mask.cols + w];
-                    if (r == 255 && g == 255 && b == 255) {
-                        objectPositions.emplace(glm::ivec2(w, h), pos);
+            for (uint32_t height = 0; height < imageResolution.y; height++) {
+                for (uint32_t width = 0; width < imageResolution.x; width++) {
+                    uint8_t red = pResisedMaskPixels[height * mask.cols + width + 2];
+                    uint8_t green = pResisedMaskPixels[height * mask.cols + width + 1];
+                    uint8_t blue = pResisedMaskPixels[height * mask.cols + width];
+                    if (red == 255 && green == 255 && blue == 255) {
+                        objectPositions.emplace(glm::ivec2(width, height), pos);
                     }
                 }
             }
 
-            std::cout << "objects selected " << std::endl;
+            std::cout << "objects selected " << '\n';
             currentSelectedObjectsSize = objectPositions.size();
         }
     }
 }
 
 void ImageSegmantationSystem::init(Device& _device, VkCommandPool& _commandPool,
-    GLFWwindow* _pWindow, std::string _imagePath,
+    GLFWwindow* _pWindow, const std::string& _imagePath,
     uint32_t imageWidth, uint32_t imageHeight,
     Controls::MouseControl& _mouseControl)
 {
@@ -253,10 +249,10 @@ void ImageSegmantationSystem::init(Device& _device, VkCommandPool& _commandPool,
     mouseControl = &_mouseControl;
     device = _device.get();
     physicalDevice = _device.getPhysicalDevice();
-    transferQueue = _device.getTransferQueue();
+    Queue& transferQueue = _device.getTransferQueue();
 
-    std::cout << "___ Initialization Phase ___ " << std::endl;
-    std::cout << "Threads: " << THREAD_NUMBER << std::endl;
+    std::cout << "___ Initialization Phase ___ " << '\n';
+    std::cout << "Threads: " << THREAD_NUMBER << '\n';
 
     imageResolution = glm::uvec2(imageWidth, imageHeight);
 
@@ -348,12 +344,12 @@ bool& ImageSegmantationSystem::isImageLoaded() { return imageLoaded; }
 
 unsigned char* ImageSegmantationSystem::getSelectedPositionsMask()
 {
-    unsigned char* selectedPositionsMask = (unsigned char*)calloc(
-        1, imageResolution.x * imageResolution.y);
+   auto pixelSize = static_cast<size_t>(imageResolution.x) * static_cast<size_t>(imageResolution.y);
+   auto selectedPositionsMask = static_cast<unsigned char*>(calloc(1, pixelSize));
     for (uint32_t w = 0; w < imageResolution.x; w++) {
         for (uint32_t h = 0; h < imageResolution.y; h++) {
             unsigned char* offset = selectedPositionsMask + w + (imageResolution.x * h);
-            glm::uvec2 pos = glm::uvec2(w, h);
+            auto pos = glm::uvec2(w, h);
             if (objectPositions.contains(pos)) {
                 offset[0] = SELECTED_REGION_HIGHLIGHT;
             } else {

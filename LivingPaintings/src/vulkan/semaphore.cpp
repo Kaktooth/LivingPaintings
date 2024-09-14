@@ -1,10 +1,4 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #include "semaphore.h"
-
-using namespace std;
 
 void Semaphore::create(VkDevice& device)
 {
@@ -17,7 +11,7 @@ void Semaphore::create(VkDevice& device)
 
     for (size_t i = 0; i < Constants::MAX_FRAMES_IN_FLIGHT; i++) {
         if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &semaphores[i]) != VK_SUCCESS) {
-            throw runtime_error("Failed to create semafore.");
+            throw std::runtime_error("Failed to create semafore.");
         }
     }
 }
@@ -29,7 +23,7 @@ void Semaphore::destroy()
     }
 }
 
-vector<VkSemaphore>& Semaphore::get()
+std::vector<VkSemaphore>& Semaphore::get()
 {
     return semaphores;
 }

@@ -1,7 +1,3 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #pragma once
 #include "consts.h"
 #include "instance.h"
@@ -28,7 +24,8 @@ public:
         void* pUserData)
     {
         if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-            std::cerr << "validation layer: [" << messageType << "] " << pCallbackData->pMessage << std::endl;
+            std::cerr << "validation layer: [" << messageType << "] "
+                      << pCallbackData->pMessage << '\n';
         }
 
         return VK_FALSE;

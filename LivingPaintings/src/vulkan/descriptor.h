@@ -1,7 +1,3 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #pragma once
 #include "buffer.h"
 #include "consts.h"
@@ -25,5 +21,5 @@ public:
     void destroy(VkDevice& device);
     VkDescriptorSetLayout& getSetLayout();
     VkDescriptorPool& getPool();
-    VkDescriptorSet& getSet(const uint32_t frame);
+    VkDescriptorSet& getSet(uint32_t frame);
 };

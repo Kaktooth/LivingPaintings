@@ -1,20 +1,15 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #include "image.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-
-using namespace std;
 
 void Image::Details::createImageInfo(
     const char* filePath,
     uint16_t width, uint16_t height, uint8_t channels,
     VkImageLayout imageLayout, VkImageViewType viewType, VkFormat format,
     int stageUsage, VkImageTiling tiling, int aspectFlags,
-    VkSampleCountFlagBits samples, stbi_uc* pixels) {
+    VkSampleCountFlagBits samples, stbi_uc* pixels)
+{
 
     this->filePath = filePath;
     this->width = width;
@@ -32,8 +27,9 @@ void Image::Details::createImageInfo(
 }
 
 void Image::create(Device& _device, VkCommandPool& commandPool,
-                   VkBufferUsageFlags usage,
-                   VkMemoryPropertyFlags memoryPropertyFlags, Queue& queue) {
+    VkBufferUsageFlags usage,
+    VkMemoryPropertyFlags memoryPropertyFlags, Queue& queue)
+{
 
     this->device = _device.get();
     this->physicalDevice = _device.getPhysicalDevice();
@@ -44,11 +40,11 @@ void Image::create(Device& _device, VkCommandPool& commandPool,
         load(imageDetails.filePath);
     } else {
 
-       if (imageDetails.pixels == (stbi_uc*)"") {
-         imageDetails.pixels = (stbi_uc*)calloc(1, imageDetails.bufferSize);
-       }
-       stagingBuffer.create(device, physicalDevice, imageDetails.pixels,
-                            imageDetails.bufferSize);
+        if (imageDetails.pixels == (stbi_uc*)"") {
+            imageDetails.pixels = (stbi_uc*)calloc(1, imageDetails.bufferSize);
+        }
+        stagingBuffer.create(device, physicalDevice, imageDetails.pixels,
+            imageDetails.bufferSize);
     }
 
     VkImageCreateInfo imageInfo {};
@@ -67,7 +63,7 @@ void Image::create(Device& _device, VkCommandPool& commandPool,
     imageInfo.samples = imageDetails.samples;
 
     if (vkCreateImage(device, &imageInfo, nullptr, &textureImage) != VK_SUCCESS) {
-        throw runtime_error("Failed to create image.");
+        throw std::runtime_error("Failed to create image.");
     }
 
     VkMemoryRequirements memoryRequirements {};
@@ -82,7 +78,7 @@ void Image::create(Device& _device, VkCommandPool& commandPool,
                 return i;
             }
         }
-        throw runtime_error("Failed to find suitable memory type for image.");
+        throw std::runtime_error("Failed to find suitable memory type for image.");
     }();
 
     VkMemoryAllocateInfo allocInfo {};
@@ -91,7 +87,7 @@ void Image::create(Device& _device, VkCommandPool& commandPool,
     allocInfo.memoryTypeIndex = memoryType;
 
     if (vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
-        throw runtime_error("Failed to allocate image memory.");
+        throw std::runtime_error("Failed to allocate image memory.");
     }
 
     vkBindImageMemory(device, textureImage, imageMemory, 0);
@@ -102,8 +98,7 @@ void Image::create(Device& _device, VkCommandPool& commandPool,
             VK_PIPELINE_STAGE_TRANSFER_BIT);
 
         copyBufferToImage(queue, stagingBuffer.get(),
-                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-        
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
         transitionLayout(queue, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             imageDetails.layout, imageDetails.stageUsage);
@@ -125,7 +120,7 @@ void Image::load(const char* filePath)
     VkDeviceSize imageSize = imageDetails.width * imageDetails.height * imageDetails.channels;
 
     if (!pixels) {
-        throw runtime_error("Failed to load texture image.");
+        throw std::runtime_error("Failed to load texture image.");
     }
 
     stagingBuffer.create(device, physicalDevice, pixels, imageSize);
@@ -172,15 +167,16 @@ void Image::transitionLayout(Queue& queue, VkImageLayout oldLayout,
 
         sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     } else {
-        throw invalid_argument("Unsupported layout transition.");
+        throw std::invalid_argument("Unsupported layout transition.");
     }
 
     vkCmdPipelineBarrier(cmd, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-    
+
     CommandBuffer::endSingleTimeCommands(device, commandPool, cmd, queue);
 }
 
-void Image::copyBufferToImage(Queue& queue, VkBuffer& buffer, VkImageLayout dstLayout) {
+void Image::copyBufferToImage(Queue& queue, VkBuffer& buffer, VkImageLayout dstLayout)
+{
 
     VkCommandBuffer cmd = CommandBuffer::beginSingleTimeCommands(device, commandPool);
 
@@ -216,7 +212,7 @@ void Image::createImageView()
     imageViewInfo.subresourceRange.layerCount = 1;
 
     if (vkCreateImageView(device, &imageViewInfo, nullptr, &imageView) != VK_SUCCESS) {
-        throw runtime_error("Failed to create texture image view.");
+        throw std::runtime_error("Failed to create texture image view.");
     }
 }
 

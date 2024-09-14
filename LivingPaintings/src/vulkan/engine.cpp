@@ -1,10 +1,5 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #include "engine.h"
 
-using namespace std;
 using Data::AlignmentProperties;
 using Data::RuntimeProperties;
 
@@ -14,8 +9,8 @@ void Engine::run()
         init();
         update();
         cleanup();
-    } catch (const exception& e) {
-        cerr << e.what() << endl;
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << '\n';
     }
 }
 
@@ -33,10 +28,10 @@ void Engine::init()
     surface.findSurfaceDetails(vulkan.physicalDevice);
     VkSampleCountFlagBits sampleCount = device.getMaxSampleCount();
     if (sampleCount < vulkan.sampleCount) {
-        cout << "Configuration is invalid: device does not support selected"
-             << std::to_string(vulkan.sampleCount) << "samples. "
-             << "Device supports to " << std::to_string(vulkan.sampleCount)
-             << "samples." << endl;
+        std::cout << "Configuration is invalid: device does not support selected"
+                  << std::to_string(vulkan.sampleCount) << "samples. "
+                  << "Device supports to " << std::to_string(vulkan.sampleCount)
+                  << "samples." << '\n';
 
         vulkan.sampleCount = sampleCount;
     }
@@ -70,7 +65,7 @@ void Engine::init()
     graphicsObjects.resize(1);
     vertexBuffers.resize(1);
     indexBuffers.resize(1);
-    graphicsObjects[0].constructQuadWithAspectRatio(1920, 1081, 0.0f);
+    graphicsObjects[0].constructQuadWithAspectRatio(TEX_WIDTH, TEX_HEIGHT, 0.0f);
     vertexBuffers[0].create(vulkan.device, vulkan.physicalDevice, vulkan.commandPool,
         graphicsObjects[0].vertices, transferQueue);
     indexBuffers[0].create(vulkan.device, vulkan.physicalDevice, vulkan.commandPool,
@@ -90,7 +85,7 @@ void Engine::init()
     }
 
     segmentationSystem.init(device, vulkan.commandPool, pWindow,
-        texturePath, 1920, 1081, controls.getMouseControls());
+        TEXTURE_PATH, TEX_WIDTH, TEX_HEIGHT, controls.getMouseControls());
 
     controls.fillInMouseControlInfo(glm::uvec2(Constants::WINDOW_WIDTH, Constants::WINDOW_HEIGHT),
         0.1f, pWindow);
@@ -98,7 +93,7 @@ void Engine::init()
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     paintingTexture.imageDetails.createImageInfo(
-        texturePath.c_str(), 1920, 1081, 4,
+        TEXTURE_PATH.c_str(), TEX_WIDTH, TEX_HEIGHT, 4,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D,
         Constants::IMAGE_TEXTURE_FORMAT,
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
@@ -109,7 +104,7 @@ void Engine::init()
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, transferQueue);
 
     heightMapTexture.imageDetails.createImageInfo(
-        "", 1920, 1081, 1,
+        "", TEX_WIDTH, TEX_HEIGHT, 1,
         VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_VIEW_TYPE_2D,
         Constants::BUMP_TEXTURE_FORMAT,
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
@@ -134,7 +129,7 @@ void Engine::init()
 
 void Engine::update()
 {
-    const vector<VkPipelineStageFlags> waitStages = {
+    const std::vector<VkPipelineStageFlags> waitStages = {
         VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
     };
@@ -191,7 +186,7 @@ void Engine::update()
             const unsigned char* mask = segmentationSystem.getSelectedPositionsMask();
             ObjectConstructionParams objectConstructionParams = gui.getObjectConstructionParams();
 
-            constructedObject.constructMeshFromTexture(1920, 1081, 0.0f, mask,
+            constructedObject.constructMeshFromTexture(TEX_WIDTH, TEX_HEIGHT, 0.0f, mask,
                 objectConstructionParams.alphaPercentage);
 
             if (constructedObject.indices.size() != 0) {
@@ -340,7 +335,7 @@ void Engine::initWindow(const uint16_t width, const uint16_t height)
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_TRUE);
-    pWindow = glfwCreateWindow(width, height, "Living Paintings", nullptr, nullptr);
+    pWindow = glfwCreateWindow(width, height, APP_NAME, nullptr, nullptr);
     glfwSetWindowUserPointer(pWindow, this);
     glfwMakeContextCurrent(pWindow);
     glfwSetFramebufferSizeCallback(

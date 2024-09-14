@@ -1,7 +1,3 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #pragma once
 
 #include "../utils/alloc.h"
@@ -38,13 +34,13 @@ struct GraphicsObject {
         glm::mat4* model { nullptr };
 
         void allocateInstances();
-        void move(ObjectParams params);
-        void rotate(ObjectParams params);
-        void scale(ObjectParams params);
+        void move(ObjectParams params) const;
+        void rotate(ObjectParams params) const;
+        void scale(ObjectParams params) const;
         void transform(ObjectParams params, AnimationParams animationParams) const;
-        void move(ObjectParams params, float time);
-        void rotate(ObjectParams params, float time);
-        void scale(ObjectParams params, float time);
+        void move(ObjectParams params, float time) const;
+        void rotate(ObjectParams params, float time) const;
+        void scale(ObjectParams params, float time) const;
         void destroy();
     } instanceUniform;
 

@@ -1,10 +1,4 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #include "command_buffer.h"
-
-using namespace std;
 
 VkCommandBuffer
 CommandBuffer::beginSingleTimeCommands(VkDevice& device, VkCommandPool& commandPool)
@@ -48,7 +42,7 @@ void CommandBuffer::create(VkDevice& device, VkCommandPool& commandPool)
     commandBufferInfo.commandBufferCount = Constants::MAX_FRAMES_IN_FLIGHT;
 
     if (vkAllocateCommandBuffers(device, &commandBufferInfo, commandBuffers.data()) != VK_SUCCESS) {
-        throw runtime_error("Failed to allocate command buffers.");
+        throw std::runtime_error("Failed to allocate command buffers.");
     }
 }
 
@@ -59,14 +53,14 @@ void CommandBuffer::begin(const size_t frame)
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     if (vkBeginCommandBuffer(commandBuffers[frame], &beginInfo) != VK_SUCCESS) {
-        throw runtime_error("Failed to begin recording command buffer.");
+        throw std::runtime_error("Failed to begin recording command buffer.");
     }
 }
 
 void CommandBuffer::end(const size_t frame)
 {
     if (vkEndCommandBuffer(commandBuffers[frame]) != VK_SUCCESS) {
-        throw runtime_error("Failed to record command buffer.");
+        throw std::runtime_error("Failed to record command buffer.");
     }
 }
 
@@ -75,7 +69,7 @@ void CommandBuffer::reset(const size_t frame)
     vkResetCommandBuffer(commandBuffers[frame], 0);
 }
 
-vector<VkCommandBuffer>& CommandBuffer::get()
+std::vector<VkCommandBuffer>& CommandBuffer::get()
 {
     return commandBuffers;
 }

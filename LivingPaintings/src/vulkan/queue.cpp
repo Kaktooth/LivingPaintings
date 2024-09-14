@@ -1,21 +1,16 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #include "queue.h"
 
-using namespace std;
-
-void Queue::create(VkDevice& device, uint8_t queueFamilyIndex) {
-  this->queueFamilyIndex = queueFamilyIndex;
-  vkGetDeviceQueue(device, queueFamilyIndex, 0, &queue);
+void Queue::create(VkDevice& device, uint8_t queueFamilyIndex)
+{
+    this->queueFamilyIndex = queueFamilyIndex;
+    vkGetDeviceQueue(device, queueFamilyIndex, 0, &queue);
 }
 
 void Queue::submit(VkCommandBuffer& commandBuffer, Fence& fence,
-    const std::vector<VkSemaphore> waitSemafores,
-    const std::vector<VkSemaphore> signalSemafores,
-    const std::vector<VkPipelineStageFlags> waitStages,
-    const size_t currentFrame)
+    std::vector<VkSemaphore> waitSemafores,
+    std::vector<VkSemaphore> signalSemafores,
+    std::vector<VkPipelineStageFlags> waitStages,
+    size_t currentFrame)
 {
     VkSubmitInfo submitInfo {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -30,7 +25,7 @@ void Queue::submit(VkCommandBuffer& commandBuffer, Fence& fence,
     fence.reset(currentFrame);
 
     if (vkQueueSubmit(queue, 1, &submitInfo, fence.get(currentFrame)) != VK_SUCCESS) {
-        throw runtime_error("Failed to submit draw command buffer.");
+        throw std::runtime_error("Failed to submit draw command buffer.");
     }
 }
 
@@ -61,6 +56,7 @@ VkQueue& Queue::get()
     return queue;
 }
 
-uint8_t Queue::getQueueFamilyIndex() { 
+uint8_t Queue::getQueueFamilyIndex() const
+{
     return queueFamilyIndex;
 }

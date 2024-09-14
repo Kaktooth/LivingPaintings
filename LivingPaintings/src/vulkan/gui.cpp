@@ -1,13 +1,8 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #include "gui.h"
 
-using namespace std;
+using Constants::APP_NAME;
 
 const float PAD = 10.0f;
-
 const ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove;
 
 void Gui::init(VkInstance& instance, Device& _device, VkCommandPool& commandPool, RenderPass& renderPass, Swapchain& swapChain, VkDescriptorPool& descriptorPool, GLFWwindow* pWindow)
@@ -47,7 +42,7 @@ void Gui::uploadFonts(Queue queue)
     ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 
-void Gui::ShowEventsOverlay(bool* p_open)
+void Gui::ShowEventsOverlay(bool* p_open) const
 {
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImVec2 work_pos = viewport->WorkPos;
@@ -55,8 +50,7 @@ void Gui::ShowEventsOverlay(bool* p_open)
     ImVec2 window_pos, window_pos_pivot;
     window_pos.x = work_pos.x + PAD;
     window_pos.y = work_pos.y + work_size.y - PAD;
-    window_pos_pivot.x = 0.0f;
-    window_pos_pivot.y = 1.0f;
+    window_pos_pivot = ImVec2(0.0f, 1.0f);
     ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
     ImGui::SetNextWindowViewport(viewport->ID);
 
@@ -70,8 +64,9 @@ void Gui::ShowEventsOverlay(bool* p_open)
     }
 
     if (ImGui::BeginPopupContextWindow()) {
-        if (p_open && ImGui::MenuItem("Close"))
+        if (p_open && ImGui::MenuItem("Close")) {
             *p_open = false;
+        }
         ImGui::EndPopup();
     }
 
@@ -82,12 +77,10 @@ void Gui::ShowControls(bool* p_open)
 {
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImVec2 work_pos = viewport->WorkPos;
-    ImVec2 work_size = viewport->WorkSize;
     ImVec2 window_pos, window_pos_pivot;
     window_pos.x = work_pos.x + PAD;
     window_pos.y = work_pos.y + PAD;
-    window_pos_pivot.x = 0.0f;
-    window_pos_pivot.y = 0.0f;
+    window_pos_pivot = ImVec2();
     ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
     ImGui::SetNextWindowViewport(viewport->ID);
 
@@ -101,8 +94,9 @@ void Gui::ShowControls(bool* p_open)
     }
 
     if (ImGui::BeginPopupContextWindow()) {
-        if (p_open && ImGui::MenuItem("Close"))
+        if (p_open && ImGui::MenuItem("Close")) {
             *p_open = false;
+        }
         ImGui::EndPopup();
     }
 
@@ -115,7 +109,7 @@ void Gui::draw()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
     {
-        bool windowCreated = ImGui::Begin("Living Paintings");
+        bool windowCreated = ImGui::Begin(APP_NAME);
 
         ShowEventsOverlay(&windowCreated);
         ShowControls(&windowCreated);
@@ -133,7 +127,8 @@ void Gui::draw()
                 ImGui::DragFloat3("Object scale", objectParams.scale, 0.1f);
                 ImGui::DragFloat3("Camera position", cameraParams.cameraPos, 0.1f);
                 ImGui::DragFloat3("Camera target", cameraParams.cameraTarget, 0.1f);
-                ImGui::DragFloat3("Up vector", cameraParams.upVector, 0.1f);
+                ImGui::DragFloat3("Up vector", cameraParams.upVector,
+                    0.1f);
                 ImGui::Checkbox("Look mode", &cameraParams.lookMode);
                 ImGui::Checkbox("Perspective mode", &cameraParams.perspectiveMode);
                 if (cameraParams.perspectiveMode) {
@@ -179,7 +174,7 @@ void Gui::draw()
             ImGui::SeparatorText("Easing equetions");
             ImGui::Checkbox("Use Easing Function", &animationParams.useEasingFunction);
             if (ImGui::TreeNode("List of easing equetions")) {
-                for (int i = 0; i < (int)animationParams.easingEquations.size(); i++) {
+                for (size_t i = 0; i < animationParams.easingEquations.size(); i++) {
                     if (ImGui::Selectable(animationParams.easingEquations[i].c_str(), i == animationParams.selectedEasingEquation)) {
                         animationParams.selectedEasingEquation = i;
                     }
@@ -190,7 +185,7 @@ void Gui::draw()
         }
         if (ImGui::BeginMenu("Debug")) {
             if (ImGui::TreeNode("Pipeline History")) {
-                for (int i = 0; i < drawParams.pipelineHistorySize; i++) {
+                for (size_t i = 0; i < drawParams.pipelineHistorySize; i++) {
                     std::string name = "Graphics Pipeline " + std::to_string(i);
                     if (ImGui::Selectable(name.c_str(), i == selectedPipelineIndex)) {
                         selectedPipelineIndex = i;
@@ -250,7 +245,7 @@ ObjectConstructionParams& Gui::getObjectConstructionParams()
     return objectConstructionParams;
 }
 
-size_t Gui::getSelectedPipelineIndex()
+size_t Gui::getSelectedPipelineIndex() const
 {
     return selectedPipelineIndex;
 }

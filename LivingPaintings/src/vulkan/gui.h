@@ -1,7 +1,3 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #pragma once
 
 #include "../segmentation/segmentation_system.h"
@@ -78,7 +74,7 @@ public:
     void init(VkInstance& instance, Device& device, VkCommandPool& commandPool,
         RenderPass& renderPass, Swapchain& swapChain,
         VkDescriptorPool& descriptorPool, GLFWwindow* window);
-    void ShowEventsOverlay(bool* p_open);
+    void ShowEventsOverlay(bool* p_open) const;
     void ShowControls(bool* p_open);
     void draw();
     void renderDrawData(VkCommandBuffer& commandBuffer);
@@ -88,6 +84,6 @@ public:
     CameraParams& getCameraParams();
     AnimationParams& getAnimationParams();
     ObjectConstructionParams& getObjectConstructionParams();
-    size_t getSelectedPipelineIndex();
+    size_t getSelectedPipelineIndex() const;
     void selectPipelineindex(const size_t pipelineIndex);
 };

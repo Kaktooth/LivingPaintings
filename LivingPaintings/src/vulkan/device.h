@@ -1,20 +1,16 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #pragma once
 #include "consts.h"
 #include "queue.h"
 #include "queue_family.h"
 #include "vulkan/vulkan.h"
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <limits>
 #include <map>
 #include <set>
 #include <stdexcept>
 #include <vector>
-#include <array>
 
 class Device {
 
@@ -29,18 +25,18 @@ class Device {
     VkPhysicalDeviceProperties deviceProperties;
     VkPhysicalDeviceFeatures deviceFeatures;
 
-    VkDeviceQueueCreateInfo createQueueCreateInfo(const uint32_t queueFamily, const float queuePriority);
+    static VkDeviceQueueCreateInfo createQueueCreateInfo(uint32_t queueFamily, float queuePriority);
     int getDeviceScore(VkPhysicalDevice& physicalDevice, Surface& surface);
-    bool checkDeviceExtensionSupport(VkPhysicalDevice& physicalDevice);
+    static bool checkDeviceExtensionSupport(VkPhysicalDevice& physicalDevice);
 
 public:
     VkDevice& create(VkInstance& instance, Surface& surface);
     void selectPhysicalDevice(VkInstance& instance, Surface& surface);
-    VkFormat findSupportedFormat(const std::vector<VkFormat>& formats,
+    VkFormat findSupportedFormat(std::vector<VkFormat>& formats,
         VkImageTiling tiling,
         VkFormatFeatureFlags features);
-    bool hasStencilComponent(VkFormat format);
-    VkSampleCountFlagBits getMaxSampleCount();
+    static bool hasStencilComponent(VkFormat format);
+    VkSampleCountFlagBits getMaxSampleCount() const;
     void destroy();
     VkDevice& get();
     VkPhysicalDevice& getPhysicalDevice();

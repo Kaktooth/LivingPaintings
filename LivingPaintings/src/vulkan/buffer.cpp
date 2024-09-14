@@ -1,14 +1,8 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #include "buffer.h"
 #include "controls.h"
 
-using namespace std;
-
 void Buffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
-    const unsigned long long size, VkBufferUsageFlags usage,
+    const uint64_t size, VkBufferUsageFlags usage,
     VkSharingMode sharingMode,
     VkMemoryPropertyFlags memoryPropertyFlags)
 {
@@ -22,7 +16,7 @@ void Buffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
     bufferInfo.sharingMode = sharingMode;
 
     if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-        throw runtime_error("Failed to create buffer.");
+        throw std::runtime_error("Failed to create buffer.");
     }
 
     VkMemoryRequirements memoryRequirements;
@@ -31,13 +25,13 @@ void Buffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
     VkPhysicalDeviceMemoryProperties memoryProperties;
     vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
 
-    uint32_t memoryType = [&]() {
+    const uint32_t memoryType = [&]() {
         for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++) {
             if ((memoryRequirements.memoryTypeBits & (1 << i)) && (memoryProperties.memoryTypes[i].propertyFlags & memoryPropertyFlags) == memoryPropertyFlags) {
                 return i;
             }
         }
-        throw runtime_error("Failed to find suitable memory type.");
+        throw std::runtime_error("Failed to find suitable memory type.");
     }();
 
     VkMemoryAllocateInfo memoryAllocInfo {};
@@ -46,7 +40,7 @@ void Buffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
     memoryAllocInfo.memoryTypeIndex = memoryType;
 
     if (vkAllocateMemory(device, &memoryAllocInfo, nullptr, &deviceMemory) != VK_SUCCESS) {
-        throw runtime_error("Failed to allocate buffer memory.");
+        throw std::runtime_error("Failed to allocate buffer memory.");
     }
 
     vkBindBufferMemory(device, buffer, deviceMemory, 0);
@@ -87,7 +81,7 @@ VkDeviceSize& Buffer::getMemorySize()
 }
 
 void StagingBuffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
-    const stbi_uc* pixels, const VkDeviceSize size)
+    stbi_uc* pixels, VkDeviceSize size)
 {
     this->device = device;
     Buffer::create(device, physicalDevice, size,
@@ -95,26 +89,26 @@ void StagingBuffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     void* data;
-    const VkDeviceMemory deviceMemory = getDeviceMemory();
+    VkDeviceMemory deviceMemory = getDeviceMemory();
     vkMapMemory(device, deviceMemory, 0, size, 0, &data);
-    memcpy(data, pixels, (size_t)size);
+    memcpy(data, pixels, static_cast<size_t>(size));
     vkUnmapMemory(device, deviceMemory);
 }
 
 void VertexBuffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
     VkCommandPool& commandPool,
-    const std::vector<Data::GraphicsObject::Vertex>& vertecies,
+    std::vector<Data::GraphicsObject::Vertex>& vertecies,
     Queue& transferQueue)
 {
     this->device = device;
 
-    const unsigned long long size = sizeof(vertecies[0]) * vertecies.size();
+    const uint64_t size = sizeof(vertecies[0]) * vertecies.size();
     stagingBuffer.create(device, physicalDevice, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_SHARING_MODE_EXCLUSIVE, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     void* data;
-    const VkDeviceMemory stagingBufferDeviceMemory = stagingBuffer.getDeviceMemory();
+    VkDeviceMemory stagingBufferDeviceMemory = stagingBuffer.getDeviceMemory();
     vkMapMemory(device, stagingBufferDeviceMemory, 0, size, 0, &data);
-    memcpy(data, vertecies.data(), (size_t)size);
+    memcpy(data, vertecies.data(), static_cast<size_t>(size));
     vkUnmapMemory(device, stagingBufferDeviceMemory);
 
     Buffer::create(
@@ -129,20 +123,20 @@ void VertexBuffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
 
 void IndexBuffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
     VkCommandPool& commandPool,
-    const std::vector<uint16_t>& indicies,
+    std::vector<uint16_t>& indicies,
     Queue& transferQueue)
 {
     this->device = device;
 
-    const unsigned long long size = sizeof(indicies[0]) * indicies.size();
+    const uint64_t size = sizeof(indicies[0]) * indicies.size();
     stagingBuffer.create(device, physicalDevice, size,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_SHARING_MODE_EXCLUSIVE,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     void* data;
-    const VkDeviceMemory stagingBufferDeviceMemory = stagingBuffer.getDeviceMemory();
+    VkDeviceMemory stagingBufferDeviceMemory = stagingBuffer.getDeviceMemory();
     vkMapMemory(device, stagingBufferDeviceMemory, 0, size, 0, &data);
-    memcpy(data, indicies.data(), (size_t)size);
+    memcpy(data, indicies.data(), static_cast<size_t>(size));
     vkUnmapMemory(device, stagingBufferDeviceMemory);
 
     Buffer::create(
@@ -156,7 +150,7 @@ void IndexBuffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
 }
 
 void UniformBuffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
-    const VkDeviceSize size,
+    VkDeviceSize size,
     VkMemoryPropertyFlags memoryProperyFlags)
 {
     Buffer::create(device, physicalDevice, size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,

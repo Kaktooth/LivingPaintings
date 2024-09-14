@@ -1,12 +1,6 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #include "fence.h"
 
-using namespace std;
-
-void Fence::create(VkDevice& device, const bool signaled)
+void Fence::create(VkDevice& device, bool signaled)
 {
     this->device = device;
 
@@ -18,7 +12,7 @@ void Fence::create(VkDevice& device, const bool signaled)
 
     for (size_t i = 0; i < Constants::MAX_FRAMES_IN_FLIGHT; i++) {
         if (vkCreateFence(device, &fenceInfo, nullptr, &fences[i]) != VK_SUCCESS) {
-            throw runtime_error("Failed to create fence.");
+            throw std::runtime_error("Failed to create fence.");
         }
     }
 }

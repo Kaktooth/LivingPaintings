@@ -1,10 +1,7 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #pragma once
 #define GLFW_INCLUDE_VULKAN
 #include "consts.h"
+#include "glm/common.hpp"
 #include "vulkan/vulkan.h"
 #include <GLFW/glfw3.h>
 #include <algorithm>
@@ -25,7 +22,7 @@ public:
     } details;
 
     VkSurfaceKHR& create(VkInstance& instance, GLFWwindow* pWindow);
-    void destory();
+    void destory() const;
     VkExtent2D chooseResolution();
     Surface::Details findSurfaceDetails(VkPhysicalDevice& device);
     VkSurfaceFormatKHR chooseSurfaceFormat();
