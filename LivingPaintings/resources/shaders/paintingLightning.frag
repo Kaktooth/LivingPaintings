@@ -13,13 +13,19 @@ layout(binding = 6) uniform sampler2D selectedPositionsMask;
 layout(location = 0) in vec2 fragTexCoord;
 layout(location = 1) in vec3 cameraView;
 layout(location = 2) in vec3 normal;
+layout(location = 3) in vec3 inTangentViewPos;
+layout(location = 4) in vec3 inTangentFragPos;
 
 layout(location = 0) out vec4 outFragColor;
+
+// Parallax mapping parameters
+const float heightScale = 0.005f;
+const float parallaxBias = 0.001f;
 
 const float gamma = 2.2f;
 const vec3 luma = vec3(0.2627f, 0.678f, 0.0593f);
 
-// scale factor that is used to vary the range of the height values
+// Scale factor that is used to vary the range of the height values
 const float heightRange = 0.5f;
 
 const float surfaceColorModifier = 0.35f;
@@ -29,8 +35,14 @@ const float textureScale = 0.2f;
 
 void main() {
 
+//	Calculate Parallax mapping
+	vec3 viewDirection = normalize(inTangentViewPos - inTangentFragPos);
+	float height = 1.0f - texture(heightMapTexSampler, fragTexCoord).r;
+	vec2 p =  (height * (heightScale * 0.5f) + parallaxBias) * viewDirection.xy;
+	vec2 UV = fragTexCoord - p;
+
 	vec2 texSize = textureSize(texSampler, 1);
-	vec3 texColor = texture(texSampler, fragTexCoord).rgb;
+	vec3 texColor = texture(texSampler, UV).rgb;
 
 //* Gamma correction
 	texColor = pow(texColor, vec3(1.0f / gamma));
@@ -66,7 +78,9 @@ void main() {
 	vec4 paintingOutput = vec4(texColor + shaded, 1.0);
    	outFragColor = paintingOutput;
 	
-	//If enabled, construct square with scaled texture content
+//* Pixels zoom in
+
+	//	If enabled, construct square with scaled texture content
 	if(mouseControl.pixelScaling) {
 	    vec2 mousePos = vec2(mouseControl.mousePos / mouseControl.windowSize);
 		vec2 uv = fragTexCoord;
@@ -87,7 +101,7 @@ void main() {
 		scaledTex.rgb -= selectedPosColor2;
 		outFragColor = mix(scaledTex + selectedPosColor, outFragColor, 1.0f - square.r);
 
-		//Make pointer 
+		//	Make pointer 
 		vec2 minBrushDistance = step(-mouseControl.squareSize * textureScale * 0.3f, uv);
 		vec2 maxBrushDistance = step(mouseControl.squareSize * textureScale * 0.3f, uv);
 		float brushDistance = (minBrushDistance.x - maxBrushDistance.x) * (minBrushDistance.y - maxBrushDistance.y);

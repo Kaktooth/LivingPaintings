@@ -12,12 +12,14 @@ layout(binding = 1) uniform ViewUbo {
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec2 inTexCoord;
 
-layout(location = 0) out vec2 texCoord;
-layout(location = 1) out vec3 cameraView;
-layout(location = 2) out mat4 model;
+layout(location = 0) out vec3 position;
+layout(location = 1) out vec2 texCoord;
+layout(location = 2) out vec3 cameraView;
+layout(location = 3) out mat4 model;
 
 void main() {
 	gl_Position = uboView.proj * uboView.view * uboInstance.model * vec4(inPosition, 1.0f);
+    position = inPosition;
     texCoord = inTexCoord;
     cameraView = uboView.view[2].xyz;
     model = uboInstance.model;

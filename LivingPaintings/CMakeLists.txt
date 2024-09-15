@@ -46,9 +46,9 @@ target_link_libraries(LivingPaintings PRIVATE gflags::gflags glfw glm::glm Vulka
 target_include_directories(LivingPaintings PRIVATE ${onnxruntime_lib} ${OpenCV_LIBS} 
 ${CMAKE_CURRENT_SOURCE_DIR}/include ${$ENV{VULKAN_SDK}/include} ${Stb_INCLUDE_DIR})
 
-set(TEXTURE_FILE_NAME "painting-342116_1920.jpg")
-set(TEXTURE_WIDTH 1920)
-set(TEXTURE_HEIGHT 1081)
+set(TEXTURE_FILE_NAME "Van_Gogh-Starry_Night.jpg")
+set(TEXTURE_WIDTH 1200)
+set(TEXTURE_HEIGHT 950)
 set(PREPROCESS_SAM_FILE_NAME "edge_sam_3x_encoder.onnx")
 set(SAM_TEXTURE_FILE_NAME "edge_sam_3x_decoder.onnx")
 set(TEXTURE_FILE_PATH "$<TARGET_FILE_DIR:LivingPaintings>/resources/textures/${TEXTURE_FILE_NAME}")
