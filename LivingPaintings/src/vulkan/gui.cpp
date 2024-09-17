@@ -1,12 +1,18 @@
 #include "gui.h"
 
 using Constants::APP_NAME;
+using Constants::MAX_FRAMES_IN_FLIGHT;
+using Constants::EFFECTS_COUNT;
 
 const float PAD = 10.0f;
 const ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove;
 
 void Gui::init(VkInstance& instance, Device& _device, VkCommandPool& commandPool, RenderPass& renderPass, Swapchain& swapChain, VkDescriptorPool& descriptorPool, GLFWwindow* pWindow)
 {
+    for (uint16_t maskIndex = 0; maskIndex < EFFECTS_ENABLED_SIZE; maskIndex++) {
+        effectsParams.enabledEffects[maskIndex] = glm::uvec4(1);
+    }
+
     Queue& graphicsQueue = _device.getGraphicsQueue();
 
     this->device = _device.get();
@@ -24,7 +30,7 @@ void Gui::init(VkInstance& instance, Device& _device, VkCommandPool& commandPool
     initInfo.Queue = graphicsQueue.get();
     initInfo.DescriptorPool = descriptorPool;
     initInfo.MinImageCount = swapChain.getMinImageCount();
-    initInfo.ImageCount = Constants::MAX_FRAMES_IN_FLIGHT;
+    initInfo.ImageCount = MAX_FRAMES_IN_FLIGHT;
     initInfo.MSAASamples = renderPass.getSampleCount();
     initInfo.ColorAttachmentFormat = swapChain.getImageFormat();
 
@@ -195,11 +201,35 @@ void Gui::draw()
             }
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("Construct Object")) {
-            ImGui::DragInt("alpha (1 - 10000)", &objectConstructionParams.alphaPercentage, 10.0f, 1, 10000, "%d%%");
-            if (ImGui::Button("Construct")) {
-                drawParams.constructSelectedObject = true;
+        if (ImGui::BeginMenu("Create")) {
+            if (ImGui::BeginMenu("Objects")) {
+                ImGui::DragInt("alpha (1 - 10000)", &objectConstructionParams.alphaPercentage, 10.0f, 1, 10000, "%d%%");
+                if (ImGui::Button("Construct")) {
+                    drawParams.constructSelectedObject = true;
+                }
+                ImGui::EndMenu();
             }
+            if (ImGui::BeginMenu("Effects")) {
+                ImGui::CheckboxFlags("Highlight selected pixels", &effectsParams.highlightSelectedPixels, 1);
+                ImGui::Separator();
+                for (uint16_t maskIndex = 0; maskIndex < EFFECTS_COUNT; maskIndex++) {
+                    std::string effectCheckboxName = "Effect: " + std::to_string(maskIndex + 1);
+                    ImGui::CheckboxFlags(effectCheckboxName.c_str(), &effectsParams.enabledEffects[0][maskIndex], 1);
+                }
+                ImGui::DragFloat("Noise Scale", &effectsParams.noiseScale, 1.0f, 0.01f, 1000.0f);
+                ImGui::DragFloat("Distortion", &effectsParams.distortionModifier, 0.001f, 0.0001, 1.0f);
+                ImGui::DragFloat("Height Scale (Parallax)", &effectsParams.heightScale, 0.001f, 0.0001, 1.0f);
+                ImGui::DragFloat("Flickering Light", &effectsParams.amplifyFlickeringLight, 0.01f, 0.0001, 1.0f);
+                ImGui::DragFloat("Highlight", &effectsParams.amplifyHighlight, 0.01f, 0.0001, 1.0f);
+                ImGui::EndMenu();
+            }
+
+            ImGui::SeparatorText("Mask Options");
+            ImGui::DragInt("Choose mask to edit", &mouseControlParams.maskIndex, 1, 0, EFFECTS_COUNT);
+            if (ImGui::Button("Clear")) {
+                drawParams.clearSelectedMask = true;
+            }
+
             ImGui::EndMenu();
         }
         ImGui::End();
@@ -240,9 +270,19 @@ AnimationParams& Gui::getAnimationParams()
     return animationParams;
 }
 
+EffectParams& Gui::getEffectParams()
+{
+    return effectsParams;
+}
+
 ObjectConstructionParams& Gui::getObjectConstructionParams()
 {
     return objectConstructionParams;
+}
+
+MouseControlParams& Gui::getMouseControlParams()
+{
+    return mouseControlParams;
 }
 
 size_t Gui::getSelectedPipelineIndex() const

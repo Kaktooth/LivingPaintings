@@ -1,11 +1,13 @@
 #include "descriptor.h"
-#include "controls.h"
+
+using Constants::MAX_FRAMES_IN_FLIGHT;
 
 void Descriptor::create(VkDevice& device,
     std::vector<UniformBuffer> uniformInstanceBuffers,
     std::vector<UniformBuffer> uniformViewBuffers,
     Image& paintingTexture, Image& heightMapTexture, Sampler& textureSampler,
-    UniformBuffer& mouseUniform, Image& selectedPosMask)
+    UniformBuffer& mouseUniform, std::array<Image, MASKS_COUNT>& selectedPosMasks, 
+    UniformBuffer& timeUniform, UniformBuffer& effectParamsUniform)
 {
     std::vector<VkDescriptorSetLayoutBinding> bindings;
 
@@ -59,11 +61,27 @@ void Descriptor::create(VkDevice& device,
 
     VkDescriptorSetLayoutBinding selectedPosMaskLayoutBinding {};
     selectedPosMaskLayoutBinding.binding = 6;
-    selectedPosMaskLayoutBinding.descriptorCount = 1;
+    selectedPosMaskLayoutBinding.descriptorCount = MASKS_COUNT;
     selectedPosMaskLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     selectedPosMaskLayoutBinding.pImmutableSamplers = nullptr;
     selectedPosMaskLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
     bindings.push_back(selectedPosMaskLayoutBinding);
+
+    VkDescriptorSetLayoutBinding timeLayoutBinding{};
+    timeLayoutBinding.binding = 7;
+    timeLayoutBinding.descriptorCount = 1;
+    timeLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    timeLayoutBinding.pImmutableSamplers = nullptr;
+    timeLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    bindings.push_back(timeLayoutBinding);
+
+    VkDescriptorSetLayoutBinding effectsParamsLayoutBinding{};
+    effectsParamsLayoutBinding.binding = 8;
+    effectsParamsLayoutBinding.descriptorCount = 1;
+    effectsParamsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    effectsParamsLayoutBinding.pImmutableSamplers = nullptr;
+    effectsParamsLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    bindings.push_back(effectsParamsLayoutBinding);
 
     VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo {};
     descriptorSetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -80,7 +98,7 @@ void Descriptor::create(VkDevice& device,
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[1].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT);
     poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[2].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT)*2;
+    poolSizes[2].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT) * 2;
     poolSizes[3].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     poolSizes[3].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT);
     poolSizes[4].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -88,7 +106,11 @@ void Descriptor::create(VkDevice& device,
     poolSizes[5].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[5].descriptorCount = 1;
     poolSizes[6].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[6].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT);
+    poolSizes[6].descriptorCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT) * MASKS_COUNT;
+    poolSizes[7].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSizes[7].descriptorCount = 1;
+    poolSizes[8].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSizes[8].descriptorCount = 1;
 
     VkDescriptorPoolCreateInfo poolInfo {};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -101,20 +123,19 @@ void Descriptor::create(VkDevice& device,
         throw std::runtime_error("Failed to create descriptor pool.");
     }
 
-    std::vector<VkDescriptorSetLayout> layouts(Constants::MAX_FRAMES_IN_FLIGHT,
-        setLayout);
+    std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, setLayout);
     VkDescriptorSetAllocateInfo descriptorSetAllocInfo {};
     descriptorSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     descriptorSetAllocInfo.descriptorPool = pool;
-    descriptorSetAllocInfo.descriptorSetCount = static_cast<uint32_t>(Constants::MAX_FRAMES_IN_FLIGHT);
+    descriptorSetAllocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
     descriptorSetAllocInfo.pSetLayouts = layouts.data();
 
-    sets.resize(Constants::MAX_FRAMES_IN_FLIGHT);
+    sets.resize(MAX_FRAMES_IN_FLIGHT);
     if (vkAllocateDescriptorSets(device, &descriptorSetAllocInfo, sets.data()) != VK_SUCCESS) {
         throw std::runtime_error("Failed to allocate descriptor sets.");
     }
 
-    for (size_t i = 0; i < Constants::MAX_FRAMES_IN_FLIGHT; i++) {
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         VkDescriptorBufferInfo instanceBufferInfo {};
         instanceBufferInfo.buffer = uniformInstanceBuffers[i].get();
         instanceBufferInfo.offset = 0;
@@ -139,15 +160,27 @@ void Descriptor::create(VkDevice& device,
         bumpTextureSamplerInfo.imageView = heightMapTexture.getView();
         bumpTextureSamplerInfo.sampler = textureSampler.get();
 
-        VkDescriptorBufferInfo mousePosBufferInfo {};
+        VkDescriptorBufferInfo mousePosBufferInfo{};
         mousePosBufferInfo.buffer = mouseUniform.get();
         mousePosBufferInfo.offset = 0;
         mousePosBufferInfo.range = sizeof(Controls::MouseControl);
 
-        VkDescriptorImageInfo selectedPosMaskInfo {};
-        selectedPosMaskInfo.imageLayout = selectedPosMask.getDetails().layout;
-        selectedPosMaskInfo.imageView = selectedPosMask.getView();
-        selectedPosMaskInfo.sampler = textureSampler.get();
+        std::array<VkDescriptorImageInfo, MASKS_COUNT> selectedPosMaskInfo {};
+        for (uint16_t maskIndex = 0; maskIndex < MASKS_COUNT; maskIndex++) {
+            selectedPosMaskInfo[maskIndex].imageLayout = selectedPosMasks[maskIndex].getDetails().layout;
+            selectedPosMaskInfo[maskIndex].imageView = selectedPosMasks[maskIndex].getView();
+            selectedPosMaskInfo[maskIndex].sampler = textureSampler.get();
+        }
+
+        VkDescriptorBufferInfo timeBufferInfo{};
+        timeBufferInfo.buffer = timeUniform.get();
+        timeBufferInfo.offset = 0;
+        timeBufferInfo.range = sizeof(float);
+
+        VkDescriptorBufferInfo effectsParamsBufferInfo{};
+        effectsParamsBufferInfo.buffer = effectParamsUniform.get();
+        effectsParamsBufferInfo.offset = 0;
+        effectsParamsBufferInfo.range = sizeof(EffectParams);
 
         std::vector<VkWriteDescriptorSet> writeDescriptorSets(bindings.size());
         writeDescriptorSets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -203,11 +236,27 @@ void Descriptor::create(VkDevice& device,
         writeDescriptorSets[6].dstBinding = 6;
         writeDescriptorSets[6].dstArrayElement = 0;
         writeDescriptorSets[6].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        writeDescriptorSets[6].descriptorCount = 1;
-        writeDescriptorSets[6].pImageInfo = &selectedPosMaskInfo;
+        writeDescriptorSets[6].descriptorCount = MASKS_COUNT;
+        writeDescriptorSets[6].pImageInfo = selectedPosMaskInfo.data();
+
+        writeDescriptorSets[7].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writeDescriptorSets[7].dstSet = sets[i];
+        writeDescriptorSets[7].dstBinding = 7;
+        writeDescriptorSets[7].dstArrayElement = 0;
+        writeDescriptorSets[7].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        writeDescriptorSets[7].descriptorCount = 1;
+        writeDescriptorSets[7].pBufferInfo = &timeBufferInfo;
+
+        writeDescriptorSets[8].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writeDescriptorSets[8].dstSet = sets[i];
+        writeDescriptorSets[8].dstBinding = 8;
+        writeDescriptorSets[8].dstArrayElement = 0;
+        writeDescriptorSets[8].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        writeDescriptorSets[8].descriptorCount = 1;
+        writeDescriptorSets[8].pBufferInfo = &effectsParamsBufferInfo;
 
         vkUpdateDescriptorSets(device, static_cast<uint32_t>(writeDescriptorSets.size()),
-            writeDescriptorSets.data(), 0, nullptr);
+                               writeDescriptorSets.data(), 0, nullptr);
     }
 }
 

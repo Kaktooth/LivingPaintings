@@ -33,6 +33,11 @@ void Controls::updateWindowSize(const glm::uvec2& windowSize)
     mouseControl.windowSize = windowSize;
 }
 
+void Controls::updateMaskIndex(const int& maskIndex)
+{
+    mouseControl.maskIndex = maskIndex;
+}
+
 void Controls::setPixelScaling(bool pixelScaling)
 {
     mouseControl.pixelScaling = pixelScaling;

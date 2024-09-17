@@ -6,6 +6,9 @@ using Constants::PREPROCESS_SAM_MODEL_PATH;
 using Constants::SAM_MODEL_PATH;
 using Constants::BUMP_TEXTURE_FORMAT;
 using Constants::SELECTED_REGION_HIGHLIGHT;
+using Constants::MASKS_COUNT;
+using Constants::WINDOW_WIDTH;
+using Constants::WINDOW_HEIGHT;
 
 const int THREAD_NUMBER = std::thread::hardware_concurrency();
 
@@ -29,10 +32,11 @@ std::unordered_set<glm::uvec2> brushPositions { { 0, 0 }, { 1, 0 }, { -1, 0 }, {
     { 0, -1 }, { 1, 1 }, { -1, -1 }, { 1, -1 },
     { -1, 1 } };
 
-std::unordered_map<glm::uvec2, glm::uvec2> objectPositions {};
+std::array<std::unordered_map<glm::uvec2, glm::uvec2>, MASKS_COUNT> objectPositions {};
+std::array<uint32_t, MASKS_COUNT> selectedObjectsSize{};
+std::array<uint32_t, MASKS_COUNT> currentSelectedObjectsSize{};
 unsigned char* selectedPosMask;
-uint32_t selectedObjectsSize = 0;
-uint32_t currentSelectedObjectsSize = 0;
+
 cv::Mat maskedImage;
 
 std::queue<glm::uvec2> inputPositions {};
@@ -76,7 +80,6 @@ static void loadImage(Sam* sam, std::string const& inputImage)
               << "  width: " << image.cols << '\n'
               << "  height: " << image.rows << '\n';
 
-    windowResolution = imageResolution;
     sam->setWindowResolution(windowResolution.x, windowResolution.y);
 
     resize(image, image, inputSize);
@@ -102,15 +105,15 @@ static void useBrush(glm::uvec2 pos)
     if (buttonHeld.first) {
         std::cout << "Holding. Pixel position: " << pos.x << " " << pos.y << '\n';
         for (glm::uvec2 brushPos : brushPositions) {
-            objectPositions.emplace(pos + brushPos, pos + brushPos);
+            objectPositions[mouseControl->maskIndex].emplace(pos + brushPos, pos + brushPos);
         }
     }
     if (buttonHeld.second) {
         for (glm::uvec2 brushPos : brushPositions) {
-            if (objectPositions.contains(pos + brushPos)) {
+            if (objectPositions[mouseControl->maskIndex].contains(pos + brushPos)) {
                 std::cout << "Removing selected pixel: " << pos.x << " " << pos.y
                           << '\n';
-                objectPositions.erase(pos + brushPos);
+                objectPositions[mouseControl->maskIndex].erase(pos + brushPos);
             }
         }
     }
@@ -118,7 +121,6 @@ static void useBrush(glm::uvec2 pos)
 
 static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
-
     if (buttonHeld.first || buttonHeld.second) {
         glm::uvec2 pos = RESIZE_POINT_POSITION(glm::vec2(xpos, ypos));
         useBrush(pos);
@@ -130,19 +132,18 @@ static void mouse_buttons_callback(GLFWwindow* window, int button, int action,
 {
     if (imageLoaded) {
         if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
-            currentSelectedObjectsSize = objectPositions.size();
+            currentSelectedObjectsSize[mouseControl->maskIndex] = objectPositions[mouseControl->maskIndex].size();
             buttonHeld.first = false;
         }
         if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE) {
-            currentSelectedObjectsSize = objectPositions.size();
+            currentSelectedObjectsSize[mouseControl->maskIndex] = objectPositions[mouseControl->maskIndex].size();
             buttonHeld.second = false;
         }
         if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS && mods == GLFW_MOD_CONTROL) {
             glm::dvec2 cursorPos {};
             glfwGetCursorPos(window, &cursorPos.x, &cursorPos.y);
-            auto pos = glm::uvec2(cursorPos);
-            std::cout << "Selected pixel position: " << pos.x << " " << pos.y
-                      << '\n';
+            glm::uvec2 pos = RESIZE_POINT_POSITION(glm::vec2(cursorPos));
+            std::cout << "Selected pixel position: " << pos.x << " " << pos.y << '\n';
             if (mouseControl->pixelScaling) {
                 buttonHeld.first = true;
                 useBrush(pos);
@@ -159,15 +160,14 @@ static void mouse_buttons_callback(GLFWwindow* window, int button, int action,
                 buttonHeld.second = true;
                 useBrush(pos);
             } else {
-                if (objectPositions.contains(pos)) {
-                    std::cout << "Removing region that contains pixel: " << pos.x << " "
-                        << pos.y << '\n';
-                    glm::uvec2 pressedKeyPos = objectPositions.at(pos);
-                    std::erase_if(objectPositions,
+                if (objectPositions[mouseControl->maskIndex].contains(pos)) {
+                    std::cout << "Removing region that contains pixel: " << pos.x << " " << pos.y << '\n';
+                    glm::uvec2 pressedKeyPos = objectPositions[mouseControl->maskIndex].at(pos);
+                    std::erase_if(objectPositions[mouseControl->maskIndex],
                         [&](const std::pair<glm::uvec2, glm::uvec2>& entry) {
                             return entry.second == pressedKeyPos;
                         });
-                    currentSelectedObjectsSize = objectPositions.size();
+                    currentSelectedObjectsSize[mouseControl->maskIndex] = objectPositions[mouseControl->maskIndex].size();
                 }
             }
         }
@@ -227,13 +227,13 @@ void ImageSegmantationSystem::runObjectSegmentationTask()
                     uint8_t green = pResisedMaskPixels[height * mask.cols + width + 1];
                     uint8_t blue = pResisedMaskPixels[height * mask.cols + width];
                     if (red == 255 && green == 255 && blue == 255) {
-                        objectPositions.emplace(glm::ivec2(width, height), pos);
+                        objectPositions[mouseControl->maskIndex].emplace(glm::ivec2(width, height), pos);
                     }
                 }
             }
 
             std::cout << "objects selected " << '\n';
-            currentSelectedObjectsSize = objectPositions.size();
+            currentSelectedObjectsSize[mouseControl->maskIndex] = objectPositions[mouseControl->maskIndex].size();
         }
     }
 }
@@ -243,8 +243,10 @@ void ImageSegmantationSystem::init(Device& _device, VkCommandPool& _commandPool,
     uint32_t imageWidth, uint32_t imageHeight,
     Controls::MouseControl& _mouseControl)
 {
+    const glm::uvec2 windowSize = glm::uvec2(WINDOW_WIDTH, WINDOW_HEIGHT);
 
     pWindow = _pWindow;
+    windowResolution = windowSize;
     imagePath = _imagePath;
     mouseControl = &_mouseControl;
     device = _device.get();
@@ -256,18 +258,20 @@ void ImageSegmantationSystem::init(Device& _device, VkCommandPool& _commandPool,
 
     imageResolution = glm::uvec2(imageWidth, imageHeight);
 
-    selectedPositionsMask.imageDetails.createImageInfo(
-        "", imageWidth, imageHeight, 1,
-        VK_IMAGE_LAYOUT_GENERAL,
-        VK_IMAGE_VIEW_TYPE_2D,
-        BUMP_TEXTURE_FORMAT, VK_SHADER_STAGE_FRAGMENT_BIT,
-        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT);
-    selectedPositionsMask.create(_device, _commandPool,
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, transferQueue);
+    for (uint16_t maskIndex = 0; maskIndex < MASKS_COUNT; maskIndex++) {
+        selectedPosMasks[maskIndex].imageDetails.createImageInfo(
+            "", imageWidth, imageHeight, 1,
+            VK_IMAGE_LAYOUT_GENERAL,
+            VK_IMAGE_VIEW_TYPE_2D,
+            BUMP_TEXTURE_FORMAT, VK_SHADER_STAGE_FRAGMENT_BIT,
+            VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT);
+        selectedPosMasks[maskIndex].create(_device, _commandPool,
+                                     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, transferQueue);
+    }
 
     VkImageSubresourceLayers imageSubresource {};
-    imageSubresource.aspectMask = selectedPositionsMask.imageDetails.aspectFlags;
+    imageSubresource.aspectMask = selectedPosMasks[0].imageDetails.aspectFlags;
     imageSubresource.mipLevel = 0;
     imageSubresource.baseArrayLayer = 0;
     imageSubresource.layerCount = 1;
@@ -289,7 +293,9 @@ void ImageSegmantationSystem::destroy()
     if (objectSelectionThread.joinable()) {
         objectSelectionThread.join();
     }
-    selectedPositionsMask.destroy();
+    for (uint16_t maskIndex = 0; maskIndex < MASKS_COUNT; maskIndex++) {
+        selectedPosMasks[maskIndex].destroy();
+    }
 }
 
 void ImageSegmantationSystem::changeWindowResolution(glm::uvec2& _windowResolution)
@@ -298,56 +304,64 @@ void ImageSegmantationSystem::changeWindowResolution(glm::uvec2& _windowResoluti
     samModel->setWindowResolution(windowResolution.x, windowResolution.y);
 }
 
-void ImageSegmantationSystem::removeAllPositions() { objectPositions.clear(); }
+void ImageSegmantationSystem::removeAllMaskPositions() { objectPositions[mouseControl->maskIndex].clear(); }
+
+void ImageSegmantationSystem::removeAllMaskPositions(uint16_t maskIndex)
+{
+    objectPositions[maskIndex].clear();
+}
 
 bool ImageSegmantationSystem::selectedObjectSizeChanged()
 {
-    if (selectedObjectsSize != currentSelectedObjectsSize) {
-        selectedObjectsSize = currentSelectedObjectsSize;
+    return selectedObjectSizeChanged(mouseControl->maskIndex);
+}
+
+bool ImageSegmantationSystem::selectedObjectSizeChanged(uint16_t maskIndex)
+{
+    if (selectedObjectsSize[maskIndex] != currentSelectedObjectsSize[maskIndex]) {
+        selectedObjectsSize[maskIndex] = currentSelectedObjectsSize[maskIndex];
         return true;
     }
 
     return false;
 }
 
-void ImageSegmantationSystem::updateSelectedImageMask(
-    Device& device, VkCommandPool& commandPool, Queue& transferQueue)
+void ImageSegmantationSystem::updatePositionMasks(Device& device, VkCommandPool& commandPool, Queue& transferQueue)
 {
     if (selectedObjectSizeChanged()) {
         unsigned char* selectedPosMask = getSelectedPositionsMask();
 
-        selectedPositionsMaskTemp.imageDetails.createImageInfo(
+        selectedPosMaskTemp.imageDetails.createImageInfo(
             "", imageResolution.x, imageResolution.y, 1, VK_IMAGE_LAYOUT_GENERAL,
             VK_IMAGE_VIEW_TYPE_2D,
             BUMP_TEXTURE_FORMAT, VK_SHADER_STAGE_FRAGMENT_BIT,
             VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT,
             VK_SAMPLE_COUNT_1_BIT, selectedPosMask);
-        selectedPositionsMaskTemp.create(device, commandPool,
+        selectedPosMaskTemp.create(device, commandPool,
             VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, transferQueue);
 
         VkCommandBuffer cmd = CommandBuffer::beginSingleTimeCommands(device.get(), commandPool);
 
-        vkCmdCopyImage(cmd, selectedPositionsMaskTemp.get(),
+        vkCmdCopyImage(cmd, selectedPosMaskTemp.get(),
             VK_IMAGE_LAYOUT_GENERAL,
-            selectedPositionsMask.get(),
+                       selectedPosMasks[mouseControl->maskIndex].get(),
             VK_IMAGE_LAYOUT_GENERAL, 1, &imageCopy);
 
-        CommandBuffer::endSingleTimeCommands(device.get(), commandPool, cmd,
-            transferQueue);
+        CommandBuffer::endSingleTimeCommands(device.get(), commandPool, cmd, transferQueue);
 
-        selectedPositionsMaskTemp.destroy();
+        selectedPosMaskTemp.destroy();
     }
-}
-
-void ImageSegmantationSystem::clearSelectedPixels()
-{
-    objectPositions.clear();
 }
 
 bool& ImageSegmantationSystem::isImageLoaded() { return imageLoaded; }
 
 unsigned char* ImageSegmantationSystem::getSelectedPositionsMask()
+{
+    return getSelectedPositionsMask(mouseControl->maskIndex);
+}
+
+unsigned char* ImageSegmantationSystem::getSelectedPositionsMask(uint16_t maskIndex)
 {
    auto pixelSize = static_cast<size_t>(imageResolution.x) * static_cast<size_t>(imageResolution.y);
    auto selectedPositionsMask = static_cast<unsigned char*>(calloc(1, pixelSize));
@@ -355,7 +369,7 @@ unsigned char* ImageSegmantationSystem::getSelectedPositionsMask()
         for (uint32_t h = 0; h < imageResolution.y; h++) {
             unsigned char* offset = selectedPositionsMask + w + (imageResolution.x * h);
             auto pos = glm::uvec2(w, h);
-            if (objectPositions.contains(pos)) {
+            if (objectPositions[maskIndex].contains(pos)) {
                 offset[0] = SELECTED_REGION_HIGHLIGHT;
             } else {
                 offset[0] = 0;
@@ -365,7 +379,7 @@ unsigned char* ImageSegmantationSystem::getSelectedPositionsMask()
     return selectedPositionsMask;
 }
 
-Image& ImageSegmantationSystem::getSelectedObjectsMask()
+std::array<Image, MASKS_COUNT>& ImageSegmantationSystem::getSelectedPosMasks()
 {
-    return selectedPositionsMask;
+    return selectedPosMasks;
 }

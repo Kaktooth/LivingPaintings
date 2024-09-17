@@ -2,6 +2,7 @@
 #include "../include/sam/sam.h"
 #include "../vulkan/controls.h"
 #include "../vulkan/image.h"
+#include "../vulkan/consts.h"
 #include "glm/glm.hpp"
 #include "glm/gtx/hash.hpp"
 #include "opencv2/xphoto/inpainting.hpp"
@@ -13,13 +14,15 @@
 #include <thread>
 #include <unordered_set>
 
+using Constants::MASKS_COUNT;
+
 class ImageSegmantationSystem {
 
     VkDevice device = VK_NULL_HANDLE;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkImageCopy imageCopy;
-    Image selectedPositionsMask;
-    Image selectedPositionsMaskTemp;
+    std::array<Image, MASKS_COUNT> selectedPosMasks;
+    Image selectedPosMaskTemp;
 
     cv::Mat segmentImage(Sam const* sam);
 
@@ -32,11 +35,13 @@ public:
     void destroy();
 
     void changeWindowResolution(glm::uvec2& windowResolution);
-    void removeAllPositions();
+    void removeAllMaskPositions();
+    void removeAllMaskPositions(uint16_t maskIndex);
     bool selectedObjectSizeChanged();
-    void updateSelectedImageMask(Device& device, VkCommandPool& commandPool, Queue& transferQueue);
-    void clearSelectedPixels();
+    bool selectedObjectSizeChanged(uint16_t maskIndex);
+    void updatePositionMasks(Device& device, VkCommandPool& commandPool, Queue& transferQueue);
     bool& isImageLoaded();
     unsigned char* getSelectedPositionsMask();
-    Image& getSelectedObjectsMask();
+    unsigned char* getSelectedPositionsMask(uint16_t maskIndex);
+    std::array<Image, MASKS_COUNT>& getSelectedPosMasks();
 };

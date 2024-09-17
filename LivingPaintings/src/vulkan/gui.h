@@ -13,9 +13,12 @@
 #include "swapchain.h"
 #include "vulkan/vulkan.h"
 #include <stdexcept>
+#include <algorithm>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+
+using Constants::MASKS_COUNT;
 
 class Gui {
 
@@ -57,8 +60,22 @@ class Gui {
         0
     };
 
+    EffectParams effectsParams = {
+        {}, 
+        true, 
+        50.0f,
+        0.005f,
+        0.0025f,
+        0.4f,
+        0.2f
+    };
+
     ObjectConstructionParams objectConstructionParams = {
         1
+    };
+
+    MouseControlParams mouseControlParams = {
+        0 // 0 to use object selection mask, other non-negative number select masks for effects.
     };
 
     size_t selectedPipelineIndex = 0;
@@ -69,11 +86,11 @@ class Gui {
     void uploadFonts(Queue queue);
 
 public:
-    SpecificDrawParams drawParams = { 1, false, false };
+    SpecificDrawParams drawParams = { 1, false, false, false };
 
     void init(VkInstance& instance, Device& device, VkCommandPool& commandPool,
-        RenderPass& renderPass, Swapchain& swapChain,
-        VkDescriptorPool& descriptorPool, GLFWwindow* window);
+              RenderPass& renderPass, Swapchain& swapChain,
+              VkDescriptorPool& descriptorPool, GLFWwindow* window);
     void ShowEventsOverlay(bool* p_open) const;
     void ShowControls(bool* p_open);
     void draw();
@@ -83,7 +100,9 @@ public:
     ObjectParams& getAnimatedObjectParams();
     CameraParams& getCameraParams();
     AnimationParams& getAnimationParams();
+    EffectParams& getEffectParams();
     ObjectConstructionParams& getObjectConstructionParams();
+    MouseControlParams& getMouseControlParams();
     size_t getSelectedPipelineIndex() const;
     void selectPipelineindex(const size_t pipelineIndex);
 };

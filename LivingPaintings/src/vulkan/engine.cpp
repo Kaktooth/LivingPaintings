@@ -3,6 +3,17 @@
 using Data::AlignmentProperties;
 using Data::RuntimeProperties;
 
+using Constants::WINDOW_WIDTH;
+using Constants::WINDOW_HEIGHT;
+using Constants::IMAGE_TEXTURE_FORMAT;
+using Constants::BUMP_TEXTURE_FORMAT;
+using Constants::EFFECT_MASK_TEXTURE_FORMAT;
+using Constants::MAX_FRAMES_IN_FLIGHT;
+
+using std::chrono::steady_clock;
+using std::chrono::seconds;
+using std::chrono::duration;
+
 void Engine::run()
 {
     try {
@@ -16,7 +27,7 @@ void Engine::run()
 
 void Engine::init()
 {
-    initWindow(Constants::WINDOW_WIDTH, Constants::WINDOW_HEIGHT);
+    initWindow(WINDOW_WIDTH, WINDOW_HEIGHT);
 
     VkDebugUtilsMessengerCreateInfoEXT debugInfo = debugMessenger.makeDebugMessengerCreateInfo();
     INIT(vulkan.instance, instance.create(debugInfo));
@@ -71,23 +82,28 @@ void Engine::init()
     indexBuffers[0].create(vulkan.device, vulkan.physicalDevice, vulkan.commandPool,
         graphicsObjects[0].indices, transferQueue);
 
-    instanceUniformBuffers.resize(Constants::MAX_FRAMES_IN_FLIGHT);
+    instanceUniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
     for (UniformBuffer& uniformBuffer : instanceUniformBuffers) {
-        uniformBuffer.create(vulkan.device, vulkan.physicalDevice,
-            RuntimeProperties::uboMemorySize,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        uniformBuffer.create(vulkan.device, vulkan.physicalDevice, RuntimeProperties::uboMemorySize,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     }
 
-    viewUniformBuffers.resize(Constants::MAX_FRAMES_IN_FLIGHT);
+    viewUniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
     for (UniformBuffer& uniformBuffer : viewUniformBuffers) {
         uniformBuffer.create(vulkan.device, vulkan.physicalDevice, sizeof(Data::GraphicsObject::ViewUbo),
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     }
 
+    time.create(vulkan.device, vulkan.physicalDevice, sizeof(int64_t),
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    effectsParams.create(vulkan.device, vulkan.physicalDevice, sizeof(EffectParams),
+                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
     segmentationSystem.init(device, vulkan.commandPool, pWindow,
         TEXTURE_PATH, TEX_WIDTH, TEX_HEIGHT, controls.getMouseControls());
 
-    controls.fillInMouseControlInfo(glm::uvec2(Constants::WINDOW_WIDTH, Constants::WINDOW_HEIGHT),
+    controls.fillInMouseControlInfo(glm::uvec2(WINDOW_WIDTH, WINDOW_HEIGHT),
         0.1f, pWindow);
     mouseControl.create(vulkan.device, vulkan.physicalDevice, mouseUniformSize,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -95,7 +111,7 @@ void Engine::init()
     paintingTexture.imageDetails.createImageInfo(
         TEXTURE_PATH.c_str(), TEX_WIDTH, TEX_HEIGHT, 4,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D,
-        Constants::IMAGE_TEXTURE_FORMAT,
+        IMAGE_TEXTURE_FORMAT,
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
         VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT,
         VK_SAMPLE_COUNT_1_BIT);
@@ -106,7 +122,7 @@ void Engine::init()
     heightMapTexture.imageDetails.createImageInfo(
         "", TEX_WIDTH, TEX_HEIGHT, 1,
         VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_VIEW_TYPE_2D,
-        Constants::BUMP_TEXTURE_FORMAT,
+        BUMP_TEXTURE_FORMAT,
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
         VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT,
         VK_SAMPLE_COUNT_1_BIT);
@@ -117,9 +133,10 @@ void Engine::init()
     textureSampler.create(vulkan.device, vulkan.physicalDevice);
 
     descriptor.create(vulkan.device, instanceUniformBuffers,
-        viewUniformBuffers, paintingTexture,
-        heightMapTexture, textureSampler, mouseControl,
-        segmentationSystem.getSelectedObjectsMask());
+                      viewUniformBuffers, paintingTexture,
+                      heightMapTexture, textureSampler, mouseControl,
+                      segmentationSystem.getSelectedPosMasks(),
+                      time, effectsParams);
 
     pipeline.create(vulkan.device, vulkan.renderPass, descriptor.getSetLayout(),
         swapchain.getExtent(), vulkan.sampleCount);
@@ -129,6 +146,8 @@ void Engine::init()
 
 void Engine::update()
 {
+    static steady_clock::time_point lastTimePoint = steady_clock::now();
+
     const std::vector<VkPipelineStageFlags> waitStages = {
         VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
@@ -166,11 +185,20 @@ void Engine::update()
         glfwPollEvents();
 
         glm::dvec2 cursorPos {};
+        int16_t maskIndex = gui.getMouseControlParams().maskIndex;
+
+        steady_clock::time_point currentTime = steady_clock::now();
+        float timeDuration_s = duration<float, seconds::period>(currentTime.time_since_epoch()).count();
+        Controls::MouseControl& mouseControls = controls.getMouseControls();
+        EffectParams& effectParams = gui.getEffectParams();
         glfwGetCursorPos(pWindow, &cursorPos.x, &cursorPos.y);
         controls.updateMousePos(cursorPos);
-        mouseControl.update(controls.getMouseControls());
+        controls.updateMaskIndex(maskIndex);
+        mouseControl.update(mouseControls);
+        time.update(timeDuration_s);
+        effectsParams.update(effectParams);
 
-        segmentationSystem.updateSelectedImageMask(device, vulkan.commandPool, transferQueue);
+        segmentationSystem.updatePositionMasks(device, vulkan.commandPool, transferQueue);
 
         pipeline.updateExtent(swapchain.getExtent());
 
@@ -181,10 +209,15 @@ void Engine::update()
         const std::vector<VkSemaphore> waitSemaphores { currentImageAvailable };
         const std::vector<VkSemaphore> signalSemaphores { currentRenderFinished };
 
+        if (gui.drawParams.clearSelectedMask) {
+            segmentationSystem.removeAllMaskPositions();
+            gui.drawParams.clearSelectedMask = false;
+        }
+
         if (gui.drawParams.constructSelectedObject) {
             Data::GraphicsObject constructedObject;
-            const unsigned char* mask = segmentationSystem.getSelectedPositionsMask();
-            segmentationSystem.clearSelectedPixels();
+            const unsigned char* mask = segmentationSystem.getSelectedPositionsMask(0);
+            segmentationSystem.removeAllMaskPositions(0);
             ObjectConstructionParams objectConstructionParams = gui.getObjectConstructionParams();
 
             constructedObject.constructMeshFromTexture(TEX_WIDTH, TEX_HEIGHT, 0.0f, mask,
@@ -310,11 +343,13 @@ void Engine::cleanup()
         vertexBuffers[i].destroy();
         indexBuffers[i].destroy();
     }
-    for (size_t i = 0; i < Constants::MAX_FRAMES_IN_FLIGHT; i++) {
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         instanceUniformBuffers[i].destroy();
         viewUniformBuffers[i].destroy();
     }
-
+    effectsParams.destroy();
+    time.destroy();
     mouseControl.destroy();
     renderPass.destroy();
     commandPool.destroy();

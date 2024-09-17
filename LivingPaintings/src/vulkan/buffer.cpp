@@ -175,3 +175,15 @@ void UniformBuffer::update(const Controls::MouseControl& uniformObject)
 {
     memcpy(mapped, &uniformObject, sizeof(uniformObject));
 }
+
+template <>
+void UniformBuffer::update(const float& uniformObject)
+{
+    memcpy(mapped, &uniformObject, sizeof(uniformObject));
+}
+
+template <>
+void UniformBuffer::update(const EffectParams& uniformObject)
+{
+    memcpy(mapped, &uniformObject, sizeof(uniformObject));
+}

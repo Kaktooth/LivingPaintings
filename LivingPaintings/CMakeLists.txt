@@ -32,6 +32,7 @@ file(GLOB HEADERS
      "src/segmentation/segmentation_system.h"
      "src/utils/alloc.h"
      "src/vulkan/*.h"
+     "src/vulkan/*.hpp"
      "src/config.hpp"
 )
 

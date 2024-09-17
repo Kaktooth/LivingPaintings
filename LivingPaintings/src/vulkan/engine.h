@@ -80,6 +80,8 @@ class Engine {
     std::vector<IndexBuffer> indexBuffers;
     Controls controls;
     UniformBuffer mouseControl;
+    UniformBuffer time;
+    UniformBuffer effectsParams;
     Image paintingTexture;
     Image heightMapTexture;
     Sampler textureSampler;

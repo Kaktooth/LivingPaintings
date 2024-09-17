@@ -25,6 +25,7 @@ struct AlignmentProperties {
 
 struct RuntimeProperties {
     static size_t uboMemorySize;
+    static float time;
 };
 
 struct GraphicsObject {

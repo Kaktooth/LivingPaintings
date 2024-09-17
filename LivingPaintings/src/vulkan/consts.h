@@ -29,6 +29,7 @@ static const uint8_t MAX_FRAMES_IN_FLIGHT = 3;
 
 static const VkFormat IMAGE_TEXTURE_FORMAT = VK_FORMAT_R8G8B8A8_SRGB;
 static const VkFormat BUMP_TEXTURE_FORMAT = VK_FORMAT_R8_UNORM;
+static const VkFormat EFFECT_MASK_TEXTURE_FORMAT = VK_FORMAT_R8_UNORM;
 
 static const VkColorSpaceKHR COLOR_SPACE = VK_COLOR_SPACE_HDR10_HLG_EXT;
 
@@ -45,4 +46,7 @@ static const uint16_t TEX_HEIGHT = std::stoi(RETRIEVE_STRING(TEXTURE_HEIGHT));
 static const std::string SHADER_PATH = RETRIEVE_STRING(RESOURCE_SHADER_PATH);
 static const std::string PREPROCESS_SAM_MODEL_PATH = RETRIEVE_STRING(PREPROCESS_SAM_PATH);
 static const std::string SAM_MODEL_PATH = RETRIEVE_STRING(SAM_PATH);
+
+static const uint16_t EFFECTS_COUNT = 3;
+static constexpr uint16_t MASKS_COUNT = EFFECTS_COUNT + 1;
 } // namespace Constants

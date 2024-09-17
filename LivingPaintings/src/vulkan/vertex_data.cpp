@@ -8,8 +8,6 @@
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/algorithm.h>
 
-#include "glm/gtx/hash.hpp"
-
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -100,12 +98,9 @@ void Data::GraphicsObject::InstanceUbo::rotate(ObjectParams params) const
     uint64_t mstartaddr = reinterpret_cast<uint64_t>(model);
     size_t uboOffset = params.index * AlignmentProperties::dynamicUniformAlignment;
     glm::mat4* modelMat = reinterpret_cast<glm::mat4*>(mstartaddr + uboOffset);
-    *modelMat = glm::rotate(*modelMat, glm::radians(params.rotation[0]),
-        IDENTITY_MAT_3[0]);
-    *modelMat = glm::rotate(*modelMat, glm::radians(params.rotation[1]),
-        IDENTITY_MAT_3[1]);
-    *modelMat = glm::rotate(*modelMat, glm::radians(params.rotation[2]),
-        IDENTITY_MAT_3[2]);
+    *modelMat = glm::rotate(*modelMat, glm::radians(params.rotation[0]), IDENTITY_MAT_3[0]);
+    *modelMat = glm::rotate(*modelMat, glm::radians(params.rotation[1]), IDENTITY_MAT_3[1]);
+    *modelMat = glm::rotate(*modelMat, glm::radians(params.rotation[2]), IDENTITY_MAT_3[2]);
 }
 
 void Data::GraphicsObject::InstanceUbo::scale(ObjectParams params) const
@@ -119,9 +114,9 @@ void Data::GraphicsObject::InstanceUbo::scale(ObjectParams params) const
 void Data::GraphicsObject::InstanceUbo::transform(ObjectParams params, AnimationParams animationParams) const
 {
     if (animationParams.play) {
-        static steady_clock::time_point startTime = std::chrono::high_resolution_clock::now();
+        static steady_clock::time_point startTime = std::chrono::steady_clock::now();
 
-        steady_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
+        steady_clock::time_point currentTime = std::chrono::steady_clock::now();
         float duration = duration_ms(currentTime - startTime).count();
 
         if (duration > animationParams.end_ms) {
@@ -174,12 +169,9 @@ void Data::GraphicsObject::InstanceUbo::rotate(ObjectParams params, float time) 
     uint64_t mstartaddr = reinterpret_cast<uint64_t>(model);
     size_t uboOffset = params.index * AlignmentProperties::dynamicUniformAlignment;
     glm::mat4* modelMat = reinterpret_cast<glm::mat4*>(mstartaddr + uboOffset);
-    *modelMat = glm::rotate(*modelMat, time * glm::radians(params.rotation[0]),
-        IDENTITY_MAT_3[0]);
-    *modelMat = glm::rotate(*modelMat, time * glm::radians(params.rotation[1]),
-        IDENTITY_MAT_3[1]);
-    *modelMat = glm::rotate(*modelMat, time * glm::radians(params.rotation[2]),
-        IDENTITY_MAT_3[2]);
+    *modelMat = glm::rotate(*modelMat, time * glm::radians(params.rotation[0]), IDENTITY_MAT_3[0]);
+    *modelMat = glm::rotate(*modelMat, time * glm::radians(params.rotation[1]), IDENTITY_MAT_3[1]);
+    *modelMat = glm::rotate(*modelMat, time * glm::radians(params.rotation[2]), IDENTITY_MAT_3[2]);
 }
 
 void Data::GraphicsObject::InstanceUbo::scale(ObjectParams params, float time) const
