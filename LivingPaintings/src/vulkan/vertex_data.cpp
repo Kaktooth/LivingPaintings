@@ -43,13 +43,13 @@ const std::map<uint16_t, uint8_t> CHECKED_REGIONS_TO_POINT_GRANULARITY {
 };
 
 size_t Data::AlignmentProperties::minUniformAlignment = 0;
-size_t Data::AlignmentProperties::dynamicUniformAlignment = 0;
+size_t Data::AlignmentProperties::dynamicUniformAlignment_mat4 = 0;
 
 size_t Data::RuntimeProperties::uboMemorySize = 0;
 
 uint16_t Data::GraphicsObject::s_instanceId = 0;
-Data::GraphicsObject::InstanceUbo Data::GraphicsObject::instanceUniform {};
-Data::GraphicsObject::ViewUbo Data::GraphicsObject::viewUniform {};
+Data::GraphicsObject::Instance Data::GraphicsObject::instanceUniform {};
+Data::GraphicsObject::View Data::GraphicsObject::viewUniform {};
 
 VkVertexInputBindingDescription
 Data::GraphicsObject::Vertex::getBindingDescription()
@@ -79,39 +79,39 @@ Data::GraphicsObject::Vertex::getAttributeDescriptions()
     return attributeDescriptions;
 }
 
-void Data::GraphicsObject::InstanceUbo::allocateInstances()
+void Data::GraphicsObject::Instance::allocateInstances()
 {
-    RuntimeProperties::uboMemorySize = Constants::OBJECT_INSTANCES * AlignmentProperties::dynamicUniformAlignment;
-    model = (glm::mat4*)alignedAlloc(RuntimeProperties::uboMemorySize, AlignmentProperties::dynamicUniformAlignment);
+    RuntimeProperties::uboMemorySize = Constants::OBJECT_INSTANCES * AlignmentProperties::dynamicUniformAlignment_mat4;
+    model = (glm::mat4*)alignedAlloc(RuntimeProperties::uboMemorySize, AlignmentProperties::dynamicUniformAlignment_mat4);
 }
 
-void Data::GraphicsObject::InstanceUbo::move(ObjectParams params) const
+void Data::GraphicsObject::Instance::move(ObjectParams params) const
 {
     uint64_t mstartaddr = reinterpret_cast<uint64_t>(model);
-    size_t uboOffset = params.index * AlignmentProperties::dynamicUniformAlignment;
+    size_t uboOffset = params.index * AlignmentProperties::dynamicUniformAlignment_mat4;
     glm::mat4* modelMat = reinterpret_cast<glm::mat4*>(mstartaddr + uboOffset);
     *modelMat = glm::translate(IDENTITY_MAT_4, { params.position[0], params.position[1], params.position[2] });
 }
 
-void Data::GraphicsObject::InstanceUbo::rotate(ObjectParams params) const
+void Data::GraphicsObject::Instance::rotate(ObjectParams params) const
 {
     uint64_t mstartaddr = reinterpret_cast<uint64_t>(model);
-    size_t uboOffset = params.index * AlignmentProperties::dynamicUniformAlignment;
+    size_t uboOffset = params.index * AlignmentProperties::dynamicUniformAlignment_mat4;
     glm::mat4* modelMat = reinterpret_cast<glm::mat4*>(mstartaddr + uboOffset);
     *modelMat = glm::rotate(*modelMat, glm::radians(params.rotation[0]), IDENTITY_MAT_3[0]);
     *modelMat = glm::rotate(*modelMat, glm::radians(params.rotation[1]), IDENTITY_MAT_3[1]);
     *modelMat = glm::rotate(*modelMat, glm::radians(params.rotation[2]), IDENTITY_MAT_3[2]);
 }
 
-void Data::GraphicsObject::InstanceUbo::scale(ObjectParams params) const
+void Data::GraphicsObject::Instance::scale(ObjectParams params) const
 {
     uint64_t mstartaddr = reinterpret_cast<uint64_t>(model);
-    size_t uboOffset = params.index * AlignmentProperties::dynamicUniformAlignment;
+    size_t uboOffset = params.index * AlignmentProperties::dynamicUniformAlignment_mat4;
     glm::mat4* modelMat = reinterpret_cast<glm::mat4*>(mstartaddr + uboOffset);
     *modelMat = glm::scale(*modelMat, glm::vec3(params.scale[0], params.scale[1], params.scale[2]));
 }
 
-void Data::GraphicsObject::InstanceUbo::transform(ObjectParams params, AnimationParams animationParams) const
+void Data::GraphicsObject::Instance::transform(ObjectParams params, AnimationParams animationParams) const
 {
     if (animationParams.play) {
         static steady_clock::time_point startTime = std::chrono::steady_clock::now();
@@ -156,38 +156,38 @@ void Data::GraphicsObject::InstanceUbo::transform(ObjectParams params, Animation
     }
 }
 
-void Data::GraphicsObject::InstanceUbo::move(ObjectParams params, float time) const
+void Data::GraphicsObject::Instance::move(ObjectParams params, float time) const
 {
     uint64_t mstartaddr = reinterpret_cast<uint64_t>(model);
-    size_t uboOffset = params.index * AlignmentProperties::dynamicUniformAlignment;
+    size_t uboOffset = params.index * AlignmentProperties::dynamicUniformAlignment_mat4;
     glm::mat4* modelMat = reinterpret_cast<glm::mat4*>(mstartaddr + uboOffset);
     *modelMat = glm::translate(*modelMat, time * glm::vec3(params.position[0], params.position[1], params.position[2]));
 }
 
-void Data::GraphicsObject::InstanceUbo::rotate(ObjectParams params, float time) const
+void Data::GraphicsObject::Instance::rotate(ObjectParams params, float time) const
 {
     uint64_t mstartaddr = reinterpret_cast<uint64_t>(model);
-    size_t uboOffset = params.index * AlignmentProperties::dynamicUniformAlignment;
+    size_t uboOffset = params.index * AlignmentProperties::dynamicUniformAlignment_mat4;
     glm::mat4* modelMat = reinterpret_cast<glm::mat4*>(mstartaddr + uboOffset);
     *modelMat = glm::rotate(*modelMat, time * glm::radians(params.rotation[0]), IDENTITY_MAT_3[0]);
     *modelMat = glm::rotate(*modelMat, time * glm::radians(params.rotation[1]), IDENTITY_MAT_3[1]);
     *modelMat = glm::rotate(*modelMat, time * glm::radians(params.rotation[2]), IDENTITY_MAT_3[2]);
 }
 
-void Data::GraphicsObject::InstanceUbo::scale(ObjectParams params, float time) const
+void Data::GraphicsObject::Instance::scale(ObjectParams params, float time) const
 {
     uint64_t mstartaddr = reinterpret_cast<uint64_t>(model);
-    size_t uboOffset = params.index * AlignmentProperties::dynamicUniformAlignment;
+    size_t uboOffset = params.index * AlignmentProperties::dynamicUniformAlignment_mat4;
     glm::mat4* modelMat = reinterpret_cast<glm::mat4*>(mstartaddr + uboOffset);
     *modelMat = glm::scale(*modelMat, time * glm::vec3(params.scale[0], params.scale[1], params.scale[2]));
 }
 
-void Data::GraphicsObject::InstanceUbo::destroy()
+void Data::GraphicsObject::Instance::destroy()
 {
     alignedFree(instanceUniform.model);
 }
 
-void Data::GraphicsObject::ViewUbo::cameraView(CameraParams& params,
+void Data::GraphicsObject::View::cameraView(CameraParams& params,
     VkExtent2D extent)
 {
     if (params.lookMode) {
@@ -263,14 +263,13 @@ void Data::GraphicsObject::constructQuadsWithAspectRatio(uint16_t width,
 /* Set uniform dynamic properties for dynamic buffers.
    minUboAlignment - parameter must be taken from device properties.
    */
-size_t Data::setUniformDynamicAlignments(size_t minUboAlignment)
+void Data::setUniformDynamicAlignments(size_t minUboAlignment)
 {
     AlignmentProperties::minUniformAlignment = minUboAlignment;
-    AlignmentProperties::dynamicUniformAlignment = sizeof(glm::mat4);
+    AlignmentProperties::dynamicUniformAlignment_mat4 = sizeof(glm::mat4);
     if (minUboAlignment > 0) {
-        AlignmentProperties::dynamicUniformAlignment = (AlignmentProperties::dynamicUniformAlignment + minUboAlignment - 1) & ~(minUboAlignment - 1);
+        AlignmentProperties::dynamicUniformAlignment_mat4 = (AlignmentProperties::dynamicUniformAlignment_mat4 + minUboAlignment - 1) & ~(minUboAlignment - 1);
     }
-    return AlignmentProperties::dynamicUniformAlignment;
 }
 
 /* Constructs mesh from mask texture by gathering points from mask texture and using Alpha shape method to build
@@ -281,13 +280,13 @@ size_t Data::setUniformDynamicAlignments(size_t minUboAlignment)
    width and height - specify resolution of texture.
    selectedDepth - used for creating mesh for specified depth.
    pixels - mask texture that is used for selected objects.
-   alphaPercentage - percentage value (1 - 10000) that used to calculate alpha parameter for Alpha shape method.
+   alpha - value (1 - 10000) that used to calculate alpha parameter for Alpha shape method.
    */
 void Data::GraphicsObject::constructMeshFromTexture(uint16_t width, uint16_t height,
-    float selectedDepth, const unsigned char* pixels, uint16_t alphaPercentage)
+    float selectedDepth, const unsigned char* pixels, uint16_t alpha)
 {
     float ratio = float(width) / height;
-    double alpha = static_cast<double>(alphaPercentage) / 10000;
+    double alphaPercentage = static_cast<double>(alpha) / 10000;
     std::unordered_map<glm::vec2, uint16_t> verticesToIndices {};
     uint16_t updatePointGranularityRate = 20;
     uint16_t pointGranularity = 5;
@@ -358,12 +357,15 @@ void Data::GraphicsObject::constructMeshFromTexture(uint16_t width, uint16_t hei
 
     for (Alpha_shape_faces_iterator it = alphaShape.all_faces_begin(); it != alphaShape.all_faces_end(); ++it) {
         double faceAlpha = it->get_alpha();
-        if (faceAlpha < alpha) {
+        if (faceAlpha < alphaPercentage) {
             Point p1 = it->vertex(0)->point();
             Point p2 = it->vertex(1)->point();
             Point p3 = it->vertex(2)->point();
 
-            bool verticesExists = verticesToIndices.find(glm::vec2(p1.x(), p1.y())) != verticesToIndices.end() && verticesToIndices.find(glm::vec2(p2.x(), p2.y())) != verticesToIndices.end() && verticesToIndices.find(glm::vec2(p3.x(), p3.y())) != verticesToIndices.end();
+            bool verticesExists = verticesToIndices.find(glm::vec2(p1.x(), p1.y())) != verticesToIndices.end() 
+                && verticesToIndices.find(glm::vec2(p2.x(), p2.y())) != verticesToIndices.end() 
+                && verticesToIndices.find(glm::vec2(p3.x(), p3.y())) != verticesToIndices.end();
+
             if (verticesExists) {
                 indices.push_back(verticesToIndices.at(glm::vec2(p1.x(), p1.y())));
                 indices.push_back(verticesToIndices.at(glm::vec2(p2.x(), p2.y())));

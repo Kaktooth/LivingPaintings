@@ -7,6 +7,9 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/out/build/${presetName}",
       "installDir": "${sourceDir}/out/install/${presetName}",
+      "toolset": {
+        "value": "host=x64,version=14.39"
+      },
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
         "VCPKG_TARGET_TRIPLET": "x64-windows",
@@ -17,7 +20,7 @@
         "type": "equals",
         "lhs": "${hostSystemName}",
         "rhs": "Windows"
-      } 
+      }
     },
     {
       "name": "x64-debug",

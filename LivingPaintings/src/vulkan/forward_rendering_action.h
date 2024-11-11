@@ -25,6 +25,7 @@ public:
         uint32_t currentFrame);
     void recordCommandBuffer(VkCommandBuffer& commandBuffer,
         VkDescriptorSet& descriptorSet,
+        VkDescriptorSet& bindlessDescriptorSet,
         VertexBuffer& vertexBuffer,
         IndexBuffer& indexBuffer,
         Data::GraphicsObject& graphicsObject);

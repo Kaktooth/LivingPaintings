@@ -127,36 +127,36 @@ void Gui::draw()
             if (ImGui::MenuItem("Save As..")) { }
             if (ImGui::MenuItem("Export")) { }
             ImGui::Separator();
-            if (ImGui::BeginMenu("Options")) {
-                ImGui::DragFloat3("Object position", objectParams.position, 0.1f);
-                ImGui::DragFloat3("Object rotation", objectParams.rotation, 0.1f);
-                ImGui::DragFloat3("Object scale", objectParams.scale, 0.1f);
-                ImGui::DragFloat3("Camera position", cameraParams.cameraPos, 0.1f);
-                ImGui::DragFloat3("Camera target", cameraParams.cameraTarget, 0.1f);
-                ImGui::DragFloat3("Up vector", cameraParams.upVector,
-                    0.1f);
-                ImGui::Checkbox("Look mode", &cameraParams.lookMode);
-                ImGui::Checkbox("Perspective mode", &cameraParams.perspectiveMode);
-                if (cameraParams.perspectiveMode) {
-                    if (cameraParams.cameraPos[0] == 45 && cameraParams.cameraPos[2] == 45) {
-                        cameraParams.cameraPos[0] = 0;
-                        cameraParams.cameraPos[2] = 1;
+                if (ImGui::BeginMenu("Options")) {
+                    ImGui::DragFloat3("Object position", objectsParams[0].position, 0.1f);
+                    ImGui::DragFloat3("Object rotation", objectsParams[0].rotation, 0.1f);
+                    ImGui::DragFloat3("Object scale", objectsParams[0].scale, 0.1f);
+                    ImGui::DragFloat3("Camera position", cameraParams.cameraPos, 0.1f);
+                    ImGui::DragFloat3("Camera target", cameraParams.cameraTarget, 0.1f);
+                    ImGui::DragFloat3("Up vector", cameraParams.upVector,
+                        0.1f);
+                    ImGui::Checkbox("Look mode", &cameraParams.lookMode);
+                    ImGui::Checkbox("Perspective mode", &cameraParams.perspectiveMode);
+                    if (cameraParams.perspectiveMode) {
+                        if (cameraParams.cameraPos[0] == 45 && cameraParams.cameraPos[2] == 45) {
+                            cameraParams.cameraPos[0] = 0;
+                            cameraParams.cameraPos[2] = 1;
+                        }
+                        ImGui::SliderFloat("Field of View", &cameraParams.fieldOfView, 0.0f, 1000.0f);
+                        ImGui::InputFloat("Field of View", &cameraParams.fieldOfView, 0.01f);
+                        ImGui::SliderFloat("Near Clipping Plane", &cameraParams.nearClippingPlane, 0.0f, 1.0f);
+                        ImGui::InputFloat("Near Clipping Plane", &cameraParams.nearClippingPlane, 0.01f);
+                        ImGui::SliderFloat("Far Clipping Plane", &cameraParams.farClippingPlane, 0.0f, 400.0f);
+                        ImGui::InputFloat("Far Clipping Plane", &cameraParams.farClippingPlane, 0.01f);
+                    } else {
+                        if (cameraParams.cameraPos[0] == 0 && cameraParams.cameraPos[2] == 1) {
+                            cameraParams.cameraPos[0] = 45;
+                            cameraParams.cameraPos[2] = 45;
+                        }
+                        ImGui::InputFloat("Ortho Left", &cameraParams.orthoSize, 0.25f);
                     }
-                    ImGui::SliderFloat("Field of View", &cameraParams.fieldOfView, 0.0f, 1000.0f);
-                    ImGui::InputFloat("Field of View", &cameraParams.fieldOfView, 0.01f);
-                    ImGui::SliderFloat("Near Clipping Plane", &cameraParams.nearClippingPlane, 0.0f, 1.0f);
-                    ImGui::InputFloat("Near Clipping Plane", &cameraParams.nearClippingPlane, 0.01f);
-                    ImGui::SliderFloat("Far Clipping Plane", &cameraParams.farClippingPlane, 0.0f, 400.0f);
-                    ImGui::InputFloat("Far Clipping Plane", &cameraParams.farClippingPlane, 0.01f);
-                } else {
-                    if (cameraParams.cameraPos[0] == 0 && cameraParams.cameraPos[2] == 1) {
-                        cameraParams.cameraPos[0] = 45;
-                        cameraParams.cameraPos[2] = 45;
-                    }
-                    ImGui::InputFloat("Ortho Left", &cameraParams.orthoSize, 0.25f);
+                    ImGui::EndMenu();
                 }
-                ImGui::EndMenu();
-            }
             if (ImGui::MenuItem("Quit", "Alt+F4")) { }
             ImGui::EndMenu();
         }
@@ -168,21 +168,22 @@ void Gui::draw()
             if (ImGui::Button("Stop animation")) {
                 animationParams.play = false;
             }
-            ImGui::DragFloat("Play (ms)", &animationParams.play_ms);
-            ImGui::DragFloat("Start (ms)", &animationParams.start_ms);
-            ImGui::DragFloat("End (ms)", &animationParams.end_ms);
+            ImGui::DragFloat("Play (ms)", &animationControlParams[0].play_ms);
+            ImGui::DragFloat("Start (ms)", &animationControlParams[0].start_ms);
+            ImGui::DragFloat("End (ms)", &animationControlParams[0].end_ms);
 
             ImGui::SeparatorText("Object properties");
-            ImGui::DragFloat3("Object position", animatedObjectParams.position, 0.1f);
-            ImGui::DragFloat3("Object rotation", animatedObjectParams.rotation, 0.1f);
-            ImGui::DragFloat3("Object scale", animatedObjectParams.scale, 0.1f);
+            ImGui::DragFloat3("Object position", objectsAnimationParams[0].position, 0.1f);
+            ImGui::DragFloat3("Object rotation", objectsAnimationParams[0].rotation, 0.1f);
+            ImGui::DragFloat3("Object scale", objectsAnimationParams[0].scale, 0.1f);
 
             ImGui::SeparatorText("Easing equetions");
-            ImGui::Checkbox("Use Easing Function", &animationParams.useEasingFunction);
+            ImGui::Checkbox("Use Easing Function", &animationControlParams[0].useEasingFunction);
             if (ImGui::TreeNode("List of easing equetions")) {
-                for (size_t i = 0; i < animationParams.easingEquations.size(); i++) {
-                    if (ImGui::Selectable(animationParams.easingEquations[i].c_str(), i == animationParams.selectedEasingEquation)) {
-                        animationParams.selectedEasingEquation = i;
+                for (size_t i = 0; i < animationControlParams[0].easingEquations.size(); i++) {
+                    if (ImGui::Selectable(animationControlParams[0].easingEquations[i].c_str(),
+                        i == animationControlParams[0].selectedEasingEquation)) {
+                        animationControlParams[0].selectedEasingEquation = i;
                     }
                 }
                 ImGui::TreePop();
@@ -212,13 +213,17 @@ void Gui::draw()
             if (ImGui::BeginMenu("Effects")) {
                 ImGui::CheckboxFlags("Highlight selected pixels", &effectsParams.highlightSelectedPixels, 1);
                 ImGui::Separator();
-                for (uint16_t maskIndex = 0; maskIndex < EFFECTS_COUNT; maskIndex++) {
+                for(uint16_t maskIndex = 0; maskIndex < EFFECTS_COUNT; maskIndex++) {
+                    uint16_t vecIndex = maskIndex / 4;
+                    uint16_t vecMaskIndex = maskIndex - vecIndex * 4;
                     std::string effectCheckboxName = "Effect: " + std::to_string(maskIndex + 1);
-                    ImGui::CheckboxFlags(effectCheckboxName.c_str(), &effectsParams.enabledEffects[0][maskIndex], 1);
+                    ImGui::CheckboxFlags(effectCheckboxName.c_str(), &effectsParams.enabledEffects[vecIndex][vecMaskIndex], 1);
                 }
+                ImGui::DragFloat("Height Range", &effectsParams.heightRange, 0.01f, 0.1, 1.0f);
                 ImGui::DragFloat("Noise Scale", &effectsParams.noiseScale, 1.0f, 0.01f, 1000.0f);
                 ImGui::DragFloat("Distortion", &effectsParams.distortionModifier, 0.001f, 0.0001, 1.0f);
-                ImGui::DragFloat("Height Scale (Parallax)", &effectsParams.heightScale, 0.001f, 0.0001, 1.0f);
+                // TODO format to 5 numbers in fraction part
+                ImGui::DragFloat("Parallax Height Scale", &effectsParams.parallaxHeightScale, 0.00001f, 0.00001, 0.001f);
                 ImGui::DragFloat("Flickering Light", &effectsParams.amplifyFlickeringLight, 0.01f, 0.0001, 1.0f);
                 ImGui::DragFloat("Highlight", &effectsParams.amplifyHighlight, 0.01f, 0.0001, 1.0f);
                 ImGui::EndMenu();
@@ -232,6 +237,11 @@ void Gui::draw()
 
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu("Inpainting")) {
+            ImGui::Checkbox("Enable", &inpaintingParams.enableInpainting);
+            ImGui::DragInt("Patch size", &inpaintingParams.patchSize, 1, 5, 200);
+            ImGui::EndMenu();
+        }
         ImGui::End();
     }
 
@@ -243,6 +253,19 @@ void Gui::renderDrawData(VkCommandBuffer& commandBuffer)
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
 }
 
+void Gui::createGraphicsObjectParams(uint16_t objIndex)
+{
+    ObjectParams objectParams = getObjectParams();
+    ObjectParams objectAnimationParams = getObjectParams();
+    AnimationParams animationParams = getAnimationParams();
+    objectParams.index = objIndex;
+    objectAnimationParams.index = objIndex;
+    animationParams.objIndex = objIndex;
+    objectsParams.push_back(objectParams);
+    objectsAnimationParams.push_back(objectAnimationParams);
+    animationControlParams.push_back(animationParams);
+}
+
 void Gui::destroy()
 {
     ImGui_ImplVulkan_Shutdown();
@@ -250,24 +273,19 @@ void Gui::destroy()
     ImGui::DestroyContext();
 }
 
-ObjectParams& Gui::getObjectParams()
+ObjectParams Gui::getObjectParams()
 {
     return objectParams;
 }
 
-ObjectParams& Gui::getAnimatedObjectParams()
+AnimationParams Gui::getAnimationParams()
 {
-    return animatedObjectParams;
+    return animationParams;
 }
 
 CameraParams& Gui::getCameraParams()
 {
     return cameraParams;
-}
-
-AnimationParams& Gui::getAnimationParams()
-{
-    return animationParams;
 }
 
 EffectParams& Gui::getEffectParams()
@@ -283,6 +301,11 @@ ObjectConstructionParams& Gui::getObjectConstructionParams()
 MouseControlParams& Gui::getMouseControlParams()
 {
     return mouseControlParams;
+}
+
+InpaintingParams& Gui::getInpaintingParams()
+{
+    return inpaintingParams;
 }
 
 size_t Gui::getSelectedPipelineIndex() const

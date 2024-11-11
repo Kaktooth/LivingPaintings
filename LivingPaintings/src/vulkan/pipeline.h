@@ -7,23 +7,23 @@
 class Pipeline {
 
     ShaderManager shaderManager;
-    std::vector<VkPipelineLayout> layouts;
+    std::vector<VkPipelineLayout> graphicsPipelineLayouts;
     std::vector<VkPipeline> graphicsPipelines;
-    std::vector<VkPipeline> computePipelines;
     std::vector<VkPipelineLayout> computePipelineLayouts;
+    std::vector<VkPipeline> computePipelines;
     VkDevice device = VK_NULL_HANDLE;
     VkRenderPass renderPass = VK_NULL_HANDLE;
-    VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
+    std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
     VkExtent2D extent;
     VkSampleCountFlagBits samples;
 
 public:
     void create(VkDevice& device, VkRenderPass& renderPass,
-        VkDescriptorSetLayout& descriptorSetLayout,
+        std::vector<VkDescriptorSetLayout>& descriptorSetLayouts,
         const VkExtent2D extent, VkSampleCountFlagBits samples);
     void destroy();
     bool recreateifShadersChanged();
-    void bind(VkCommandBuffer& cmdCompute, VkDescriptorSet& computeDescriptorSet);
+    void bind(VkCommandBuffer& cmdCompute, VkDescriptorSet& descriptorSet, VkDescriptorSet& bindlessDescriptorSet);
     void updateExtent(VkExtent2D& extent);
     VkPipelineLayout& getLastLayout();
     VkPipeline& getLast();

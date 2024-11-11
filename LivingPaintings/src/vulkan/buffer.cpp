@@ -84,10 +84,11 @@ void StagingBuffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
     stbi_uc* pixels, VkDeviceSize size)
 {
     this->device = device;
+
     Buffer::create(device, physicalDevice, size,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_SHARING_MODE_EXCLUSIVE,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
+    
     void* data;
     VkDeviceMemory deviceMemory = getDeviceMemory();
     vkMapMemory(device, deviceMemory, 0, size, 0, &data);
@@ -159,31 +160,31 @@ void UniformBuffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
 }
 
 template <>
-void UniformBuffer::update(const Data::GraphicsObject::InstanceUbo& uniformObject)
+void UniformBuffer::update(const Data::GraphicsObject::Instance& uniform)
 {
-    memcpy(mapped, uniformObject.model, memorySize);
+    memcpy(mapped, uniform.model, memorySize);
 }
 
 template <>
-void UniformBuffer::update(const Data::GraphicsObject::ViewUbo& uniformObject)
+void UniformBuffer::update(const Data::GraphicsObject::View& uniform)
 {
-    memcpy(mapped, &uniformObject, sizeof(uniformObject));
+    memcpy(mapped, &uniform, sizeof(uniform));
 }
 
 template <>
-void UniformBuffer::update(const Controls::MouseControl& uniformObject)
+void UniformBuffer::update(const Controls::MouseControl& uniform)
 {
-    memcpy(mapped, &uniformObject, sizeof(uniformObject));
+    memcpy(mapped, &uniform, sizeof(uniform));
 }
 
 template <>
-void UniformBuffer::update(const float& uniformObject)
+void UniformBuffer::update(const float& uniform)
 {
-    memcpy(mapped, &uniformObject, sizeof(uniformObject));
+    memcpy(mapped, &uniform, sizeof(uniform));
 }
 
 template <>
-void UniformBuffer::update(const EffectParams& uniformObject)
+void UniformBuffer::update(const EffectParams& uniform)
 {
-    memcpy(mapped, &uniformObject, sizeof(uniformObject));
+    memcpy(mapped, &uniform, sizeof(uniform));
 }

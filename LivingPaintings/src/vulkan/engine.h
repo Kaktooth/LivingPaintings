@@ -33,6 +33,7 @@ using Constants::APP_NAME;
 using Constants::TEXTURE_PATH;
 using Constants::TEX_WIDTH;
 using Constants::TEX_HEIGHT;
+using Constants::MAX_SAMPLE_COUNT;
 
 class Engine {
 
@@ -51,7 +52,7 @@ class Engine {
         VkDevice device = VK_NULL_HANDLE;
         VkRenderPass renderPass = VK_NULL_HANDLE;
         VkCommandPool commandPool = VK_NULL_HANDLE;
-        VkSampleCountFlagBits sampleCount = VK_SAMPLE_COUNT_4_BIT;
+        VkSampleCountFlagBits sampleCount = MAX_SAMPLE_COUNT;
     } vulkan;
 
     ImageSegmantationSystem segmentationSystem;
@@ -59,7 +60,6 @@ class Engine {
     GLFWwindow* pWindow = nullptr;
     VulkanInstance instance;
     VulkanDebugMessenger debugMessenger;
-    QueueFamily queueFamily;
     Device device;
     Surface surface;
     Swapchain swapchain;
@@ -82,7 +82,7 @@ class Engine {
     UniformBuffer mouseControl;
     UniformBuffer time;
     UniformBuffer effectsParams;
-    Image paintingTexture;
+    std::vector<Image> objectsTextures; // contains original image of a painting and inpainted images
     Image heightMapTexture;
     Sampler textureSampler;
     Gui gui;

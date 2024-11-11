@@ -1,5 +1,8 @@
 #include <stdlib.h>
 
+// Aligned memory allocations for different platforms and vendors
+// from Vulkan repository https://github.com/SaschaWillems/Vulkan/blob/master/examples/dynamicuniformbuffer
+
 static void* alignedAlloc(size_t size, size_t alignment)
 {
     void* data = nullptr;

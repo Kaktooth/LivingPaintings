@@ -24,7 +24,12 @@ class Device {
     QueueFamily queueFamily;
     VkPhysicalDeviceProperties deviceProperties;
     VkPhysicalDeviceFeatures deviceFeatures;
-
+    VkPhysicalDeviceFeatures2 deviceFeatures2 = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 
+    };
+    VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = { 
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT, nullptr 
+    };
     static VkDeviceQueueCreateInfo createQueueCreateInfo(uint32_t queueFamily, float queuePriority);
     int getDeviceScore(VkPhysicalDevice& physicalDevice, Surface& surface);
     static bool checkDeviceExtensionSupport(VkPhysicalDevice& physicalDevice);

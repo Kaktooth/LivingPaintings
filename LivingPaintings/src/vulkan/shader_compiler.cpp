@@ -2,8 +2,6 @@
 
 using Constants::SHADER_PATH;
 
-std::map<std::string, std::vector<char>> compiledShaders {};
-
 const std::map<std::string, shaderc_shader_kind> shaderTypes {
     { ".vert", shaderc_glsl_vertex_shader },
     { ".frag", shaderc_glsl_fragment_shader },
@@ -12,6 +10,8 @@ const std::map<std::string, shaderc_shader_kind> shaderTypes {
     { ".tesc", shaderc_glsl_tess_control_shader },
     { ".tese", shaderc_glsl_tess_evaluation_shader }
 };
+
+std::map<std::string, std::vector<char>> compiledShaders{};
 
 void ShaderCompiler::compileIfChanged()
 {
@@ -37,7 +37,8 @@ void ShaderCompiler::compile(std::filesystem::path shaderPath, const std::string
 {
     shaderc::Compiler compiler;
     shaderc::CompileOptions options;
-
+    options.SetOptimizationLevel(shaderc_optimization_level_performance);
+    options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_1);
     const char* filename = reinterpret_cast<const char*>(shaderPath.filename().c_str());
     const std::string ext = shaderPath.extension().string();
     std::string path = std::filesystem::absolute(shaderPath).string();

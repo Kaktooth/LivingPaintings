@@ -20,7 +20,7 @@ namespace Data {
 
 struct AlignmentProperties {
     static size_t minUniformAlignment;
-    static size_t dynamicUniformAlignment;
+    static size_t dynamicUniformAlignment_mat4;
 };
 
 struct RuntimeProperties {
@@ -31,7 +31,7 @@ struct RuntimeProperties {
 struct GraphicsObject {
     static uint16_t s_instanceId;
 
-    static struct InstanceUbo {
+    static struct Instance {
         glm::mat4* model { nullptr };
 
         void allocateInstances();
@@ -45,7 +45,7 @@ struct GraphicsObject {
         void destroy();
     } instanceUniform;
 
-    static struct ViewUbo {
+    static struct View {
         glm::mat4 view;
         glm::mat4 proj;
 
@@ -76,5 +76,5 @@ struct GraphicsObject {
         uint16_t alphaPercentage);
 };
 
-size_t setUniformDynamicAlignments(size_t minUboAlignment);
+void setUniformDynamicAlignments(size_t minUboAlignment);
 } // namespace Data

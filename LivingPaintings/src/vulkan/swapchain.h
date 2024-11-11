@@ -32,7 +32,7 @@ class Swapchain {
     uint32_t currentFrame;
     bool framebufferResized;
 
-    void createSpecializedImages(Device& device);
+    void createSpecializedImages(Queue& graphicsQueue);
 
 public:
     void setContext(Device& device, Surface& surface,
@@ -43,14 +43,14 @@ public:
         VkImageAspectFlags aspectFlags);
     void createImageViews();
     void createFramebuffers(VkRenderPass& renderPass);
-    void presentImage(Device& device, VkRenderPass& renderPass,
+    void presentImage(Queue& graphicsQueue, VkRenderPass& renderPass,
         VkQueue& presentationQueue,
         std::vector<VkSemaphore> signalSemafores,
         GLFWwindow* window);
-    uint32_t asquireNextImage(Device& device, VkRenderPass& renderPass,
+    uint32_t asquireNextImage(Queue& graphicsQueue, VkRenderPass& renderPass,
         VkSemaphore& imageAvailable, GLFWwindow* window);
     void nextFrame();
-    void recreate(Device& device, VkRenderPass& renderPass, GLFWwindow* window);
+    void recreate(Queue& graphicsQueue, VkRenderPass& renderPass, GLFWwindow* window);
     void destroy();
     uint32_t getMinImageCount();
     VkFormat& getImageFormat();

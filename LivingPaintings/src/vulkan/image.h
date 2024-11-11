@@ -12,16 +12,19 @@ class Image {
     VkDevice device = VK_NULL_HANDLE;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkCommandPool commandPool = VK_NULL_HANDLE;
+    VkBufferUsageFlags usageFlags;
 
     void load(const char* filePath);
     void transitionLayout(Queue& queue, VkImageLayout oldLayout,
                           VkImageLayout newLayout,
                           VkPipelineStageFlags destinationStage);
-    void copyBufferToImage(Queue& queue, VkBuffer& buffer,
-                           VkImageLayout dstLayout);
 
 public:
+    static std::map<uint16_t, uint16_t> bindingIdToImageArrayElementId;
+
     struct Details {
+        static uint32_t imageId;
+        uint32_t bindingId;
         const char* filePath;
         uint16_t width;
         uint16_t height;
@@ -37,6 +40,7 @@ public:
         VkDeviceSize bufferSize;
 
         void createImageInfo(
+           
             const char* filePath,
             uint16_t width,
             uint16_t height, uint8_t channels,
@@ -45,16 +49,20 @@ public:
             int stageUsage, VkImageTiling tiling,
             int aspectFlags,
             VkSampleCountFlagBits samples,
-            stbi_uc* pixels = (stbi_uc*)"");
+            stbi_uc* pixels = (stbi_uc*)"",
+            uint32_t bindingId = imageId++);
     } imageDetails;
 
-    void create(Device& _device, VkCommandPool& commandPool,
-                VkBufferUsageFlags usage,
+    void create(VkDevice& device, VkPhysicalDevice& physicalDevice,
+                VkCommandPool& commandPool, VkBufferUsageFlags usage,
                 VkMemoryPropertyFlags memoryPropertyFlags, Queue& queue);
+    void copyBufferToImage(Queue& queue, VkBuffer& buffer,
+                           VkImageLayout dstLayout);
+    void copyBufferToImage(Queue& queue, unsigned char* buffer);
     void createImageView();
     void destroy();
     VkImage& get();
     VkImageView& getView();
-    StagingBuffer& getBuffer();
+    StagingBuffer getBuffer();
     Details& getDetails();
 };

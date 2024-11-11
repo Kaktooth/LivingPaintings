@@ -26,6 +26,7 @@ inline static const std::vector<const char*> DEVICE_EXTENTIONS = {
 };
 
 static const uint8_t MAX_FRAMES_IN_FLIGHT = 3;
+static const VkSampleCountFlagBits MAX_SAMPLE_COUNT = VkSampleCountFlagBits::VK_SAMPLE_COUNT_4_BIT;
 
 static const VkFormat IMAGE_TEXTURE_FORMAT = VK_FORMAT_R8G8B8A8_SRGB;
 static const VkFormat BUMP_TEXTURE_FORMAT = VK_FORMAT_R8_UNORM;
@@ -34,9 +35,10 @@ static const VkFormat EFFECT_MASK_TEXTURE_FORMAT = VK_FORMAT_R8_UNORM;
 static const VkColorSpaceKHR COLOR_SPACE = VK_COLOR_SPACE_HDR10_HLG_EXT;
 
 // from 0 - 255
-static const uint8_t SELECTED_REGION_HIGHLIGHT = 100;
+static const uint8_t SELECTED_REGION_HIGHLIGHT = 70;
 
-static const size_t OBJECT_INSTANCES = 1000;
+static const size_t OBJECT_INSTANCES = 100;
+static const uint32_t MAX_BINDLESS_RESOURCES = 100;
 
 // TEXTURE_FILE_PATH variable is retrieved from Cmake with macros in file
 // config.hpp.in
@@ -49,4 +51,7 @@ static const std::string SAM_MODEL_PATH = RETRIEVE_STRING(SAM_PATH);
 
 static const uint16_t EFFECTS_COUNT = 3;
 static constexpr uint16_t MASKS_COUNT = EFFECTS_COUNT + 1;
+
+static const uint8_t DEFAULT_PATCH_SIZE = 20;
+static const std::string INPAINTING_HISTORY_FOLDER_NAME = "InpaintingHistory";
 } // namespace Constants

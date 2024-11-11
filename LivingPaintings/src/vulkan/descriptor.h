@@ -12,9 +12,14 @@ using Constants::MASKS_COUNT;
 
 class Descriptor {
 
+    VkDevice device = VK_NULL_HANDLE;
     VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
+    VkDescriptorSetLayout bindlessSetLayout = VK_NULL_HANDLE;
     VkDescriptorPool pool = VK_NULL_HANDLE;
+    VkDescriptorPool bindlessPool = VK_NULL_HANDLE;
     std::vector<VkDescriptorSet> sets;
+    std::vector<VkDescriptorSet> bindlessSets;
+    VkSampler sampler = VK_NULL_HANDLE;
 
 public:
     void create(VkDevice& device,
@@ -23,8 +28,12 @@ public:
                 Image& paintingTexture, Image& heightMapTexture, Sampler& textureSampler,
                 UniformBuffer& mouseUniform, std::array<Image, MASKS_COUNT>& selectedPosMasks,
                 UniformBuffer& timeUniform, UniformBuffer& effectParamsUniform);
-    void destroy(VkDevice& device);
+    void updateBindlessTexture(Image& textureWrite, uint32_t arrayElementId);
+    void destroy();
     VkDescriptorSetLayout& getSetLayout();
+    VkDescriptorSetLayout& getBindlessSetLayout();
     VkDescriptorPool& getPool();
+    VkDescriptorPool& getBindlessPool();
     VkDescriptorSet& getSet(uint32_t frame);
+    VkDescriptorSet& getBindlessSet(uint32_t frame);
 };

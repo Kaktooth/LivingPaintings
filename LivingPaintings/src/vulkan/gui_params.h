@@ -20,6 +20,7 @@ struct ObjectParams {
 };
 
 struct AnimationParams {
+    uint16_t objIndex;
     bool play;
     float play_ms;
     float start_ms;
@@ -35,9 +36,10 @@ struct EffectParams
 {
     glm::uvec4 enabledEffects[EFFECTS_ENABLED_SIZE]; // boolean values packed into uvec4
     unsigned int highlightSelectedPixels; // uint aligned to 16 bytes
+    float heightRange;
     float noiseScale;
     float distortionModifier;
-    float heightScale;
+    float parallaxHeightScale;
     float amplifyFlickeringLight;
     float amplifyHighlight;
 };
@@ -53,6 +55,8 @@ struct CameraParams {
     float farClippingPlane;
     float orthoSize;
 };
+
+//Todo LightParams
 
 struct SpecificDrawParams {
     size_t pipelineHistorySize;
@@ -70,5 +74,10 @@ struct ObjectConstructionParams {
 struct MouseControlParams
 {
     int maskIndex;
+};
+
+struct InpaintingParams {
+    bool enableInpainting;
+    int patchSize;
 };
 #endif

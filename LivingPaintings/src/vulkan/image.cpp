@@ -3,12 +3,16 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+std::map<uint16_t, uint16_t> Image::bindingIdToImageArrayElementId = {};
+uint32_t Image::Details::imageId = 1000;
+
 void Image::Details::createImageInfo(
+
     const char* filePath,
     uint16_t width, uint16_t height, uint8_t channels,
     VkImageLayout imageLayout, VkImageViewType viewType, VkFormat format,
     int stageUsage, VkImageTiling tiling, int aspectFlags,
-    VkSampleCountFlagBits samples, stbi_uc* pixels)
+    VkSampleCountFlagBits samples, stbi_uc* pixels, uint32_t bindingId)
 {
 
     this->filePath = filePath;
@@ -24,16 +28,23 @@ void Image::Details::createImageInfo(
     this->samples = samples;
     this->pixels = pixels;
     this->bufferSize = width * height * channels;
+    this->bindingId = bindingId;
+    if (bindingIdToImageArrayElementId.contains(bindingId)) {
+        bindingIdToImageArrayElementId.insert({ bindingId, bindingIdToImageArrayElementId[bindingId]++});
+    }
+    else {
+        bindingIdToImageArrayElementId.insert({ bindingId, 0 });
+    }
 }
 
-void Image::create(Device& _device, VkCommandPool& commandPool,
-    VkBufferUsageFlags usage,
-    VkMemoryPropertyFlags memoryPropertyFlags, Queue& queue)
+void Image::create(VkDevice& device, VkPhysicalDevice& physicalDevice, 
+                   VkCommandPool& commandPool, VkBufferUsageFlags usage,
+                   VkMemoryPropertyFlags memoryPropertyFlags, Queue& queue)
 {
-
-    this->device = _device.get();
-    this->physicalDevice = _device.getPhysicalDevice();
+    this->device = device;
+    this->physicalDevice = physicalDevice;
     this->commandPool = commandPool;
+    this->usageFlags = usage;
 
     bool imageFound = strcmp(imageDetails.filePath, "") != 0;
     if (imageFound) {
@@ -43,8 +54,7 @@ void Image::create(Device& _device, VkCommandPool& commandPool,
         if (imageDetails.pixels == (stbi_uc*)"") {
             imageDetails.pixels = (stbi_uc*)calloc(1, imageDetails.bufferSize);
         }
-        stagingBuffer.create(device, physicalDevice, imageDetails.pixels,
-            imageDetails.bufferSize);
+        stagingBuffer.create(device, physicalDevice, imageDetails.pixels, imageDetails.bufferSize);
     }
 
     VkImageCreateInfo imageInfo {};
@@ -91,7 +101,6 @@ void Image::create(Device& _device, VkCommandPool& commandPool,
     }
 
     vkBindImageMemory(device, textureImage, imageMemory, 0);
-
     if ((usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT) == VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
         transitionLayout(queue, VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -198,6 +207,44 @@ void Image::copyBufferToImage(Queue& queue, VkBuffer& buffer, VkImageLayout dstL
     CommandBuffer::endSingleTimeCommands(device, commandPool, cmd, queue);
 }
 
+void Image::copyBufferToImage(Queue& queue, unsigned char* buffer)
+{
+    Image tempImage;
+    tempImage.imageDetails.createImageInfo("", imageDetails.width, imageDetails.height,
+                                                    imageDetails.channels, VK_IMAGE_LAYOUT_GENERAL,
+                                                    VK_IMAGE_VIEW_TYPE_2D, imageDetails.format,
+                                                    VK_SHADER_STAGE_FRAGMENT_BIT, VK_IMAGE_TILING_OPTIMAL,
+                                                    VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT,
+                                                    buffer);
+    tempImage.create(device, physicalDevice, commandPool,
+                               VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, queue);
+
+    VkCommandBuffer cmd = CommandBuffer::beginSingleTimeCommands(device, commandPool);
+
+    VkImageSubresourceLayers imageSubresource{};
+    imageSubresource.aspectMask = imageDetails.aspectFlags;
+    imageSubresource.mipLevel = 0;
+    imageSubresource.baseArrayLayer = 0;
+    imageSubresource.layerCount = 1;
+
+    VkImageCopy imageCopy{};
+    imageCopy.srcSubresource = imageSubresource;
+    imageCopy.srcOffset = { 0, 0, 0 };
+    imageCopy.dstSubresource = imageSubresource;
+    imageCopy.dstOffset = { 0, 0, 0 };
+    imageCopy.extent = { imageDetails.width, imageDetails.height, 1 };
+
+    vkCmdCopyImage(cmd, tempImage.get(),
+                   VK_IMAGE_LAYOUT_GENERAL,
+                   textureImage,
+                   imageDetails.layout, 1, &imageCopy);
+
+    CommandBuffer::endSingleTimeCommands(device, commandPool, cmd, queue);
+
+    tempImage.destroy();
+}
+
 void Image::createImageView()
 {
     VkImageViewCreateInfo imageViewInfo {};
@@ -233,7 +280,7 @@ VkImageView& Image::getView()
     return imageView;
 }
 
-StagingBuffer& Image::getBuffer()
+StagingBuffer Image::getBuffer()
 {
     return stagingBuffer;
 }

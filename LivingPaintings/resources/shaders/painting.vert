@@ -1,6 +1,6 @@
 #version 460
-
-layout(binding = 0) uniform InstanceUbo {
+#if VULKAN
+layout(set = 0, binding = 0) uniform InstanceUbo {
     mat4 model;
 } uboInstance;
 
@@ -16,6 +16,7 @@ layout(location = 0) out vec3 position;
 layout(location = 1) out vec2 texCoord;
 layout(location = 2) out vec3 cameraView;
 layout(location = 3) out mat4 model;
+layout(location = 7) out int instanceID;
 
 void main() {
 	gl_Position = uboView.proj * uboView.view * uboInstance.model * vec4(inPosition, 1.0f);
@@ -23,4 +24,6 @@ void main() {
     texCoord = inTexCoord;
     cameraView = uboView.view[2].xyz;
     model = uboInstance.model;
+    instanceID = gl_InstanceIndex;
 }
+#endif

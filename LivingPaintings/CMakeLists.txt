@@ -1,7 +1,6 @@
 ﻿set(OpenCV_DIR "${VCPKG_INSTALLED_DIR}/x64-windows/share/opencv4")
 
 find_package(Stb REQUIRED)
-find_package(gflags CONFIG REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
@@ -11,11 +10,6 @@ find_package(OpenCV CONFIG REQUIRED)
 find_package(CGAL CONFIG REQUIRED)
 
 include_directories( ${OpenCV_INCLUDE_DIRS} )
-
-file(GLOB vulkan_engine_SRC
-     "src/vulkan/*.h"
-     "src/vulkan/*.cpp"
-)
 
 configure_file("src/config.hpp.in" ${CMAKE_BINARY_DIR}/generated/config.hpp )
 include_directories( ${CMAKE_BINARY_DIR}/generated/ )
@@ -32,22 +26,24 @@ file(GLOB HEADERS
      "src/segmentation/segmentation_system.h"
      "src/utils/alloc.h"
      "src/vulkan/*.h"
-     "src/vulkan/*.hpp"
      "src/config.hpp"
 )
 
 file(GLOB INCLUDE_HEADERS
      "src/include/sam/sam.h"
+     "src/include/inpaint/*.h"
 )
 
 add_executable (LivingPaintings ${SOURCES} ${HEADERS} ${INCLUDE_HEADERS} )
-target_link_libraries(LivingPaintings PRIVATE gflags::gflags glfw glm::glm Vulkan::Vulkan imgui::imgui 
+target_link_libraries(LivingPaintings PRIVATE glfw glm::glm Vulkan::Vulkan imgui::imgui
                                               unofficial::shaderc::shaderc ${OpenCV_LIBS} CGAL::CGAL
-                                              "${CMAKE_SOURCE_DIR}/include/sam/$<CONFIG>/sam_cpp_lib.lib")
-target_include_directories(LivingPaintings PRIVATE ${onnxruntime_lib} ${OpenCV_LIBS} 
+                                              "${CMAKE_SOURCE_DIR}/include/sam/$<CONFIG>/sam_cpp_lib.lib" 
+                                              "${CMAKE_SOURCE_DIR}/include/inpaint/$<CONFIG>/inpaint.lib")
+
+target_include_directories(LivingPaintings PRIVATE ${onnxruntime_lib} ${OpenCV_LIBS}
 ${CMAKE_CURRENT_SOURCE_DIR}/include ${$ENV{VULKAN_SDK}/include} ${Stb_INCLUDE_DIR})
 
-set(TEXTURE_FILE_NAME "Van_Gogh-Starry_Night.jpg")
+set(TEXTURE_FILE_NAME "Van_Gogh-Starry_Night.png")
 set(TEXTURE_WIDTH 1200)
 set(TEXTURE_HEIGHT 950)
 set(PREPROCESS_SAM_FILE_NAME "edge_sam_3x_encoder.onnx")

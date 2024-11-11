@@ -1,6 +1,7 @@
 #include "segmentation_system.h"
 #include "../config.hpp"
 #include "../vulkan/consts.h"
+#include "inpaint/criminisi_inpainter.h"
 
 using Constants::PREPROCESS_SAM_MODEL_PATH;
 using Constants::SAM_MODEL_PATH;
@@ -9,6 +10,8 @@ using Constants::SELECTED_REGION_HIGHLIGHT;
 using Constants::MASKS_COUNT;
 using Constants::WINDOW_WIDTH;
 using Constants::WINDOW_HEIGHT;
+using Constants::INPAINTING_HISTORY_FOLDER_NAME;
+using Constants::IMAGE_TEXTURE_FORMAT;
 
 const int THREAD_NUMBER = std::thread::hardware_concurrency();
 
@@ -21,7 +24,7 @@ Controls::MouseControl* mouseControl = nullptr;
 std::unique_ptr<Sam> samModel = nullptr;
 glm::uvec2 modelResolution;
 
-cv::Mat imageTexture;
+cv::Mat latestImageTexture;
 glm::uvec2 imageResolution;
 glm::uvec2 windowResolution;
 
@@ -35,15 +38,17 @@ std::unordered_set<glm::uvec2> brushPositions { { 0, 0 }, { 1, 0 }, { -1, 0 }, {
 std::array<std::unordered_map<glm::uvec2, glm::uvec2>, MASKS_COUNT> objectPositions {};
 std::array<uint32_t, MASKS_COUNT> selectedObjectsSize{};
 std::array<uint32_t, MASKS_COUNT> currentSelectedObjectsSize{};
-unsigned char* selectedPosMask;
 
-cv::Mat maskedImage;
+cv::Mat image;
+cv::Mat selectedPosMask;
 
 std::queue<glm::uvec2> inputPositions {};
 std::thread objectSelectionThread;
 
 // First value is for condition when user selecting pixels and second value is for unselecting pixels.
 std::pair<bool, bool> buttonHeld;
+
+Inpaint::CriminisiInpainter inpainter;
 
 static Sam::Parameter getSamParam(std::string const& preprocessModel,
     std::string const& segmentModel,
@@ -70,7 +75,8 @@ static void loadImage(Sam* sam, std::string const& inputImage)
         std::cout << "Sam initialization failed" << '\n';
     }
 
-    cv::Mat image = cv::imread(inputImage, -1);
+    cv::Mat image = cv::imread(inputImage, cv::IMREAD_UNCHANGED);
+    latestImageTexture = image.clone();
     if (image.empty()) {
         std::cout << "Image is empty, image loading failed" << '\n';
     }
@@ -88,7 +94,9 @@ static void loadImage(Sam* sam, std::string const& inputImage)
     } else {
         std::cout << "Image is loaded!" << '\n';
     }
-    imageTexture = image.clone();
+
+    //load image again because previous image has lost resolution after resize
+    image = latestImageTexture;
 }
 
 cv::Mat ImageSegmantationSystem::segmentImage(Sam const* sam)
@@ -176,7 +184,6 @@ static void mouse_buttons_callback(GLFWwindow* window, int button, int action,
 
 void ImageSegmantationSystem::runObjectSegmentationTask()
 {
-
     std::cout << "Starting to build Segment Anything model... " << '\n';
     samModel = std::make_unique<Sam>(paramSam);
     std::cout << "Building is finished!" << '\n';
@@ -184,48 +191,24 @@ void ImageSegmantationSystem::runObjectSegmentationTask()
     loadImage(samModel.get(), imagePath);
     imageLoaded = true;
 
-    const VkDeviceSize maskSize = static_cast<size_t>(imageResolution.x) 
-                                * static_cast<size_t>(imageResolution.y) * sizeof(char);
     while (runningSegmentation) {
         bool inputPositionsEmpty = inputPositions.empty();
         if (!inputPositionsEmpty) {
+            //TODO pos to mouse
             glm::uvec2 pos = inputPositions.front();
             inputPositions.pop();
 
-            cv::Mat mask = segmentImage(samModel.get());
-            auto pMaskPixels = static_cast<uint8_t*>(mask.data);
-            uint8_t channels = imageTexture.channels();
-
-            cv::imwrite("D:\\Downloads\\mask.jpg", mask);
-            maskedImage = imageTexture.clone();
-            auto pPixels = static_cast<uint8_t*>(maskedImage.data);
-            for (int height = 0; height < imageTexture.rows; height++) {
-                for (int width = 0; width < imageTexture.cols; width++) {
-                    uint8_t red = pMaskPixels[height * mask.cols + width + 2];
-                    uint8_t green = pMaskPixels[height * mask.cols + width + 1];
-                    uint8_t blue = pMaskPixels[height * mask.cols + width];
-                    if (red == 255 && green == 255 && blue == 255) {
-                        pPixels[height * imageTexture.cols * channels + width * channels + 2] = 0;
-                        pPixels[height * imageTexture.cols * channels + width * channels + 1] = 0;
-                        pPixels[height * imageTexture.cols * channels + width * channels] = 0;
-                    }
-                }
-            }
-            // cv::Mat inpaintedImage;
-            // cv::xphoto::inpaint(maskedImage, ~mask, inpaintedImage,
-            //                     cv::xphoto::INPAINT_FSR_FAST);
-            // cv::imwrite("D:\\Downloads\\inpaintedImage.jpg", inpaintedImage);
-
-            cv::resize(mask, mask, cv::Size(imageResolution.x, imageResolution.y));
-            auto pResisedMaskPixels = static_cast<uint8_t*>(mask.data);
-            cv::resize(maskedImage, maskedImage, cv::Size(imageResolution.x, imageResolution.y));
-            cv::imwrite("D:\\Downloads\\maskedImage.jpg", maskedImage);
+            selectedPosMask = segmentImage(samModel.get());
+            image = latestImageTexture.clone();
+   
+            cv::resize(selectedPosMask, selectedPosMask, cv::Size(imageResolution.x, imageResolution.y));
+            auto pResisedMaskPixels = static_cast<uint8_t*>(selectedPosMask.data);
 
             for (uint32_t height = 0; height < imageResolution.y; height++) {
                 for (uint32_t width = 0; width < imageResolution.x; width++) {
-                    uint8_t red = pResisedMaskPixels[height * mask.cols + width + 2];
-                    uint8_t green = pResisedMaskPixels[height * mask.cols + width + 1];
-                    uint8_t blue = pResisedMaskPixels[height * mask.cols + width];
+                    uint8_t red = pResisedMaskPixels[height * selectedPosMask.cols + width + 2];
+                    uint8_t green = pResisedMaskPixels[height * selectedPosMask.cols + width + 1];
+                    uint8_t blue = pResisedMaskPixels[height * selectedPosMask.cols + width];
                     if (red == 255 && green == 255 && blue == 255) {
                         objectPositions[mouseControl->maskIndex].emplace(glm::ivec2(width, height), pos);
                     }
@@ -243,7 +226,11 @@ void ImageSegmantationSystem::init(Device& _device, VkCommandPool& _commandPool,
     uint32_t imageWidth, uint32_t imageHeight,
     Controls::MouseControl& _mouseControl)
 {
+    const std::string createFolder = "mkdir " + INPAINTING_HISTORY_FOLDER_NAME;
+    system(createFolder.c_str());
+
     const glm::uvec2 windowSize = glm::uvec2(WINDOW_WIDTH, WINDOW_HEIGHT);
+    imageResolution = glm::uvec2(imageWidth, imageHeight);
 
     pWindow = _pWindow;
     windowResolution = windowSize;
@@ -256,8 +243,6 @@ void ImageSegmantationSystem::init(Device& _device, VkCommandPool& _commandPool,
     std::cout << "___ Initialization Phase ___ " << '\n';
     std::cout << "Threads: " << THREAD_NUMBER << '\n';
 
-    imageResolution = glm::uvec2(imageWidth, imageHeight);
-
     for (uint16_t maskIndex = 0; maskIndex < MASKS_COUNT; maskIndex++) {
         selectedPosMasks[maskIndex].imageDetails.createImageInfo(
             "", imageWidth, imageHeight, 1,
@@ -265,22 +250,10 @@ void ImageSegmantationSystem::init(Device& _device, VkCommandPool& _commandPool,
             VK_IMAGE_VIEW_TYPE_2D,
             BUMP_TEXTURE_FORMAT, VK_SHADER_STAGE_FRAGMENT_BIT,
             VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT);
-        selectedPosMasks[maskIndex].create(_device, _commandPool,
+        selectedPosMasks[maskIndex].create(device, physicalDevice, _commandPool,
                                      VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, transferQueue);
     }
-
-    VkImageSubresourceLayers imageSubresource {};
-    imageSubresource.aspectMask = selectedPosMasks[0].imageDetails.aspectFlags;
-    imageSubresource.mipLevel = 0;
-    imageSubresource.baseArrayLayer = 0;
-    imageSubresource.layerCount = 1;
-
-    imageCopy.srcSubresource = imageSubresource;
-    imageCopy.srcOffset = { 0, 0, 0 };
-    imageCopy.dstSubresource = imageSubresource;
-    imageCopy.dstOffset = { 0, 0, 0 };
-    imageCopy.extent = { imageResolution.x, imageResolution.y, 1 };
 
     glfwSetMouseButtonCallback(pWindow, mouse_buttons_callback);
     glfwSetCursorPosCallback(pWindow, cursor_position_callback);
@@ -330,45 +303,117 @@ void ImageSegmantationSystem::updatePositionMasks(Device& device, VkCommandPool&
 {
     if (selectedObjectSizeChanged()) {
         unsigned char* selectedPosMask = getSelectedPositionsMask();
-
-        selectedPosMaskTemp.imageDetails.createImageInfo(
-            "", imageResolution.x, imageResolution.y, 1, VK_IMAGE_LAYOUT_GENERAL,
-            VK_IMAGE_VIEW_TYPE_2D,
-            BUMP_TEXTURE_FORMAT, VK_SHADER_STAGE_FRAGMENT_BIT,
-            VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT,
-            VK_SAMPLE_COUNT_1_BIT, selectedPosMask);
-        selectedPosMaskTemp.create(device, commandPool,
-            VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, transferQueue);
-
-        VkCommandBuffer cmd = CommandBuffer::beginSingleTimeCommands(device.get(), commandPool);
-
-        vkCmdCopyImage(cmd, selectedPosMaskTemp.get(),
-            VK_IMAGE_LAYOUT_GENERAL,
-                       selectedPosMasks[mouseControl->maskIndex].get(),
-            VK_IMAGE_LAYOUT_GENERAL, 1, &imageCopy);
-
-        CommandBuffer::endSingleTimeCommands(device.get(), commandPool, cmd, transferQueue);
-
-        selectedPosMaskTemp.destroy();
+        selectedPosMasks[mouseControl->maskIndex].copyBufferToImage(transferQueue, selectedPosMask);
     }
+}
+
+/* Method inpaints chosen pixel mask with already existing image patches using Criminisi method.
+   Firstly, area and side of square area will be found using mask countours. Center point will be 
+   found using moments of pixel colors of the image that is used to align inpainted area to the center.
+   To inpaint the image there will be used square area patch of the image instead of whole image to 
+   speed up method excecution time for larger images.  */
+void ImageSegmantationSystem::inpaintImage(uint8_t patchSize, std::vector<Image>& objectsTextures, ObjectParams& objectParams, Descriptor& descriptor, VkCommandPool& commandPool, Queue& transferQueue)
+{
+    std::vector<std::vector<cv::Point>> contours;
+    cv::findContours(selectedPosMask, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
+    uint32_t biggestArea = 0;
+    for (auto contour : contours) {
+        auto area = cv::contourArea(contour);
+        if (biggestArea < area) {
+            biggestArea = area;
+        }
+    }
+    int side = cv::sqrt(biggestArea);
+    cv::Moments m = cv::moments(selectedPosMask, true);
+    cv::Point pointNearCenter(m.m10 / m.m00, m.m01 / m.m00);
+    uint32_t negativeLength_x = glm::clamp(pointNearCenter.x - side , 0, image.cols);
+    uint32_t negativeLength_y = glm::clamp(pointNearCenter.y - side, 0, image.rows);
+    uint32_t positiveLength_x = glm::clamp(pointNearCenter.x + side, 0, image.cols);
+    uint32_t positiveLength_y = glm::clamp(pointNearCenter.y + side, 0, image.rows);
+    auto border_w = cv::Range(negativeLength_x, positiveLength_x);
+    auto border_h = cv::Range(negativeLength_y, positiveLength_y);
+    cv::Mat resisedImage = image(border_h, border_w);
+    cv::Mat selectedPosMaskR = selectedPosMask(border_h, border_w);
+    cv::Mat maskRectangle = selectedPosMaskR.clone();
+    cv::rectangle(maskRectangle, cv::Point(patchSize), cv::Point(selectedPosMaskR.cols - patchSize, selectedPosMaskR.rows - patchSize), (0, 0, 0), -1);
+    cv::bitwise_xor(selectedPosMaskR, maskRectangle, selectedPosMaskR);
+    inpainter.setSourceImage(resisedImage);
+    inpainter.setTargetMask(selectedPosMaskR);
+    inpainter.setSourceMask(~selectedPosMaskR);
+    inpainter.setPatchSize(patchSize);
+    inpainter.initialize();
+
+    while (inpainter.hasMoreSteps()) {
+        inpainter.step();
+    }
+
+    cv::Mat resImage;
+    cv::Mat inpaintedImage;
+    inpainter.image().copyTo(inpaintedImage);
+    uint32_t top = border_h.start;
+    uint32_t bottom = image.rows - border_h.end;
+    uint32_t left = border_w.start;
+    uint32_t right = image.cols - border_w.end;
+    cv::copyMakeBorder(inpaintedImage, resImage, top, bottom, left, right, cv::BorderTypes::BORDER_CONSTANT, 0);
+    cv::copyTo(resImage, image, selectedPosMask);
+
+    //TODO implement inpainted image history
+    std::stringstream filePath;
+    filePath << INPAINTING_HISTORY_FOLDER_NAME << "/" << "latest.png";
+    std::vector<int> imageWriteParams;
+    imageWriteParams.push_back(cv::IMWRITE_PNG_COMPRESSION);
+    imageWriteParams.push_back(0);
+    cv::imwrite(filePath.str(), image, imageWriteParams);
+    latestImageTexture = image.clone();
+    std::cout << "Background is inpainted" << '\n';
+
+    Image::Details imageDetails = objectsTextures.front().getDetails();
+    int w, h, channels;
+    uchar* inpaintedTextureBuffer = stbi_load(filePath.str().c_str(), &w, &h, &channels, STBI_rgb_alpha);
+    Image inpaintImage;
+    inpaintImage.imageDetails.createImageInfo(
+        "", imageDetails.width, imageDetails.height, imageDetails.channels,
+        VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_VIEW_TYPE_2D,
+        IMAGE_TEXTURE_FORMAT,
+        VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
+        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT,
+        VK_SAMPLE_COUNT_1_BIT, inpaintedTextureBuffer, imageDetails.bindingId);
+    inpaintImage.create(this->device, physicalDevice, commandPool,
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, transferQueue);
+    objectsTextures.push_back(inpaintImage);
+
+    uint16_t maxBinding = Image::bindingIdToImageArrayElementId[imageDetails.bindingId];
+    descriptor.updateBindlessTexture(objectsTextures.back(), 0);
+    uint16_t arrayElementId = 1;
+    for (uint16_t i = maxBinding; i >= 1; i--) {
+        descriptor.updateBindlessTexture(objectsTextures[maxBinding - i], arrayElementId++);
+    }
+    float objectMaxWidth = imageDetails.width - right - left;
+    float width = glm::sqrt(objectMaxWidth + side);
+    float objectMaxHeight = imageDetails.height - top - bottom;
+    float hight = glm::sqrt(objectMaxHeight + side);
+    glm::vec2 objectCenter = glm::vec2(pointNearCenter.x + width, pointNearCenter.y - hight);
+
+    objectParams.position[0] = -0.5f * ((float)imageDetails.width / imageDetails.height);
+    objectParams.position[1] = -0.5f;
 }
 
 bool& ImageSegmantationSystem::isImageLoaded() { return imageLoaded; }
 
-unsigned char* ImageSegmantationSystem::getSelectedPositionsMask()
+uchar* ImageSegmantationSystem::getSelectedPositionsMask()
 {
     return getSelectedPositionsMask(mouseControl->maskIndex);
 }
 
-unsigned char* ImageSegmantationSystem::getSelectedPositionsMask(uint16_t maskIndex)
+uchar* ImageSegmantationSystem::getSelectedPositionsMask(uint16_t maskIndex)
 {
    auto pixelSize = static_cast<size_t>(imageResolution.x) * static_cast<size_t>(imageResolution.y);
    auto selectedPositionsMask = static_cast<unsigned char*>(calloc(1, pixelSize));
-    for (uint32_t w = 0; w < imageResolution.x; w++) {
-        for (uint32_t h = 0; h < imageResolution.y; h++) {
-            unsigned char* offset = selectedPositionsMask + w + (imageResolution.x * h);
-            auto pos = glm::uvec2(w, h);
+    for (uint32_t width = 0; width < imageResolution.x; width++) {
+        for (uint32_t height = 0; height < imageResolution.y; height++) {
+            unsigned char* offset = selectedPositionsMask + width + (imageResolution.x * height);
+            auto pos = glm::uvec2(width, height);
             if (objectPositions[maskIndex].contains(pos)) {
                 offset[0] = SELECTED_REGION_HIGHLIGHT;
             } else {

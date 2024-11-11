@@ -1,12 +1,12 @@
 #include "pipeline.h"
 
 void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
-    VkDescriptorSetLayout& descriptorSetLayout,
+    std::vector<VkDescriptorSetLayout>& descriptorSetLayouts,
     const VkExtent2D extent, VkSampleCountFlagBits samples)
 {
     this->device = device;
     this->renderPass = renderPass;
-    this->descriptorSetLayout = descriptorSetLayout;
+    this->descriptorSetLayouts = descriptorSetLayouts;
     this->extent = extent;
     this->samples = samples;
 
@@ -41,7 +41,6 @@ void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
         }
     }
 
-    // Graphics Pipeline Creation
     VkViewport viewport {};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
@@ -134,8 +133,8 @@ void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo {};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+    pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
+    pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
     // pipelineLayoutInfo.pushConstantRangeCount = 0;
     // pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
@@ -143,7 +142,7 @@ void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
     if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &layout) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create pipeline layout.");
     }
-    layouts.push_back(layout);
+    graphicsPipelineLayouts.push_back(layout);
 
     VkGraphicsPipelineCreateInfo graphicsPipelineInfo {};
     graphicsPipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -174,8 +173,8 @@ void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
 
         VkPipelineLayoutCreateInfo computePipelineLayoutInfo {};
         computePipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        computePipelineLayoutInfo.setLayoutCount = 1;
-        computePipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+        computePipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
+        computePipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
 
         VkPipelineLayout computePipelineLayout;
         if (vkCreatePipelineLayout(device, &computePipelineLayoutInfo, nullptr, &computePipelineLayout) != VK_SUCCESS) {
@@ -203,9 +202,9 @@ void Pipeline::create(VkDevice& device, VkRenderPass& renderPass,
 
 void Pipeline::destroy()
 {
-    for (size_t i = 0; i < layouts.size(); i++) {
+    for (size_t i = 0; i < graphicsPipelineLayouts.size(); i++) {
         vkDestroyPipeline(device, graphicsPipelines[i], nullptr);
-        vkDestroyPipelineLayout(device, layouts[i], nullptr);
+        vkDestroyPipelineLayout(device, graphicsPipelineLayouts[i], nullptr);
         vkDestroyPipeline(device, computePipelines[i], nullptr);
         vkDestroyPipelineLayout(device, computePipelineLayouts[i], nullptr);
     }
@@ -214,7 +213,7 @@ void Pipeline::destroy()
 bool Pipeline::recreateifShadersChanged()
 {
     if (ShaderManager::recreateGraphicsPipeline) {
-        Pipeline::create(device, renderPass, descriptorSetLayout, extent,
+        Pipeline::create(device, renderPass, descriptorSetLayouts, extent,
             samples);
         ShaderManager::recreateGraphicsPipeline = false;
         return true;
@@ -223,16 +222,18 @@ bool Pipeline::recreateifShadersChanged()
     return false;
 }
 
-void Pipeline::bind(VkCommandBuffer& cmdCompute, VkDescriptorSet& computeDescriptorSet)
+void Pipeline::bind(VkCommandBuffer& cmdCompute, VkDescriptorSet& descriptorSet, VkDescriptorSet& bindlessDescriptorSet)
 {
-    const uint32_t dynamicOffset = static_cast<uint32_t>(Data::AlignmentProperties::dynamicUniformAlignment);
-    for (size_t i = 0; i < computePipelines.size(); i++) {
-        vkCmdBindDescriptorSets(cmdCompute, VK_PIPELINE_BIND_POINT_COMPUTE,
-            computePipelineLayouts[i], 0, 1,
-            &computeDescriptorSet, 1, &dynamicOffset);
-        vkCmdBindPipeline(cmdCompute, VK_PIPELINE_BIND_POINT_COMPUTE,
-            computePipelines[i]);
-    }
+    const uint32_t dynamicOffset = static_cast<uint32_t>(Data::AlignmentProperties::dynamicUniformAlignment_mat4);
+    VkPipelineLayout layout =  computePipelineLayouts.back();
+    VkPipeline pipeline = computePipelines.back();
+    vkCmdBindDescriptorSets(cmdCompute, VK_PIPELINE_BIND_POINT_COMPUTE,
+         layout, 0, 1,
+         &descriptorSet, 1, &dynamicOffset);
+    vkCmdBindDescriptorSets(cmdCompute, VK_PIPELINE_BIND_POINT_COMPUTE,
+         layout, 1, 1,
+         &bindlessDescriptorSet, 0, nullptr);
+    vkCmdBindPipeline(cmdCompute, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
 }
 
 void Pipeline::updateExtent(VkExtent2D& extent)
@@ -242,17 +243,17 @@ void Pipeline::updateExtent(VkExtent2D& extent)
 
 VkPipelineLayout& Pipeline::getLastLayout()
 {
-    return layouts[layouts.size() - 1];
+    return graphicsPipelineLayouts[graphicsPipelineLayouts.size() - 1];
 }
 
 VkPipeline& Pipeline::getLast()
 {
-    return graphicsPipelines[layouts.size() - 1];
+    return graphicsPipelines[graphicsPipelineLayouts.size() - 1];
 }
 
 VkPipelineLayout& Pipeline::getLayout(const size_t index)
 {
-    return layouts[index];
+    return graphicsPipelineLayouts[index];
 }
 
 VkPipeline& Pipeline::get(const size_t index)

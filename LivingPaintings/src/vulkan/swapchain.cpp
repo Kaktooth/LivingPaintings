@@ -23,26 +23,26 @@ void Swapchain::setContext(Device& device, Surface& surface,
         ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT
         : VK_IMAGE_ASPECT_DEPTH_BIT;
 
-    createSpecializedImages(device);
+    Queue& graphicsQueue = device.getGraphicsQueue();
+    createSpecializedImages(graphicsQueue);
 }
 
-void Swapchain::createSpecializedImages(Device& device)
+void Swapchain::createSpecializedImages(Queue& graphicsQueue)
 {
-    Queue& graphicsQueue = device.getGraphicsQueue();
     depthImage.imageDetails.createImageInfo(
-        "", extent.width, extent.height, 4,
+         "", extent.width, extent.height, 4,
         VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D,
         depthFormat, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
         VK_IMAGE_TILING_OPTIMAL, aspectFlags, samples);
-    depthImage.create(device, commandPool,
+    depthImage.create(device, physicalDevice, commandPool,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, graphicsQueue);
 
     colorImage.imageDetails.createImageInfo(
-        "", extent.width, extent.height, 4, VK_IMAGE_LAYOUT_UNDEFINED,
+         "", extent.width, extent.height, 4, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_VIEW_TYPE_2D, imageFormat, VK_SHADER_STAGE_FRAGMENT_BIT,
         VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, samples);
-    colorImage.create(device, commandPool,
+    colorImage.create(device, physicalDevice, commandPool,
         VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, graphicsQueue);
 }
@@ -159,13 +159,13 @@ void Swapchain::createFramebuffers(VkRenderPass& renderPass)
     }
 }
 
-uint32_t Swapchain::asquireNextImage(Device& device, VkRenderPass& renderPass, VkSemaphore& imageAvailable, GLFWwindow* pWindow)
+uint32_t Swapchain::asquireNextImage(Queue& graphicsQueue, VkRenderPass& renderPass, VkSemaphore& imageAvailable, GLFWwindow* pWindow)
 {
     uint32_t imageIndex;
     VkResult result = vkAcquireNextImageKHR(this->device, swapchain, UINT64_MAX, imageAvailable, VK_NULL_HANDLE, &imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        recreate(device, renderPass, pWindow);
+        recreate(graphicsQueue, renderPass, pWindow);
         return 0;
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         throw std::runtime_error("Failed to acquire swap chain image.");
@@ -174,7 +174,7 @@ uint32_t Swapchain::asquireNextImage(Device& device, VkRenderPass& renderPass, V
     return imageIndex;
 }
 
-void Swapchain::presentImage(Device& device, VkRenderPass& renderPass, VkQueue& presentationQueue,
+void Swapchain::presentImage(Queue& graphicsQueue, VkRenderPass& renderPass, VkQueue& presentationQueue,
     std::vector<VkSemaphore> signalSemafores,
     GLFWwindow* pWindow)
 {
@@ -191,7 +191,7 @@ void Swapchain::presentImage(Device& device, VkRenderPass& renderPass, VkQueue& 
 
     VkResult result = vkQueuePresentKHR(presentationQueue, &presentationInfo);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
-        recreate(device, renderPass, pWindow);
+        recreate(graphicsQueue, renderPass, pWindow);
         framebufferResized = false;
         currentFrame = 0;
         return;
@@ -225,7 +225,7 @@ void Swapchain::destroy()
     colorImage.destroy();
 }
 
-void Swapchain::recreate(Device& device, VkRenderPass& renderPass,
+void Swapchain::recreate(Queue& graphicsQueue, VkRenderPass& renderPass,
     GLFWwindow* pWindow)
 {
     int width = 0, height = 0;
@@ -254,7 +254,7 @@ void Swapchain::recreate(Device& device, VkRenderPass& renderPass,
 
     create();
     createImageViews();
-    createSpecializedImages(device);
+    createSpecializedImages(graphicsQueue);
     createFramebuffers(renderPass);
 }
 

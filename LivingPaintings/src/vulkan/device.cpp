@@ -24,13 +24,24 @@ VkDevice& Device::create(VkInstance& instance, Surface& surface)
     vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
     vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
 
+    VkPhysicalDeviceFeatures2 deviceIndexingFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, &indexingFeatures };
+    vkGetPhysicalDeviceFeatures2(physicalDevice, &deviceIndexingFeatures);
+    vkGetPhysicalDeviceFeatures2(physicalDevice, &deviceFeatures2);
+
     VkDeviceCreateInfo deviceInfo {};
     deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     deviceInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
     deviceInfo.pQueueCreateInfos = queueCreateInfos.data();
-    deviceInfo.pEnabledFeatures = &deviceFeatures;
     deviceInfo.enabledExtensionCount = static_cast<uint32_t>(Constants::DEVICE_EXTENTIONS.size());
     deviceInfo.ppEnabledExtensionNames = Constants::DEVICE_EXTENTIONS.data();
+    deviceInfo.pNext = &deviceFeatures2;
+
+    bool bindlessSupported = indexingFeatures.descriptorBindingPartiallyBound && indexingFeatures.runtimeDescriptorArray;
+    if (bindlessSupported) {
+        indexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
+        indexingFeatures.runtimeDescriptorArray = VK_TRUE;
+        deviceFeatures2.pNext = &indexingFeatures;
+    }
 
     if (Constants::ENABLE_VALIDATION_LAYERS) {
         deviceInfo.enabledExtensionCount = static_cast<uint32_t>(Constants::VALIDATION_LAYERS.size());
@@ -69,9 +80,6 @@ void Device::selectPhysicalDevice(VkInstance& instance, Surface& surface)
         deviceCandidates.insert({ deviceScore, device });
     }
 
-    deviceFeatures.sampleRateShading = VK_TRUE;
-    deviceFeatures.samplerAnisotropy = VK_TRUE;
-
     physicalDevice = deviceCandidates.begin()->second;
 
     if (physicalDevice == VK_NULL_HANDLE) {
@@ -96,8 +104,10 @@ int Device::getDeviceScore(VkPhysicalDevice& physicalDevice, Surface& surface)
 
     bool extensionsSupported = checkDeviceExtensionSupport(physicalDevice);
     bool supportedSurfaceCapabilities = !surface.details.formats.empty() && !surface.details.presentationModes.empty();
-    if (!(deviceFeatures.geometryShader || deviceFeatures.sampleRateShading || deviceFeatures.samplerAnisotropy || queueFamily.indicies.isAvailable()
-            || supportedSurfaceCapabilities || extensionsSupported)) {
+    if (!(deviceFeatures.geometryShader || deviceFeatures.sampleRateShading 
+        || deviceFeatures.samplerAnisotropy 
+        || supportedSurfaceCapabilities || extensionsSupported
+        || queueFamily.indicies.isAvailable())) {
         return 0;
     }
 

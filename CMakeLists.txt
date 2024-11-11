@@ -1,8 +1,8 @@
 ﻿cmake_minimum_required(VERSION 3.27)
 
-set(CMAKE_CXX_FLAGS "-std=c++20 -Wall -Wextra -v")
+set(CMAKE_CXX_FLAGS "-std=c++20 -Wall -v ${CMAKE_CXX_FLAGS}")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-g -O1")
+set(CMAKE_CXX_FLAGS_RELEASE "-O1")
 set(CMAKE_MSVC_PARALLEL_ENABLE ON)
 set(CMAKE_CXX_CLANG_TIDY 
 clang-tidy; 
