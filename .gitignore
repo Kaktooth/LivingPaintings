@@ -16,3 +16,5 @@ _deps
 /LivingPaintings/resources/models/sam_hq_vit_h.onnx
 /LivingPaintings/resources/models/sam_preprocess.onnx
 /LivingPaintings/resources/models/sam_vit_h_4b8939.onnx
+/out
+/vcpkg_installed
