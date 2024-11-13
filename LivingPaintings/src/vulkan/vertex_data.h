@@ -38,7 +38,7 @@ struct GraphicsObject {
         void move(ObjectParams params) const;
         void rotate(ObjectParams params) const;
         void scale(ObjectParams params) const;
-        void transform(ObjectParams params, AnimationParams animationParams) const;
+        void transform(GlobalAnimationParams globAnimParams, ObjectParams params, AnimationParams animationParams) const;
         void move(ObjectParams params, float time) const;
         void rotate(ObjectParams params, float time) const;
         void scale(ObjectParams params, float time) const;

@@ -45,6 +45,12 @@ class Gui {
         0
     };
 
+    GlobalAnimationParams globalAnimationParams = {
+        0.0f,
+        0.0f,
+        true
+    };
+
     CameraParams cameraParams = {
         { 45.0f, 0.0f, 45.0f }, // init for orthogonal projection
         { 0.0f, 0.0f, 0.0f },
@@ -95,6 +101,9 @@ public:
 
     SpecificDrawParams drawParams = { 1, false, false, false };
 
+    uint16_t animIndex = 0;
+    uint16_t objIndex = 0;
+
     void init(VkInstance& instance, Device& device, VkCommandPool& commandPool,
               RenderPass& renderPass, Swapchain& swapChain,
               VkDescriptorPool& descriptorPool, GLFWwindow* window);
@@ -103,9 +112,12 @@ public:
     void draw();
     void renderDrawData(VkCommandBuffer& commandBuffer);
     void createGraphicsObjectParams(uint16_t objIndex);
+    void createObjectAnimationParams(uint16_t objIndex);
+    void updateGlobalAnimationParams();
     void destroy();
     ObjectParams getObjectParams();
     AnimationParams getAnimationParams();
+    GlobalAnimationParams& getGlobalAnimationParams();
     CameraParams& getCameraParams();
     EffectParams& getEffectParams();
     ObjectConstructionParams& getObjectConstructionParams();

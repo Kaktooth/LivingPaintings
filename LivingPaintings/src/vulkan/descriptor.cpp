@@ -338,9 +338,12 @@ void Descriptor::updateBindlessTexture(Image& textureWrite, uint32_t arrayElemen
 
 void Descriptor::destroy()
 {
-    vkDestroyDescriptorPool(device, pool, nullptr);
+    vkDestroyDescriptorPool(device, pool, nullptr);   
+    vkDestroyDescriptorPool(device, bindlessPool, nullptr);
     vkDestroyDescriptorSetLayout(device, setLayout, nullptr);
+    vkDestroyDescriptorSetLayout(device, bindlessSetLayout, nullptr);
     sets.clear();
+    bindlessSets.clear();
 }
 
 VkDescriptorSetLayout& Descriptor::getSetLayout()

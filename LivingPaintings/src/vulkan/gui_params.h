@@ -32,6 +32,12 @@ struct AnimationParams {
     int selectedEasingEquation;
 };
 
+struct GlobalAnimationParams {
+    float start_ms;
+    float end_ms;
+    bool showObjectPosStart;
+};
+
 struct EffectParams
 {
     glm::uvec4 enabledEffects[EFFECTS_ENABLED_SIZE]; // boolean values packed into uvec4

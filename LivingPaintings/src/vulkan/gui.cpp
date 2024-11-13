@@ -5,7 +5,7 @@ using Constants::MAX_FRAMES_IN_FLIGHT;
 using Constants::EFFECTS_COUNT;
 
 const float PAD = 10.0f;
-const ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove;
+const ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove;
 
 void Gui::init(VkInstance& instance, Device& _device, VkCommandPool& commandPool, RenderPass& renderPass, Swapchain& swapChain, VkDescriptorPool& descriptorPool, GLFWwindow* pWindow)
 {
@@ -97,6 +97,7 @@ void Gui::ShowControls(bool* p_open)
         ImGui::Text("Ctrl + Left Mouse Click: Select object region");
         ImGui::Text("Ctrl + Right Mouse Click: Unselect object region");
         ImGui::Text("I: Zoom in. In zoom in state hold mouse button to select(or unselect) the pixels and release the button when done.");
+        ImGui::Text("Note: Change mask index to select area for effects.");
     }
 
     if (ImGui::BeginPopupContextWindow()) {
@@ -115,105 +116,175 @@ void Gui::draw()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
     {
+        ImGui::SetNextWindowSize(ImVec2(550, 900));
         bool windowCreated = ImGui::Begin(APP_NAME);
-
         ShowEventsOverlay(&windowCreated);
         ShowControls(&windowCreated);
 
         if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("New")) { }
-            if (ImGui::MenuItem("Open", "Ctrl+O")) { }
-            if (ImGui::MenuItem("Save", "Ctrl+S")) { }
-            if (ImGui::MenuItem("Save As..")) { }
-            if (ImGui::MenuItem("Export")) { }
+            if (ImGui::MenuItem("New")) {}
+            if (ImGui::MenuItem("Open", "Ctrl+O")) {}
+            if (ImGui::MenuItem("Save", "Ctrl+S")) {}
+            if (ImGui::MenuItem("Save As..")) {}
+            if (ImGui::MenuItem("Export As..")) {}
             ImGui::Separator();
-                if (ImGui::BeginMenu("Options")) {
-                    ImGui::DragFloat3("Object position", objectsParams[0].position, 0.1f);
-                    ImGui::DragFloat3("Object rotation", objectsParams[0].rotation, 0.1f);
-                    ImGui::DragFloat3("Object scale", objectsParams[0].scale, 0.1f);
-                    ImGui::DragFloat3("Camera position", cameraParams.cameraPos, 0.1f);
-                    ImGui::DragFloat3("Camera target", cameraParams.cameraTarget, 0.1f);
-                    ImGui::DragFloat3("Up vector", cameraParams.upVector,
-                        0.1f);
-                    ImGui::Checkbox("Look mode", &cameraParams.lookMode);
-                    ImGui::Checkbox("Perspective mode", &cameraParams.perspectiveMode);
-                    if (cameraParams.perspectiveMode) {
-                        if (cameraParams.cameraPos[0] == 45 && cameraParams.cameraPos[2] == 45) {
-                            cameraParams.cameraPos[0] = 0;
-                            cameraParams.cameraPos[2] = 1;
-                        }
-                        ImGui::SliderFloat("Field of View", &cameraParams.fieldOfView, 0.0f, 1000.0f);
-                        ImGui::InputFloat("Field of View", &cameraParams.fieldOfView, 0.01f);
-                        ImGui::SliderFloat("Near Clipping Plane", &cameraParams.nearClippingPlane, 0.0f, 1.0f);
-                        ImGui::InputFloat("Near Clipping Plane", &cameraParams.nearClippingPlane, 0.01f);
-                        ImGui::SliderFloat("Far Clipping Plane", &cameraParams.farClippingPlane, 0.0f, 400.0f);
-                        ImGui::InputFloat("Far Clipping Plane", &cameraParams.farClippingPlane, 0.01f);
-                    } else {
-                        if (cameraParams.cameraPos[0] == 0 && cameraParams.cameraPos[2] == 1) {
-                            cameraParams.cameraPos[0] = 45;
-                            cameraParams.cameraPos[2] = 45;
-                        }
-                        ImGui::InputFloat("Ortho Left", &cameraParams.orthoSize, 0.25f);
+
+            if (ImGui::MenuItem("Quit", "Alt+F4")) {}
+            ImGui::EndMenu();
+        }
+
+        ImGui::SeparatorText("Mask Selection Options");
+        if (ImGui::Button("Clear")) {
+            drawParams.clearSelectedMask = true;
+        }
+        ImGui::SameLine();
+        ImGui::DragInt("Mask Index", &mouseControlParams.maskIndex, 1, 0, EFFECTS_COUNT);
+        ImGui::Spacing();
+
+        ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
+        if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
+        {
+            if (ImGui::BeginTabItem("Scene"))
+            {
+                ImGui::SeparatorText("Scene");
+                ImGui::Spacing();
+
+                if (ImGui::BeginMenu("Create New Object")) {
+                    ImGui::SeparatorText("Construction Parameters");
+                    ImGui::DragInt("Alpha (1 - 10000)", &objectConstructionParams.alphaPercentage, 10.0f, 1, 10000, "%d%%");
+                    ImGui::SeparatorText("Inpainting");
+                    // TODO disable and enable inpainting..
+                    ImGui::Checkbox("Enable", &inpaintingParams.enableInpainting);
+                    ImGui::DragInt("Patch Size", &inpaintingParams.patchSize, 1, 5, 200);
+                    ImGui::Spacing();
+                    if (ImGui::Button("Construct")) {
+                        drawParams.constructSelectedObject = true;
                     }
                     ImGui::EndMenu();
                 }
-            if (ImGui::MenuItem("Quit", "Alt+F4")) { }
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Animation")) {
-            ImGui::SeparatorText("Animation controls");
-            if (ImGui::Button("Play animation")) {
-                animationParams.play = true;
-            }
-            if (ImGui::Button("Stop animation")) {
-                animationParams.play = false;
-            }
-            ImGui::DragFloat("Play (ms)", &animationControlParams[0].play_ms);
-            ImGui::DragFloat("Start (ms)", &animationControlParams[0].start_ms);
-            ImGui::DragFloat("End (ms)", &animationControlParams[0].end_ms);
 
-            ImGui::SeparatorText("Object properties");
-            ImGui::DragFloat3("Object position", objectsAnimationParams[0].position, 0.1f);
-            ImGui::DragFloat3("Object rotation", objectsAnimationParams[0].rotation, 0.1f);
-            ImGui::DragFloat3("Object scale", objectsAnimationParams[0].scale, 0.1f);
+                for (int i = 0; i < objectsParams.size(); i++)
+                {
+                    std::string index = std::to_string(objectsParams[i].index);
+                    std::string objectName = "Object: " + index;
+                    std::string positionFieldName = "Position##" + index;
+                    std::string roitationFieldName = "Rotation##" + index;
+                    std::string scaleFieldName = "Scale##" + index;
+                    ImGui::Text(objectName.c_str());
+                    ImGui::Separator();
+                    ImGui::DragFloat3(positionFieldName.c_str(), objectsParams[i].position, 0.1f);
+                    ImGui::DragFloat3(roitationFieldName.c_str(), objectsParams[i].rotation, 0.1f);
+                    ImGui::DragFloat3(scaleFieldName.c_str(), objectsParams[i].scale, 0.1f);
+                    ImGui::Spacing();
+                }
 
-            ImGui::SeparatorText("Easing equetions");
-            ImGui::Checkbox("Use Easing Function", &animationControlParams[0].useEasingFunction);
-            if (ImGui::TreeNode("List of easing equetions")) {
-                for (size_t i = 0; i < animationControlParams[0].easingEquations.size(); i++) {
-                    if (ImGui::Selectable(animationControlParams[0].easingEquations[i].c_str(),
-                        i == animationControlParams[0].selectedEasingEquation)) {
-                        animationControlParams[0].selectedEasingEquation = i;
+                ImGui::Text("Camera");
+                ImGui::Separator();
+                ImGui::DragFloat3("Camera Position", cameraParams.cameraPos, 0.1f);
+                ImGui::DragFloat3("Camera Target", cameraParams.cameraTarget, 0.1f);
+                ImGui::DragFloat3("Up Vector", cameraParams.upVector, 0.1f);
+                ImGui::Spacing();
+                ImGui::Checkbox("Look Mode", &cameraParams.lookMode);
+                ImGui::SameLine();
+                ImGui::Checkbox("Perspective Mode", &cameraParams.perspectiveMode);
+                if (cameraParams.perspectiveMode) {
+                    if (cameraParams.cameraPos[0] == 45 && cameraParams.cameraPos[2] == 45) {
+                        cameraParams.cameraPos[0] = 0;
+                        cameraParams.cameraPos[2] = 1;
+                    }
+                    ImGui::SliderFloat("Field Of View", &cameraParams.fieldOfView, 0.0f, 1000.0f);
+                    ImGui::InputFloat("Field Of View", &cameraParams.fieldOfView, 0.01f);
+                    ImGui::SliderFloat("Near Clipping Plane", &cameraParams.nearClippingPlane, 0.0f, 1.0f);
+                    ImGui::InputFloat("Near Clipping Plane", &cameraParams.nearClippingPlane, 0.01f);
+                    ImGui::SliderFloat("Far Clipping Plane", &cameraParams.farClippingPlane, 0.0f, 400.0f);
+                    ImGui::InputFloat("Far Clipping Plane", &cameraParams.farClippingPlane, 0.01f);
+                }
+                else {
+                    if (cameraParams.cameraPos[0] == 0 && cameraParams.cameraPos[2] == 1) {
+                        cameraParams.cameraPos[0] = 45;
+                        cameraParams.cameraPos[2] = 45;
+                    }
+                    ImGui::InputFloat("Ortho Left", &cameraParams.orthoSize, 0.25f);
+                }
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("Animation Controls"))
+            {
+                ImGui::SeparatorText("Animation Controls");
+                ImGui::Spacing();
+
+                if (ImGui::Button("Play")) {
+                    for (size_t i = 0; i < animationControlParams.size(); i++) {
+                        animationControlParams[i].play = true;
                     }
                 }
-                ImGui::TreePop();
-            }
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Debug")) {
-            if (ImGui::TreeNode("Pipeline History")) {
-                for (size_t i = 0; i < drawParams.pipelineHistorySize; i++) {
-                    std::string name = "Graphics Pipeline " + std::to_string(i);
-                    if (ImGui::Selectable(name.c_str(), i == selectedPipelineIndex)) {
-                        selectedPipelineIndex = i;
+                ImGui::SameLine();
+                if (ImGui::Button("Stop")) {
+                    for (size_t i = 0; i < animationControlParams.size(); i++) {
+                        animationControlParams[i].play = false;
                     }
                 }
-                ImGui::TreePop();
-            }
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Create")) {
-            if (ImGui::BeginMenu("Objects")) {
-                ImGui::DragInt("alpha (1 - 10000)", &objectConstructionParams.alphaPercentage, 10.0f, 1, 10000, "%d%%");
-                if (ImGui::Button("Construct")) {
-                    drawParams.constructSelectedObject = true;
+                ImGui::SameLine();
+                if (ImGui::Button("Start/End Result")) {
+                    globalAnimationParams.showObjectPosStart = !globalAnimationParams.showObjectPosStart;
                 }
-                ImGui::EndMenu();
+                ImGui::Spacing();
+
+                ImGui::DragFloat("Play (ms)", &animationControlParams[animIndex].play_ms, 2.5f, 0.0f);
+                ImGui::DragFloat("Start (ms)", &animationControlParams[animIndex].start_ms, 2.5f, 0.0f);
+                ImGui::DragFloat("End (ms)", &animationControlParams[animIndex].end_ms, 2.5f, 0.0f);
+
+                ImGui::SeparatorText("Object Properties");
+                ImGui::DragFloat3("Position", objectsAnimationParams[animIndex].position, 0.1f);
+                ImGui::DragFloat3("Rotation", objectsAnimationParams[animIndex].rotation, 0.1f);
+                ImGui::DragFloat3("Scale", objectsAnimationParams[animIndex].scale, 0.1f);
+
+                ImGui::SeparatorText("Easing Equations");
+                ImGui::Checkbox("Use Easing Function", &animationControlParams[animIndex].useEasingFunction);
+                if (ImGui::TreeNode("List of easing equations")) {
+                    for (size_t i = 0; i < animationControlParams[animIndex].easingEquations.size(); i++) {
+                        if (ImGui::Selectable(animationControlParams[animIndex].easingEquations[i].c_str(),
+                            i == animationControlParams[animIndex].selectedEasingEquation)) {
+                            animationControlParams[animIndex].selectedEasingEquation = i;
+                        }
+                    }
+                    ImGui::TreePop();
+                }
+                ImGui::Spacing();
+
+                ImGui::SeparatorText("Animations");
+                ImGui::Spacing();
+                if (ImGui::Button("Create animation")) {
+                    createObjectAnimationParams(objIndex);
+                    animIndex = animationControlParams.size() - 1;
+                }
+                ImGui::SameLine();
+                if (ImGui::TreeNode("Object")) {
+                    for (size_t i = 0; i < objectsParams.size(); i++) {
+                        if (ImGui::Selectable(std::to_string(objectsParams[i].index).c_str(),
+                            objIndex == i)) {
+                            objIndex = i;
+                        }
+                    }
+                    ImGui::TreePop();
+                }
+                ImGui::Spacing();
+
+                for (size_t i = 0; i < animationControlParams.size(); i++) {
+                    std::string animationLabel = "Animation: " + std::to_string(i) 
+                        + ", Object: " + std::to_string(animationControlParams[i].objIndex);
+                    if (ImGui::Selectable(animationLabel.c_str(), animIndex == i)) {
+                        animIndex = i;
+                    }
+                }
+                ImGui::EndTabItem();
             }
-            if (ImGui::BeginMenu("Effects")) {
+            if (ImGui::BeginTabItem("Effects"))
+            {
+                ImGui::SeparatorText("Effects");
                 ImGui::CheckboxFlags("Highlight selected pixels", &effectsParams.highlightSelectedPixels, 1);
                 ImGui::Separator();
-                for(uint16_t maskIndex = 0; maskIndex < EFFECTS_COUNT; maskIndex++) {
+                for (uint16_t maskIndex = 0; maskIndex < EFFECTS_COUNT; maskIndex++) {
                     uint16_t vecIndex = maskIndex / 4;
                     uint16_t vecMaskIndex = maskIndex - vecIndex * 4;
                     std::string effectCheckboxName = "Effect: " + std::to_string(maskIndex + 1);
@@ -226,22 +297,24 @@ void Gui::draw()
                 ImGui::DragFloat("Parallax Height Scale", &effectsParams.parallaxHeightScale, 0.00001f, 0.00001, 0.001f);
                 ImGui::DragFloat("Flickering Light", &effectsParams.amplifyFlickeringLight, 0.01f, 0.0001, 1.0f);
                 ImGui::DragFloat("Highlight", &effectsParams.amplifyHighlight, 0.01f, 0.0001, 1.0f);
-                ImGui::EndMenu();
-            }
 
-            ImGui::SeparatorText("Mask Options");
-            ImGui::DragInt("Choose mask to edit", &mouseControlParams.maskIndex, 1, 0, EFFECTS_COUNT);
-            if (ImGui::Button("Clear")) {
-                drawParams.clearSelectedMask = true;
+                ImGui::EndTabItem();
             }
+            if (ImGui::BeginTabItem("Pipeline History"))
+            {   
+                // TODO Creating 2 items. Must be only one.
+                for (size_t i = 0; i < drawParams.pipelineHistorySize; i++) {
+                    std::string name = "Graphics Pipeline " + std::to_string(i);
+                    if (ImGui::Selectable(name.c_str(), i == selectedPipelineIndex)) {
+                        selectedPipelineIndex = i;
+                    }
+                }
+                ImGui::EndTabItem();
+            }
+            ImGui::EndTabBar();
+        }
+        ImGui::Separator();
 
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Inpainting")) {
-            ImGui::Checkbox("Enable", &inpaintingParams.enableInpainting);
-            ImGui::DragInt("Patch size", &inpaintingParams.patchSize, 1, 5, 200);
-            ImGui::EndMenu();
-        }
         ImGui::End();
     }
 
@@ -256,14 +329,27 @@ void Gui::renderDrawData(VkCommandBuffer& commandBuffer)
 void Gui::createGraphicsObjectParams(uint16_t objIndex)
 {
     ObjectParams objectParams = getObjectParams();
+    objectParams.index = objIndex;
+    objectsParams.push_back(objectParams);
+}
+
+void Gui::createObjectAnimationParams(uint16_t objIndex)
+{
     ObjectParams objectAnimationParams = getObjectParams();
     AnimationParams animationParams = getAnimationParams();
-    objectParams.index = objIndex;
     objectAnimationParams.index = objIndex;
     animationParams.objIndex = objIndex;
-    objectsParams.push_back(objectParams);
     objectsAnimationParams.push_back(objectAnimationParams);
     animationControlParams.push_back(animationParams);
+}
+
+
+void Gui::updateGlobalAnimationParams()
+{
+    globalAnimationParams.end_ms = 0;
+    for (int i = 0; i < objectsAnimationParams.size(); i++) {
+        globalAnimationParams.end_ms = std::fmax(globalAnimationParams.end_ms, animationControlParams[i].end_ms);
+    }
 }
 
 void Gui::destroy()
@@ -281,6 +367,11 @@ ObjectParams Gui::getObjectParams()
 AnimationParams Gui::getAnimationParams()
 {
     return animationParams;
+}
+
+GlobalAnimationParams& Gui::getGlobalAnimationParams()
+{
+    return globalAnimationParams;
 }
 
 CameraParams& Gui::getCameraParams()

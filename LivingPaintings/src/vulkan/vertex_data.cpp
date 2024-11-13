@@ -111,48 +111,51 @@ void Data::GraphicsObject::Instance::scale(ObjectParams params) const
     *modelMat = glm::scale(*modelMat, glm::vec3(params.scale[0], params.scale[1], params.scale[2]));
 }
 
-void Data::GraphicsObject::Instance::transform(ObjectParams params, AnimationParams animationParams) const
+void Data::GraphicsObject::Instance::transform(GlobalAnimationParams globAnimParams, ObjectParams params, AnimationParams animationParams) const
 {
+    static steady_clock::time_point startTime = std::chrono::steady_clock::now();
+
+    steady_clock::time_point currentTime = std::chrono::steady_clock::now();
+    float duration = duration_ms(currentTime - startTime).count();
+
     if (animationParams.play) {
-        static steady_clock::time_point startTime = std::chrono::steady_clock::now();
-
-        steady_clock::time_point currentTime = std::chrono::steady_clock::now();
-        float duration = duration_ms(currentTime - startTime).count();
-
-        if (duration > animationParams.end_ms) {
+        if (duration > globAnimParams.end_ms) {
             startTime = currentTime;
         }
+    }
 
-        // Get normilized time in percentage for compliting object transformation in animation.
-        animationParams.t = (duration - animationParams.start_ms) / (animationParams.end_ms - animationParams.start_ms);
+    // Get normilized time in percentage for compliting object transformation in animation.
+    animationParams.t = (duration - animationParams.start_ms) / (animationParams.end_ms - animationParams.start_ms);
 
-        float equation = 0;
-        if (animationParams.useEasingFunction) {
-            if (animationParams.selectedEasingEquation == 0) {
-                equation = 1 - glm::cos((animationParams.t * glm::pi<float>()) / 2);
-            } else if (animationParams.selectedEasingEquation == 1) {
-                equation = glm::sin((animationParams.t * glm::pi<float>()) / 2);
-            } else if (animationParams.selectedEasingEquation == 2) {
-                equation = -(glm::cos(animationParams.t * glm::pi<float>()) - 1) / 2;
-            }
-
-            animationParams.tranformModifier = std::lerp(0, 1, equation);
-        } else {
-            animationParams.tranformModifier = animationParams.t;
+    float equation = 0;
+    if (animationParams.useEasingFunction) {
+        if (animationParams.selectedEasingEquation == 0) {
+            equation = 1 - glm::cos((animationParams.t * glm::pi<float>()) / 2);
+        }
+        else if (animationParams.selectedEasingEquation == 1) {
+            equation = glm::sin((animationParams.t * glm::pi<float>()) / 2);
+        }
+        else if (animationParams.selectedEasingEquation == 2) {
+            equation = -(glm::cos(animationParams.t * glm::pi<float>()) - 1) / 2;
         }
 
-        if (animationParams.play_ms >= animationParams.end_ms) {
-            animationParams.play_ms = animationParams.start_ms;
-        }
+        animationParams.tranformModifier = std::lerp(0, 1, equation);
+    }
+    else {
+        animationParams.tranformModifier = animationParams.t;
+    }
 
-        animationParams.play_ms += duration;
+    animationParams.play_ms += duration;
 
-        if (animationParams.start_ms <= animationParams.play_ms && animationParams.play_ms <= animationParams.end_ms) {
-            // Use normilized time for object transformations
-            instanceUniform.move(params, animationParams.tranformModifier);
-            instanceUniform.rotate(params, animationParams.tranformModifier);
-            /*  scale(params, animationParams.tranformModifier);*/
-        }
+    if (animationParams.start_ms <= animationParams.play_ms && animationParams.play_ms <= animationParams.end_ms) {
+        // Use normilized time for object transformations
+        instanceUniform.move(params, animationParams.tranformModifier);
+        instanceUniform.rotate(params, animationParams.tranformModifier);
+        /*  scale(params, animationParams.tranformModifier);*/
+    }
+    else if (animationParams.play_ms > animationParams.end_ms && globAnimParams.showObjectPosStart) {
+        instanceUniform.move(params, 1.0f);
+        instanceUniform.rotate(params, 1.0f);
     }
 }
 

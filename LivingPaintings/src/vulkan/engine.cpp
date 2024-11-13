@@ -252,14 +252,19 @@ void Engine::update()
             gui.drawParams.constructSelectedObject = false;
         }
 
+        gui.updateGlobalAnimationParams();
+        GlobalAnimationParams globAnimParams = gui.getGlobalAnimationParams();
         for (size_t i = 0; i < graphicsObjects.size(); i++) {
             ObjectParams objectParams = gui.objectsParams[i];
-            ObjectParams objectAnimationParams = gui.objectsAnimationParams[i];
-            AnimationParams animationParams = gui.animationControlParams[i];
             Data::GraphicsObject::instanceUniform.move(objectParams);
             Data::GraphicsObject::instanceUniform.rotate(objectParams);
             Data::GraphicsObject::instanceUniform.scale(objectParams);
-            Data::GraphicsObject::instanceUniform.transform(objectAnimationParams, animationParams);
+        }
+
+        for (size_t i = 0; i < gui.objectsAnimationParams.size(); i++) {
+            ObjectParams objectAnimationParams = gui.objectsAnimationParams[i];
+            AnimationParams animationParams = gui.animationControlParams[i];
+            Data::GraphicsObject::instanceUniform.transform(globAnimParams, objectAnimationParams, animationParams);
         }
 
         instanceUniformBuffers[currentFrame].update(Data::GraphicsObject::instanceUniform);
