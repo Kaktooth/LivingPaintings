@@ -32,14 +32,13 @@ void main() {
 
 	vec3 N = normalize(mat3(model[0]) * normal);
 	vec3 T = normalize(mat3(model[0]) * TB[0]);
-	vec3 B = normalize(mat3(model[0]) * TB[1]);
+	vec3 B = normalize(cross(N, T));
 	mat3 TBN = transpose(mat3(T, B, N));
-    normal = N;
-
-	outTangentViewPos = TBN * inCameraView[0];
-	outTangentFragPos = TBN * vec3(model[0] * vec4(inPositions[0], 1.0f));
+	normal = N;
 
 	for(int i = 0; i < gl_in.length(); i++) {
+		outTangentFragPos = TBN * vec3(model[i] * vec4(inPositions[i], 1.0f));
+		outTangentViewPos = TBN * inCameraView[i];
 		cameraView = inCameraView[i];
 		fragTexCoord = inTexCoord[i];
 		gl_Layer = instanceIDin[i];

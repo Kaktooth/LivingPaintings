@@ -290,11 +290,11 @@ void Gui::draw()
                     std::string effectCheckboxName = "Effect: " + std::to_string(maskIndex + 1);
                     ImGui::CheckboxFlags(effectCheckboxName.c_str(), &effectsParams.enabledEffects[vecIndex][vecMaskIndex], 1);
                 }
-                ImGui::DragFloat("Height Range", &effectsParams.heightRange, 0.01f, 0.1, 1.0f);
+                ImGui::DragFloat("Height Range", &effectsParams.heightRange, 0.01f, 0.1, 2.0f);
                 ImGui::DragFloat("Noise Scale", &effectsParams.noiseScale, 1.0f, 0.01f, 1000.0f);
                 ImGui::DragFloat("Distortion", &effectsParams.distortionModifier, 0.001f, 0.0001, 1.0f);
                 // TODO format to 5 numbers in fraction part
-                ImGui::DragFloat("Parallax Height Scale", &effectsParams.parallaxHeightScale, 0.00001f, 0.00001, 0.001f);
+                ImGui::DragFloat("Parallax Height Scale", &effectsParams.parallaxHeightScale, 0.0001f, 0.001, 0.1f);
                 ImGui::DragFloat("Flickering Light", &effectsParams.amplifyFlickeringLight, 0.01f, 0.0001, 1.0f);
                 ImGui::DragFloat("Highlight", &effectsParams.amplifyHighlight, 0.01f, 0.0001, 1.0f);
 

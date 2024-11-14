@@ -67,15 +67,71 @@ float gradientNoise(vec2 st) {
                      dot( random2(i + vec2(1.0,1.0) ), f - vec2(1.0,1.0) ), u.x), u.y);
 }
 
+
+/*
+  Implementation of Parallax Mapping with Offset Limiting. This is done by calculating the camera's direction
+  to the surface and finding the height bias, where the parallaxHeightScale parameter will be multiplied by -0.5
+  so that the height can include zero values, since the surface will intersect with the polygon that will display it.
+
+  Next, the height will be calculated, where the product of the height obtained from the height map with the 
+  parallaxHeightScale parameter and the height bias will be found. Next, the offset for the texture coordinates 
+  will be found by finding the product of the camera direction to the painting surface and the height. After that,
+  the texture coordinates will be shifted by subtracting the offset from the texture coordinates, so that larger
+  height values are shifted faster than smaller ones, where the height values are in the range from 0 to 1.
+
+  Parameters:
+	viewDirection - tangent-space viewing direction.
+
+  References:
+        [T. Welsh, 2004] "Parallax Mapping with Offset Limiting: A Per­Pixel Approximation of Uneven Surfaces"
+*/
+vec2 parallaxMapping(vec3 viewDirection) {
+	float heightBias = effectsParams.parallaxHeightScale * -0.5f;
+	float biasedHeight = texture(heightMapTexSampler, fragTexCoord).r * effectsParams.parallaxHeightScale + heightBias;
+	vec2 P = viewDirection.xy * biasedHeight;
+	return fragTexCoord - P;
+}
+
+/*
+  Parallax Occlusion Mapping implementation. Firstly, view direction is used to calculate parallax 
+  offset P. Next, ray-cast the view ray along parallax offset vector P calculating layer depth that 
+  is an estimated depth of ray until ray is touched and moving texture coordinates with parallax 
+  offset P. After ray is touched height of texel loop will break and texture coordinates will be found.
+  
+  Parameters:
+	viewDirection - tangent-space viewing direction.
+	layerNumber   - is the number of layers used to control the number of samples that pass 
+	through the view ray along P in the direction of view (viewDirection).
+
+  References:
+        [N. Tatarchuk, 2006] "Practical Dynamic Parallax Occlusion Mapping"
+*/
+vec2 parallaxOcclusionMapping(vec3 viewDirection, float layerNumber) {
+	float layerDepth = 1.0f / layerNumber;
+	float currLayerDepth = 0.0f;
+	vec2 P = viewDirection.xy * (effectsParams.parallaxHeightScale / 100);
+	vec2 currUV = fragTexCoord;
+	float height = 1.0f - texture(heightMapTexSampler, currUV).r;
+	for (float depth = 1; depth >= -0.1f; depth -= layerDepth) {
+		currLayerDepth += layerDepth;
+		currUV -= P;
+		height = 1.0f - texture(heightMapTexSampler, currUV).r;
+		if (height < currLayerDepth) {
+			break;
+		}
+	}
+	vec2 prevUV = currUV + P;
+	float nextDepth = height - currLayerDepth;
+	float prevDepth = 1.0f - texture(heightMapTexSampler, prevUV).r - currLayerDepth + layerDepth;
+	return mix(currUV, prevUV, nextDepth / (nextDepth - prevDepth));
+}
+
 void main() {
 //	Calculate Parallax mapping
 	vec3 viewDirection = normalize(inTangentViewPos - inTangentFragPos);
-	float heightBias = effectsParams.parallaxHeightScale * -0.5f;
-	float biasedHeight = texture(heightMapTexSampler, fragTexCoord).r * effectsParams.parallaxHeightScale + heightBias;
-	vec2 p = viewDirection.xy * biasedHeight;
-	vec2 UV = fragTexCoord - p;
+	vec2 UV = parallaxOcclusionMapping(viewDirection, 50.0f);
 
-// 	Create animations or effects for selected objects that was selected.
+ 	// Create animations or effects for selected objects that was selected.
 	float selectedObjectMask = texture(selectedPositionsMask[0], fragTexCoord).r;
 	float distortionMask = texture(selectedPositionsMask[1], fragTexCoord).r;
 	float flickeringMask = texture(selectedPositionsMask[2], fragTexCoord).r;
