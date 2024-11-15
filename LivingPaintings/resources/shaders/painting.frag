@@ -104,7 +104,8 @@ vec2 parallaxMapping(vec3 viewDirection) {
 	through the view ray along P in the direction of view (viewDirection).
 
   References:
-        [N. Tatarchuk, 2006] "Practical Dynamic Parallax Occlusion Mapping"
+        [N. Tatarchuk, 2006] "Practical Parallax Occlusion Mapping with Approximate Soft Shadows for
+							  Detailed Surface Rendering"
 */
 vec2 parallaxOcclusionMapping(vec3 viewDirection, float layerNumber) {
 	float layerDepth = 1.0f / layerNumber;
