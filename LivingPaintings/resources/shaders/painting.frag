@@ -36,6 +36,7 @@ layout(location = 1) in vec3 cameraView;
 layout(location = 2) in vec3 normal;
 layout(location = 3) in vec3 inTangentViewPos;
 layout(location = 4) in vec3 inTangentFragPos;
+layout(location = 5) in vec3 inTangentLightPos;
 
 layout(location = 0) out vec4 outFragColor;
 
@@ -187,7 +188,7 @@ void main() {
 	vec3 surfaceColor = surfaceColorModifier * texColor;
 	vec3 coolColor = colorPallete[0] + surfaceColor;
 	vec3 warmColor = colorPallete[1] + surfaceColor;
-	vec3 lightPos = cameraView + vec3(0.0f, 10.0f, 5.0f);
+	vec3 lightPos = inTangentLightPos;
 	float angle = dot(norm, lightPos);
 	vec3 reflectedLight = reflect(norm, lightPos);  
 	float highlightBlendFactor = clamp(100 * dot(reflectedLight, cameraView) - 97, 0, 1);

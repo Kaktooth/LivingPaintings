@@ -12,6 +12,7 @@ layout(location = 1) out vec3 cameraView;
 layout(location = 2) out vec3 normal;
 layout(location = 3) out vec3 outTangentViewPos;
 layout(location = 4) out vec3 outTangentFragPos;
+layout(location = 5) out vec3 outTangentLightPos;
 layout(triangle_strip, max_vertices = 3) out;
 
 void main() {
@@ -35,10 +36,11 @@ void main() {
 	vec3 B = normalize(cross(N, T));
 	mat3 TBN = transpose(mat3(T, B, N));
 	normal = N;
-
+	
 	for(int i = 0; i < gl_in.length(); i++) {
 		outTangentFragPos = TBN * vec3(model[i] * vec4(inPositions[i], 1.0f));
 		outTangentViewPos = TBN * inCameraView[i];
+		outTangentLightPos = TBN * inCameraView[i] + vec3(0.0f, 10.0f, 5.0f);
 		cameraView = inCameraView[i];
 		fragTexCoord = inTexCoord[i];
 		gl_Layer = instanceIDin[i];
