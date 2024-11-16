@@ -101,6 +101,7 @@ vec2 parallaxMapping(vec3 viewDirection) {
   
   Parameters:
 	viewDirection - tangent-space viewing direction.
+	texCoord - texture coordinates.
 	layerNumber   - is the number of layers used to control the number of samples that pass 
 	through the view ray along P in the direction of view (viewDirection).
 
@@ -108,11 +109,11 @@ vec2 parallaxMapping(vec3 viewDirection) {
         [N. Tatarchuk, 2006] "Practical Parallax Occlusion Mapping with Approximate Soft Shadows for
 							  Detailed Surface Rendering"
 */
-vec2 parallaxOcclusionMapping(vec3 viewDirection, float layerNumber) {
+vec2 parallaxOcclusionMapping(vec3 viewDirection, vec2 texCoord, float layerNumber) {
 	float layerDepth = 1.0f / layerNumber;
 	float currLayerDepth = 0.0f;
 	vec2 P = viewDirection.xy * (effectsParams.parallaxHeightScale / 100);
-	vec2 currUV = fragTexCoord;
+	vec2 currUV = texCoord;
 	float height = 1.0f - texture(heightMapTexSampler, currUV).r;
 	for (float depth = 1; depth >= -0.1f; depth -= layerDepth) {
 		currLayerDepth += layerDepth;
@@ -129,9 +130,6 @@ vec2 parallaxOcclusionMapping(vec3 viewDirection, float layerNumber) {
 }
 
 void main() {
-//	Calculate Parallax mapping
-	vec3 viewDirection = normalize(inTangentViewPos - inTangentFragPos);
-	vec2 UV = parallaxOcclusionMapping(viewDirection, 50.0f);
 
  	// Create animations or effects for selected objects that was selected.
 	float selectedObjectMask = texture(selectedPositionsMask[0], fragTexCoord).r;
@@ -142,7 +140,8 @@ void main() {
 	vec3 mixColor = vec3(0.0f);
 	vec2 noiseScale = vec2(effectsParams.noiseScale);
 	vec2 scaledFragTexCoord = fragTexCoord * noiseScale;
-	float noise = gradientNoise(scaledFragTexCoord);
+	float noise = gradientNoise(scaledFragTexCoord);	
+	vec2 UV = fragTexCoord;
 	// Effect for object construction mask 
 
 	// Sway effect
@@ -158,6 +157,10 @@ void main() {
 	if(highlightMask != 0 && effectsParams.enabledEffects[0][2] == 1) {
 		mixColor += mix(maskColors[1], maskColors[2], abs(sin(prop.time)) * noise) * effectsParams.amplifyHighlight;
 	}
+
+	//	Calculate Parallax mapping
+	vec3 viewDirection = normalize(inTangentViewPos - inTangentFragPos);
+	UV = parallaxOcclusionMapping(viewDirection, UV, 50.0f);
 
 	vec2 texSize = textureSize(paintingTexSampler[gl_Layer], 1);
 	vec3 texColor = texture(paintingTexSampler[gl_Layer], UV).rgb + mixColor;

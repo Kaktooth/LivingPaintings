@@ -142,7 +142,7 @@ void Gui::draw()
         ImGui::Spacing();
 
         ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
-        if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
+        if (ImGui::BeginTabBar("Tab", tab_bar_flags))
         {
             if (ImGui::BeginTabItem("Scene"))
             {
