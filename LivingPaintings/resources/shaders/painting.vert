@@ -1,4 +1,5 @@
 #version 460
+
 #if VULKAN
 layout(set = 0, binding = 0) uniform InstanceUbo {
     mat4 model;

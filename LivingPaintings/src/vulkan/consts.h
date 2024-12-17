@@ -2,6 +2,7 @@
 #include "../config.hpp"
 #include <cstdint>
 #include <string>
+#include <iostream>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -14,6 +15,9 @@ static const bool ENABLE_VALIDATION_LAYERS = true;
 #endif
 static const uint16_t WINDOW_WIDTH = 1920;
 static const uint16_t WINDOW_HEIGHT = 1080;
+
+static const uint16_t UI_WINDOW_WIDTH = 550;
+static const uint16_t UI_WINDOW_HEIGHT = 900;
 
 inline static const char* APP_NAME = { "Living Paintings" };
 inline static const char* ENGINE_NAME = { "Engine" };
@@ -54,4 +58,9 @@ static constexpr uint16_t MASKS_COUNT = EFFECTS_COUNT + 1;
 
 static const uint8_t DEFAULT_PATCH_SIZE = 20;
 static const std::string INPAINTING_HISTORY_FOLDER_NAME = "InpaintingHistory";
+
+static const std::string OUTPUT_FOLDER_NAME = "Output";
+
+static const uint32_t STREAM_FRAME_RATE = 25;
+static const uint32_t EXPORT_FRAME_COUNT = 200;
 } // namespace Constants

@@ -8,6 +8,7 @@ find_package(imgui CONFIG REQUIRED)
 find_package(unofficial-shaderc CONFIG REQUIRED)
 find_package(OpenCV CONFIG REQUIRED)
 find_package(CGAL CONFIG REQUIRED)
+find_package(FFMPEG REQUIRED)
 
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 
@@ -19,12 +20,13 @@ include_directories( ${OpenCV_INCLUDE_DIRS} )
 file(GLOB SOURCES
      "src/LivingPaintings.cpp"
      "src/segmentation/segmentation_system.cpp"
+     "src/utils/*.cpp"
      "src/vulkan/*.cpp"
 )
 
 file(GLOB HEADERS
      "src/segmentation/segmentation_system.h"
-     "src/utils/alloc.h"
+     "src/utils/*.h"
      "src/vulkan/*.h"
      "src/config.hpp"
 )
@@ -35,13 +37,18 @@ file(GLOB INCLUDE_HEADERS
 )
 
 add_executable (LivingPaintings ${SOURCES} ${HEADERS} ${INCLUDE_HEADERS} )
+
+target_include_directories(LivingPaintings PRIVATE ${onnxruntime_lib} ${OpenCV_LIBS}
+${CMAKE_CURRENT_SOURCE_DIR}/include ${$ENV{VULKAN_SDK}/include} ${Stb_INCLUDE_DIR}
+${FFMPEG_INCLUDE_DIRS})
+
+target_link_directories(LivingPaintings PRIVATE ${FFMPEG_LIBRARY_DIRS})
+
 target_link_libraries(LivingPaintings PRIVATE glfw glm::glm Vulkan::Vulkan imgui::imgui
                                               unofficial::shaderc::shaderc ${OpenCV_LIBS} CGAL::CGAL
                                               "${CMAKE_SOURCE_DIR}/include/sam/$<CONFIG>/sam_cpp_lib.lib" 
-                                              "${CMAKE_SOURCE_DIR}/include/inpaint/$<CONFIG>/inpaint.lib")
-
-target_include_directories(LivingPaintings PRIVATE ${onnxruntime_lib} ${OpenCV_LIBS}
-${CMAKE_CURRENT_SOURCE_DIR}/include ${$ENV{VULKAN_SDK}/include} ${Stb_INCLUDE_DIR})
+                                              "${CMAKE_SOURCE_DIR}/include/inpaint/$<CONFIG>/inpaint.lib"
+                                              ${FFMPEG_LIBRARIES})
 
 set(TEXTURE_FILE_NAME "Van_Gogh-Starry_Night.png")
 set(TEXTURE_WIDTH 1200)

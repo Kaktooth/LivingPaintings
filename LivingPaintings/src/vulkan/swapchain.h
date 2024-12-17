@@ -52,6 +52,9 @@ public:
     void nextFrame();
     void recreate(Queue& graphicsQueue, VkRenderPass& renderPass, GLFWwindow* window);
     void destroy();
+    
+    unsigned char* writeFrameToBuffer(VkCommandBuffer cmd, Queue transferQueue, uint8_t currentFrame);
+    
     uint32_t getMinImageCount();
     VkFormat& getImageFormat();
     VkFormat& getDepthFormat();
@@ -60,4 +63,9 @@ public:
     std::vector<VkFramebuffer>& getFramebuffers();
     uint32_t& getCurrentFrame();
     void resizeFramebuffer();
+    VkDevice& getDevice();
+    VkPhysicalDevice& getPhysicalDevice();
+    VkCommandPool& getCommandPool();
+    Image& getColorImage();
+    Image& getDepthImage();
 };

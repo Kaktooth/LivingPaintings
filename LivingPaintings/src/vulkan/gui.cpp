@@ -1,8 +1,10 @@
 #include "gui.h"
+#include "../utils/frame_exporter.h"
 
 using Constants::APP_NAME;
 using Constants::MAX_FRAMES_IN_FLIGHT;
 using Constants::EFFECTS_COUNT;
+using Constants::STREAM_FRAME_RATE;
 
 const float PAD = 10.0f;
 const ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove;
@@ -93,7 +95,7 @@ void Gui::ShowControls(bool* p_open)
     ImGui::SetNextWindowBgAlpha(0.35f);
     if (ImGui::Begin("Controls", p_open, window_flags)) {
         ImGui::Text("Constrols: ");
-        ImGui::Separator;
+        ImGui::Separator();
         ImGui::Text("Ctrl + Left Mouse Click: Select object region");
         ImGui::Text("Ctrl + Right Mouse Click: Unselect object region");
         ImGui::Text("I: Zoom in. In zoom in state hold mouse button to select(or unselect) the pixels and release the button when done.");
@@ -124,9 +126,22 @@ void Gui::draw()
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("New")) {}
             if (ImGui::MenuItem("Open", "Ctrl+O")) {}
-            if (ImGui::MenuItem("Save", "Ctrl+S")) {}
-            if (ImGui::MenuItem("Save As..")) {}
-            if (ImGui::MenuItem("Export As..")) {}
+            if (ImGui::BeginMenu("Export As..")) {
+                float overallTime_s = (float)drawParams.frameCount / STREAM_FRAME_RATE;
+                std::string overallTime = "Time (seconds): " + std::to_string(overallTime_s);
+                ImGui::Text(overallTime.c_str());
+                ImGui::SameLine();
+                ImGui::DragInt("Number of frames", &drawParams.frameCount, 1, 10, 1500);
+                if (ImGui::MenuItem("Graphics Interchange Format (.gif)")) {
+                    drawParams.writeFile = true;
+                    drawParams.fileFormat = ".gif";
+                }
+                if (ImGui::MenuItem("MPEG-4 Part 14 (.mp4)")) {
+                    drawParams.writeFile = true;
+                    drawParams.fileFormat = ".mp4";
+                }
+                ImGui::EndMenu();
+            }
             ImGui::Separator();
 
             if (ImGui::MenuItem("Quit", "Alt+F4")) {}
@@ -206,6 +221,14 @@ void Gui::draw()
                     }
                     ImGui::InputFloat("Ortho Left", &cameraParams.orthoSize, 0.25f);
                 }
+                ImGui::Spacing();
+
+                ImGui::Text("Light Source");
+                ImGui::Separator();
+                ImGui::DragFloat3("Light Position", lightParams.lightPos, 0.01f);
+                ImGui::DragFloat("Surface Color Modifier", &lightParams.surfaceColorModifier, 0.01f);
+                ImGui::Spacing();
+
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Animation Controls"))
@@ -382,6 +405,11 @@ CameraParams& Gui::getCameraParams()
 EffectParams& Gui::getEffectParams()
 {
     return effectsParams;
+}
+
+LightParams& Gui::getLightParams()
+{
+    return lightParams;
 }
 
 ObjectConstructionParams& Gui::getObjectConstructionParams()

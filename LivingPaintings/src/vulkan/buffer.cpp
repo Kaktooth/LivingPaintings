@@ -188,3 +188,9 @@ void UniformBuffer::update(const EffectParams& uniform)
 {
     memcpy(mapped, &uniform, sizeof(uniform));
 }
+
+template <>
+void UniformBuffer::update(const LightParams& uniform)
+{
+    memcpy(mapped, &uniform, sizeof(uniform));
+}

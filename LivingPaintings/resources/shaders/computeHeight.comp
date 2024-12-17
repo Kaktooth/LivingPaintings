@@ -9,69 +9,17 @@ const float gamma = 2.2f;
 const vec3 luminance = vec3(0.2627f, 0.678f, 0.0593f);
 
 const mat3 kernel = mat3(
-//  top Sobel
-//	vec3( -1.0f,-2.0f, -1.0f), 
-//	vec3( 0.0f, 0.0f, 0.0f), 
-//	vec3( 1.0f, 2.0f, 1.0f)
-
 	vec3( 1.0f, 2.0f, 1.0f), 
 	vec3( 0.0f, 0.0f, 0.0f), 
 	vec3( -1.0f, -2.0f, -1.0f)
 
-//  top Sobel–Feldman operator
-//	vec3( -3.0f, -10.0f, -3.0f), 
-//	vec3( 0.0f, 0.0f, 0.0f), 
-//	vec3( 3.0f, 10.0f, 3.0f)
-
-//  top Sobel–Feldman operator
-//	vec3( -47.0f, -162.0f, -47.0f), 
-//	vec3( 0.0f, 0.0f, 0.0f), 
-//	vec3( 47.0f, 162.0f, 47.0f)
-
-// box blur
-//	vec3( 0.111f, 0.111f, 0.111f), 
-//	vec3( 0.111f, 0.111f, 0.111f), 
-//	vec3( 0.111f, 0.111f, 0.111f)
-
-//  Gausian blur
-//	vec3( 0.0625f, 0.125f, 0.0625f), 
-//	vec3( 0.125f, 0.25f, 0.125f), 
-//	vec3( 0.0625f, 0.125f, 0.0625f)
-
-//	vec3( 0.0f, 0.0f, 0.0f), 
-//	vec3( 0.0f, 1.0f, 0.0f), 
-//	vec3( 0.0f, 0.0f, 0.0f)
-
-//	Lagrange operator
-//	vec3( 0.0f, 1.0f, 0.0f), 
-//	vec3( 1.0f, -4.0f, 1.0f), 
-//	vec3( 0.0f, 1.0f, 0.0f)
-
-//  Emboss
-//	vec3( -2.0f, -1.0f, 0.0f), 
-//	vec3( -1.0f, 1.0f, 1.0f), 
-//	vec3( 0.0f, 1.0f, 2.0f)
 );
 
 const mat3 kernel2 = mat3(
-//  right Sobel
-//	vec3( -1.0f, 0.0f, 1.0f), 
-//	vec3( -2.0f, 0.0f, 2.0f), 
-//	vec3( -1.0f, 0.0f, 1.0f)
-
 	vec3( 1.0f, 0.0f, -1.0f), 
 	vec3( 2.0f, 0.0f, -2.0f), 
 	vec3( 1.0f, 0.0f, -1.0f)
 
-//  right Sobel–Feldman operator
-//	vec3( -3.0f, 0.0f, 3.0f), 
-//	vec3( -10.0f, 0.0f, 10.0f), 
-//	vec3( -3.0f, 0.0f, 3.0f)
-
-//  right Sobel–Feldman operator
-//	vec3( -47.0f, 0.0f, 47.0f), 
-//	vec3( -162.0f, 0.0f, 162.0f), 
-//	vec3( -47.0f, 0.0f, 47.0f)
 );
 
 vec3 convolve(float dilation, vec2 res, vec2 texCoord) {
@@ -79,6 +27,8 @@ vec3 convolve(float dilation, vec2 res, vec2 texCoord) {
 	// Steps for all neighbours (horizontal, vertical, diagonal and inverted diagonal)
 	vec2 stp = vec2(1. / res.x, 1. / res.y);
 	stp += stp * dilation;
+	// or we can divide step to make brushstrokes thinner
+	//stp /= 2;
 	vec2 stpHor = vec2(0.0f, stp.y);
 	vec2 stpVert = vec2(stp.x, 0.0f);
   	vec2 stpDiag = vec2(stp.x, stp.y);
@@ -113,7 +63,7 @@ void main() {
 
 //* Height map creation
 //	Calculating matrix convolution using sobel operator and creating height map.
-	vec2 res = textureSize(texSampler[0], 1);
+	vec2 res = vec2(textureSize(texSampler[0], 0));
 	ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
 	vec4 relativeCoord = vec4(0.0f, 0.0f, 0.0f, 1.0f);
 	relativeCoord.xy = vec2(float(texelCoord.x) / gl_NumWorkGroups.x, float(texelCoord.y) / gl_NumWorkGroups.y);

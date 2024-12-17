@@ -9,10 +9,14 @@ using Constants::IMAGE_TEXTURE_FORMAT;
 using Constants::BUMP_TEXTURE_FORMAT;
 using Constants::EFFECT_MASK_TEXTURE_FORMAT;
 using Constants::MAX_FRAMES_IN_FLIGHT;
+using Constants::OUTPUT_FOLDER_NAME;
+using Constants::EXPORT_FRAME_COUNT;
 
 using std::chrono::steady_clock;
 using std::chrono::seconds;
 using std::chrono::duration;
+
+const std::string createOutputFolder = "mkdir " + OUTPUT_FOLDER_NAME;
 
 void Engine::run()
 {
@@ -27,6 +31,8 @@ void Engine::run()
 
 void Engine::init()
 {
+    system(createOutputFolder.c_str());
+
     initWindow(WINDOW_WIDTH, WINDOW_HEIGHT);
 
     VkDebugUtilsMessengerCreateInfoEXT debugInfo = debugMessenger.makeDebugMessengerCreateInfo();
@@ -58,7 +64,8 @@ void Engine::init()
     vkQueueWaitIdle(device.getComputeQueue().get());
     computeCmds.create(vulkan.device, vulkan.commandPool);
 
-    swapchain.setContext(device, surface, vulkan.commandPool, vulkan.sampleCount, depthFormatCandidates);
+    swapchain.setContext(device, surface, vulkan.commandPool,
+        vulkan.sampleCount, depthFormatCandidates);
     swapchain.create();
     swapchain.createImageViews();
 
@@ -76,7 +83,7 @@ void Engine::init()
     graphicsObjects.resize(1);
     vertexBuffers.resize(1);
     indexBuffers.resize(1);
-    graphicsObjects[0].constructQuadWithAspectRatio(TEX_WIDTH, TEX_HEIGHT, -0.00001f);
+    graphicsObjects[0].constructQuadWithAspectRatio(TEX_WIDTH, TEX_HEIGHT, 0.00001f);
     vertexBuffers[0].create(vulkan.device, vulkan.physicalDevice, vulkan.commandPool,
         graphicsObjects[0].vertices, transferQueue);
     indexBuffers[0].create(vulkan.device, vulkan.physicalDevice, vulkan.commandPool,
@@ -100,11 +107,15 @@ void Engine::init()
     effectsParams.create(vulkan.device, vulkan.physicalDevice, sizeof(EffectParams),
                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
+    lightsParams.create(vulkan.device, vulkan.physicalDevice, sizeof(LightParams),
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
     segmentationSystem.init(device, vulkan.commandPool, pWindow,
         TEXTURE_PATH, TEX_WIDTH, TEX_HEIGHT, controls.getMouseControls());
 
     controls.fillInMouseControlInfo(glm::uvec2(WINDOW_WIDTH, WINDOW_HEIGHT),
         0.1f, pWindow);
+
     mouseControl.create(vulkan.device, vulkan.physicalDevice, mouseUniformSize,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
@@ -138,7 +149,7 @@ void Engine::init()
                       viewUniformBuffers, paintingTexture,
                       heightMapTexture, textureSampler, mouseControl,
                       segmentationSystem.getSelectedPosMasks(),
-                      time, effectsParams);
+                      time, effectsParams, lightsParams);
 
     std::vector<VkDescriptorSetLayout> descriptorLayouts = { descriptor.getSetLayout(), descriptor.getBindlessSetLayout() };
     pipeline.create(vulkan.device, vulkan.renderPass, descriptorLayouts,
@@ -182,10 +193,8 @@ void Engine::update()
                             computeSignalSemaphores, computeWaitStages, currentFrame);
     };
 
-    // run compute only once for a frame
-    for (int currentFrame = 0; currentFrame < Constants::MAX_FRAMES_IN_FLIGHT; currentFrame++) {
-        runComputeShader(currentFrame);
-    }
+    // run compute only once
+    runComputeShader(0);
 
     while (!glfwWindowShouldClose(pWindow)) {
         glfwPollEvents();
@@ -194,6 +203,7 @@ void Engine::update()
         float timeDuration_s = duration<float, seconds::period>(currentTime.time_since_epoch()).count();
         Controls::MouseControl& mouseControls = controls.getMouseControls();
         EffectParams& effectParams = gui.getEffectParams();
+        LightParams& lightParams = gui.getLightParams();
         int16_t maskIndex = gui.getMouseControlParams().maskIndex;
         glm::dvec2 cursorPos{};
         glfwGetCursorPos(pWindow, &cursorPos.x, &cursorPos.y);
@@ -202,122 +212,139 @@ void Engine::update()
         mouseControl.update(mouseControls);
         time.update(timeDuration_s);
         effectsParams.update(effectParams);
+        lightsParams.update(lightParams);
 
         segmentationSystem.updatePositionMasks(device, vulkan.commandPool, transferQueue);
 
         pipeline.updateExtent(swapchain.getExtent());
 
-        const uint32_t& currentFrame = swapchain.getCurrentFrame();
-        VkCommandBuffer& cmdGraphics = graphicsCmds.get(currentFrame);
-        VkSemaphore& currentImageAvailable = imageAvailable.get(currentFrame);
-        VkSemaphore& currentRenderFinished = renderFinished.get(currentFrame);
-        const std::vector<VkSemaphore> waitSemaphores { currentImageAvailable };
-        const std::vector<VkSemaphore> signalSemaphores { currentRenderFinished };
+        for (int32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            const uint32_t& currentFrame = swapchain.getCurrentFrame();
+            VkCommandBuffer& cmdGraphics = graphicsCmds.get(currentFrame);
+            VkSemaphore& currentImageAvailable = imageAvailable.get(currentFrame);
+            VkSemaphore& currentRenderFinished = renderFinished.get(currentFrame);
+            const std::vector<VkSemaphore> waitSemaphores{ currentImageAvailable };
+            const std::vector<VkSemaphore> signalSemaphores{ currentRenderFinished };
 
-        if (gui.drawParams.clearSelectedMask) {
-            segmentationSystem.removeAllMaskPositions();
-            gui.drawParams.clearSelectedMask = false;
-        }
-
-        if (gui.drawParams.constructSelectedObject) {
-            Data::GraphicsObject constructedObject;
-            const unsigned char* mask = segmentationSystem.getSelectedPositionsMask(0);
-            segmentationSystem.removeAllMaskPositions(0);
-            ObjectConstructionParams objectConstructionParams = gui.getObjectConstructionParams();
-            constructedObject.constructMeshFromTexture(TEX_WIDTH, TEX_HEIGHT, 0.0f, mask,
-                objectConstructionParams.alphaPercentage);
-
-            if (constructedObject.indices.size() > 0) {
-                size_t lastSize = graphicsObjects.size();
-                vertexBuffers.resize(lastSize + 1);
-                indexBuffers.resize(lastSize + 1);
-                vertexBuffers[lastSize].create(
-                    vulkan.device, vulkan.physicalDevice, vulkan.commandPool,
-                    constructedObject.vertices, transferQueue);
-                indexBuffers[lastSize].create(
-                    vulkan.device, vulkan.physicalDevice, vulkan.commandPool,
-                    constructedObject.indices, transferQueue);
-                graphicsObjects.push_back(constructedObject);
-
-                InpaintingParams inpaintingParams = gui.getInpaintingParams();
-                gui.createGraphicsObjectParams(constructedObject.instanceId);
-                if (inpaintingParams.enableInpainting) {
-                    segmentationSystem.inpaintImage(inpaintingParams.patchSize, objectsTextures, 
-                        gui.objectsParams.back(), descriptor, 
-                        vulkan.commandPool, transferQueue);
-
-                    runComputeShader(currentFrame);
-                }
+            if (gui.drawParams.clearSelectedMask) {
+                segmentationSystem.removeAllMaskPositions();
+                gui.drawParams.clearSelectedMask = false;
             }
-            gui.drawParams.constructSelectedObject = false;
-        }
 
-        gui.updateGlobalAnimationParams();
-        GlobalAnimationParams globAnimParams = gui.getGlobalAnimationParams();
-        for (size_t i = 0; i < graphicsObjects.size(); i++) {
-            ObjectParams objectParams = gui.objectsParams[i];
-            Data::GraphicsObject::instanceUniform.move(objectParams);
-            Data::GraphicsObject::instanceUniform.rotate(objectParams);
-            Data::GraphicsObject::instanceUniform.scale(objectParams);
-        }
+            if (gui.drawParams.constructSelectedObject) {
+                Data::GraphicsObject constructedObject;
+                const unsigned char* mask = segmentationSystem.getSelectedPositionsMask(0);
+                segmentationSystem.removeAllMaskPositions(0);
+                ObjectConstructionParams objectConstructionParams = gui.getObjectConstructionParams();
+                constructedObject.constructMeshFromTexture(TEX_WIDTH, TEX_HEIGHT, 0.0f, mask,
+                    objectConstructionParams.alphaPercentage);
 
-        for (size_t i = 0; i < gui.objectsAnimationParams.size(); i++) {
-            ObjectParams objectAnimationParams = gui.objectsAnimationParams[i];
-            AnimationParams animationParams = gui.animationControlParams[i];
-            Data::GraphicsObject::instanceUniform.transform(globAnimParams, objectAnimationParams, animationParams);
-        }
+                if (constructedObject.indices.size() > 0) {
+                    size_t lastSize = graphicsObjects.size();
+                    vertexBuffers.resize(lastSize + 1);
+                    indexBuffers.resize(lastSize + 1);
+                    vertexBuffers[lastSize].create(
+                        vulkan.device, vulkan.physicalDevice, vulkan.commandPool,
+                        constructedObject.vertices, transferQueue);
+                    indexBuffers[lastSize].create(
+                        vulkan.device, vulkan.physicalDevice, vulkan.commandPool,
+                        constructedObject.indices, transferQueue);
+                    graphicsObjects.push_back(constructedObject);
 
-        instanceUniformBuffers[currentFrame].update(Data::GraphicsObject::instanceUniform);
+                    InpaintingParams inpaintingParams = gui.getInpaintingParams();
+                    gui.createGraphicsObjectParams(constructedObject.instanceId);
+                    if (inpaintingParams.enableInpainting) {
+                        segmentationSystem.inpaintImage(inpaintingParams.patchSize, objectsTextures,
+                            gui.objectsParams.back(), descriptor,
+                            vulkan.commandPool, transferQueue);
 
-        VkMappedMemoryRange mappedMemoryRange {};
-        mappedMemoryRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-        mappedMemoryRange.memory = instanceUniformBuffers[currentFrame].getDeviceMemory();
-        mappedMemoryRange.size = instanceUniformBuffers[currentFrame].getMemorySize();
-        vkFlushMappedMemoryRanges(vulkan.device, 1, &mappedMemoryRange);
+                        runComputeShader(currentFrame);
+                    }
+                }
+                gui.drawParams.constructSelectedObject = false;
+            }
 
-        CameraParams cameraParams = gui.getCameraParams();
-        Data::GraphicsObject::viewUniform.cameraView(cameraParams, extent);
-        viewUniformBuffers[currentFrame].update(Data::GraphicsObject::viewUniform);
+            gui.updateGlobalAnimationParams();
+            GlobalAnimationParams globAnimParams = gui.getGlobalAnimationParams();
+            for (size_t i = 0; i < graphicsObjects.size(); i++) {
+                ObjectParams objectParams = gui.objectsParams[i];
+                Data::GraphicsObject::instanceUniform.move(objectParams);
+                Data::GraphicsObject::instanceUniform.rotate(objectParams);
+                Data::GraphicsObject::instanceUniform.scale(objectParams);
+            }
 
-        inFlightFence.wait(currentFrame);
-        inFlightFence.reset(currentFrame);
+            for (size_t i = 0; i < gui.objectsAnimationParams.size(); i++) {
+                ObjectParams objectAnimationParams = gui.objectsAnimationParams[i];
+                AnimationParams animationParams = gui.animationControlParams[i];
+                Data::GraphicsObject::instanceUniform.transform(globAnimParams, objectAnimationParams, animationParams);
+            }
 
-        swapchain.asquireNextImage(graphicsQueue, vulkan.renderPass,
-            currentImageAvailable, pWindow);
+            instanceUniformBuffers[currentFrame].update(Data::GraphicsObject::instanceUniform);
 
-        graphicsCmds.begin(currentFrame);
+            VkMappedMemoryRange mappedMemoryRange{};
+            mappedMemoryRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+            mappedMemoryRange.memory = instanceUniformBuffers[currentFrame].getDeviceMemory();
+            mappedMemoryRange.size = instanceUniformBuffers[currentFrame].getMemorySize();
+            vkFlushMappedMemoryRanges(vulkan.device, 1, &mappedMemoryRange);
 
-        gui.drawParams.pipelineHistorySize = pipeline.getPipelineHistorySize();
-        gui.drawParams.imageLoaded = segmentationSystem.isImageLoaded();
-        gui.draw();
+            CameraParams cameraParams = gui.getCameraParams();
+            Data::GraphicsObject::viewUniform.cameraView(cameraParams, extent);
+            viewUniformBuffers[currentFrame].update(Data::GraphicsObject::viewUniform);
 
-        if (pipeline.recreateifShadersChanged()) {
-            gui.selectPipelineindex(pipeline.getPipelineHistorySize() - 1);
-            runComputeShader(currentFrame);
-            
             inFlightFence.wait(currentFrame);
             inFlightFence.reset(currentFrame);
+
+            swapchain.asquireNextImage(graphicsQueue, vulkan.renderPass,
+                currentImageAvailable, pWindow);
+
+            graphicsCmds.begin(currentFrame);
+
+            gui.drawParams.pipelineHistorySize = pipeline.getPipelineHistorySize();
+            gui.drawParams.imageLoaded = segmentationSystem.isImageLoaded();
+            if (!gui.drawParams.writeFile) {
+                gui.draw();
+            }
+
+            if (pipeline.recreateifShadersChanged()) {
+                gui.selectPipelineindex(pipeline.getPipelineHistorySize() - 1);
+                runComputeShader(currentFrame);
+
+                inFlightFence.wait(currentFrame);
+                inFlightFence.reset(currentFrame);
+            }
+
+            forwardRenderAction.setContext(pipeline, extent, gui.getSelectedPipelineIndex());
+            forwardRenderAction.beginRenderPass(cmdGraphics, vulkan.renderPass,
+                framebuffers, currentFrame);
+            for (size_t i = 0; i < graphicsObjects.size(); i++) {
+                forwardRenderAction.recordCommandBuffer(cmdGraphics,
+                    descriptor.getSet(currentFrame), descriptor.getBindlessSet(0),
+                    vertexBuffers[i], indexBuffers[i], graphicsObjects[i]);
+            }
+
+            if (!gui.drawParams.writeFile) {
+                gui.renderDrawData(cmdGraphics);
+            }
+
+            forwardRenderAction.endRenderPass(cmdGraphics);
+            graphicsCmds.end(currentFrame);
+
+            presentationQueue.submit(cmdGraphics, inFlightFence, waitSemaphores,
+                signalSemaphores, waitStages, currentFrame);
+
+            swapchain.presentImage(graphicsQueue, vulkan.renderPass, presentationQueue.get(),
+                signalSemaphores, pWindow);
+
+            if (gui.drawParams.writeFile) {
+                unsigned char* frame = swapchain.writeFrameToBuffer(cmdGraphics, transferQueue, currentFrame);
+                FileSupport::gatherFrame(frame, gui.drawParams.writeFile, gui.drawParams.fileFormat);
+            } else {
+                FileSupport::setFrameSize(gui.drawParams.frameCount);
+            }
         }
 
-        forwardRenderAction.setContext(pipeline, extent, gui.getSelectedPipelineIndex());
-        forwardRenderAction.beginRenderPass(cmdGraphics, vulkan.renderPass,
-                                            framebuffers, currentFrame);
-        for (size_t i = 0; i < graphicsObjects.size(); i++) {
-            forwardRenderAction.recordCommandBuffer(cmdGraphics, 
-                descriptor.getSet(currentFrame), descriptor.getBindlessSet(0),
-                vertexBuffers[i], indexBuffers[i], graphicsObjects[i]);
-        }
-        gui.renderDrawData(cmdGraphics);
-        forwardRenderAction.endRenderPass(cmdGraphics);
-        graphicsCmds.end(currentFrame);
-
-        presentationQueue.submit(cmdGraphics, inFlightFence, waitSemaphores,
-            signalSemaphores, waitStages, currentFrame);
-        swapchain.presentImage(graphicsQueue, vulkan.renderPass, presentationQueue.get(),
-            signalSemaphores, pWindow);
+        vkDeviceWaitIdle(vulkan.device);
     }
-
-    vkDeviceWaitIdle(vulkan.device);
 }
 
 void Engine::cleanup()
@@ -348,6 +375,7 @@ void Engine::cleanup()
         instanceUniformBuffers[i].destroy();
         viewUniformBuffers[i].destroy();
     }
+    lightsParams.destroy();
     effectsParams.destroy();
     time.destroy();
     mouseControl.destroy();

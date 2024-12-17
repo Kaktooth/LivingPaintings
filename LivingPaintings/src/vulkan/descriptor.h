@@ -27,7 +27,7 @@ public:
                 std::vector<UniformBuffer> uniformViewBuffers,
                 Image& paintingTexture, Image& heightMapTexture, Sampler& textureSampler,
                 UniformBuffer& mouseUniform, std::array<Image, MASKS_COUNT>& selectedPosMasks,
-                UniformBuffer& timeUniform, UniformBuffer& effectParamsUniform);
+                UniformBuffer& timeUniform, UniformBuffer& effectParamsUniform, UniformBuffer& lightParamsUniform);
     void updateBindlessTexture(Image& textureWrite, uint32_t arrayElementId);
     void destroy();
     VkDescriptorSetLayout& getSetLayout();

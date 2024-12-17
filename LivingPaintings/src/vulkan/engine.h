@@ -18,6 +18,7 @@
 #include "sampler.h"
 #include "semaphore.h"
 #include "surface.h"
+#include "../utils/frame_exporter.h"
 #include "vulkan/vulkan.h"
 
 #define GLFW_INCLUDE_VULKAN
@@ -38,8 +39,9 @@ using Constants::MAX_SAMPLE_COUNT;
 class Engine {
 
     const std::vector<VkFormat> depthFormatCandidates = {
-        VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
-        VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D16_UNORM
+        //VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
+        // use low resolution depth format
+        VK_FORMAT_D16_UNORM
     };
 
     const VkDeviceSize mouseUniformSize = sizeof(Controls::MouseControl);
@@ -82,6 +84,7 @@ class Engine {
     UniformBuffer mouseControl;
     UniformBuffer time;
     UniformBuffer effectsParams;
+    UniformBuffer lightsParams;
     std::vector<Image> objectsTextures; // contains original image of a painting and inpainted images
     Image heightMapTexture;
     Sampler textureSampler;

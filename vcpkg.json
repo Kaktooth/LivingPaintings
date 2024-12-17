@@ -21,6 +21,7 @@
         "default-features"
       ]
     },
-    "cgal"
+    "cgal",
+    "ffmpeg"
   ]
 }

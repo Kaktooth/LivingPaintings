@@ -31,6 +31,11 @@ layout(binding = 7) uniform EffectParams {
 	float amplifyHighlight;
 } effectsParams;
 
+layout(binding = 8) uniform LightParams {
+  vec3 pos;
+  float surfaceColorModifier;
+} lightParams;
+
 layout(location = 0) in vec2 fragTexCoord;
 layout(location = 1) in vec3 cameraView;
 layout(location = 2) in vec3 normal;
@@ -41,10 +46,9 @@ layout(location = 5) in vec3 inTangentLightPos;
 layout(location = 0) out vec4 outFragColor;
 
 const vec3 maskColors[MASKS_COUNT] = { vec3(0.7f), vec3(0.5f, 1.0f, 0.4f), vec3(0.01f, 0.01f, 1.26f), vec3(0.97f, 0.011f, 0.26f) };
+const vec3 colorPallete [2] = { vec3(0.06f, 0.052f, 0.074f), vec3(0.0047f, 0.0094f, 0.026f) }; // cold and warm color specified by RGB values in range [0, 1]
 
 const float gamma = 2.2f;
-const float surfaceColorModifier = 0.35f;
-const vec3 colorPallete [2] = { vec3(0.06f, 0.052f, 0.074f), vec3(0.0047f, 0.0094f, 0.026f) };
 
 const float textureScale = 0.2f;
 
@@ -97,7 +101,7 @@ vec2 parallaxMapping(vec3 viewDirection) {
   Parallax Occlusion Mapping implementation. Firstly, view direction is used to calculate parallax 
   offset P. Next, ray-cast the view ray along parallax offset vector P calculating layer depth that 
   is an estimated depth of ray until ray is touched and moving texture coordinates with parallax 
-  offset P. After ray is touched height of texel loop will break and texture coordinates will be found.
+  offset P. After ray is touched height of texel, loop will break and texture coordinates will be found.
   
   Parameters:
 	viewDirection - tangent-space viewing direction.
@@ -162,7 +166,7 @@ void main() {
 	vec3 viewDirection = normalize(inTangentViewPos - inTangentFragPos);
 	UV = parallaxOcclusionMapping(viewDirection, UV, 50.0f);
 
-	vec2 texSize = textureSize(paintingTexSampler[gl_Layer], 1);
+	vec2 texSize = textureSize(paintingTexSampler[0], 0);
 	vec3 texColor = texture(paintingTexSampler[gl_Layer], UV).rgb + mixColor;
 
 //* Gamma correction
@@ -188,10 +192,10 @@ void main() {
 
 //  Gooch Illumination Model Calculation
 	vec3 norm = normal + N;
-	vec3 surfaceColor = surfaceColorModifier * texColor;
+	vec3 surfaceColor = lightParams.surfaceColorModifier * texColor;
 	vec3 coolColor = colorPallete[0] + surfaceColor;
 	vec3 warmColor = colorPallete[1] + surfaceColor;
-	vec3 lightPos = inTangentLightPos;
+	vec3 lightPos = inTangentLightPos + lightParams.pos;
 	float angle = dot(norm, lightPos);
 	vec3 reflectedLight = reflect(norm, lightPos);  
 	float highlightBlendFactor = clamp(100 * dot(reflectedLight, cameraView) - 97, 0, 1);
@@ -207,7 +211,7 @@ void main() {
 	    vec2 mousePos = vec2(mouseMaskControl.mousePos / mouseMaskControl.windowSize);
 		vec2 uv = fragTexCoord;
 		uv -= fragTexCoord + clamp(mousePos - fragTexCoord, -1.0f, 1.0f);
-		uv.x *= texSize.x / texSize.y;
+		uv.x *= float(texSize.x) / texSize.y;
 		vec2 minDistance = step(-mouseMaskControl.squareSize, uv);
 		vec2 maxDistance = step(mouseMaskControl.squareSize, uv);
 		float squareDistance = (minDistance.x - maxDistance.x) * (minDistance.y - maxDistance.y);
@@ -215,9 +219,9 @@ void main() {
 
 		vec2 texUV = (((fragTexCoord - mousePos) * textureScale) + (mousePos * textureScale) / textureScale);
 
-		vec4 scaledTex = texture(paintingTexSampler[gl_Layer], texUV).rgba;
-		vec4 selectedPosColor = texture(selectedPositionsMask[0], texUV).rrra;
-		vec3 revertPosColor = texture(selectedPositionsMask[0], fragTexCoord).rrr;
+		vec4 scaledTex = texture(paintingTexSampler[0], texUV).rgba;
+		vec4 selectedPosColor = texture(selectedPositionsMask[mouseMaskControl.maskEffectIndex], texUV).rrra;
+		vec3 revertPosColor = texture(selectedPositionsMask[mouseMaskControl.maskEffectIndex], fragTexCoord).rrr;
 		
 		scaledTex.rgb *= square;
 		scaledTex.rgb -= revertPosColor;

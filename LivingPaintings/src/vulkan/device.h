@@ -28,7 +28,7 @@ class Device {
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 
     };
     VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = { 
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT, nullptr 
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES, nullptr 
     };
     static VkDeviceQueueCreateInfo createQueueCreateInfo(uint32_t queueFamily, float queuePriority);
     int getDeviceScore(VkPhysicalDevice& physicalDevice, Surface& surface);
