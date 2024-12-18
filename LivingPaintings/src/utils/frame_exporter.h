@@ -17,9 +17,13 @@ class FileSupport {
 
 	//TODO create queue of files to be written
 	static uint32_t frameCount;
+	static uint32_t windowWidth;
+	static uint32_t windowHeight;
+	static AVPixelFormat presentationSurfaceFormat;
 
 public:
-	static void setFrameSize(uint32_t frameCount);
+	static void setPresentationSurfaceFormat(uint32_t surfaceFormat);
+	static void setExportParams(uint32_t frameCount, uint32_t windowWidth, uint32_t windowHeight);
 	static void gatherFrame(unsigned char* frame, bool& writeVideo, std::string fileFormat);
 	static void writeFramesToStream(AVCodecID codecId, AVPixelFormat frameFormat,
 		uint32_t frameTimestampModifier, std::string fileFormat);

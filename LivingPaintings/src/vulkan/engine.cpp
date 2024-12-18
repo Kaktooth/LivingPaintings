@@ -156,6 +156,8 @@ void Engine::init()
         swapchain.getExtent(), vulkan.sampleCount);
 
     gui.init(vulkan.instance, device, vulkan.commandPool, renderPass, swapchain, descriptor.getPool(), pWindow);
+
+    FileSupport::setPresentationSurfaceFormat(colorFormat);
 }
 
 void Engine::update()
@@ -339,7 +341,7 @@ void Engine::update()
                 unsigned char* frame = swapchain.writeFrameToBuffer(cmdGraphics, transferQueue, currentFrame);
                 FileSupport::gatherFrame(frame, gui.drawParams.writeFile, gui.drawParams.fileFormat);
             } else {
-                FileSupport::setFrameSize(gui.drawParams.frameCount);
+                FileSupport::setExportParams(gui.drawParams.frameCount, extent.width, extent.height);
             }
         }
 

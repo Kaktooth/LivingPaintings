@@ -3,8 +3,6 @@
 using Constants::TEX_HEIGHT;
 using Constants::TEX_WIDTH;
 using Constants::IMAGE_TEXTURE_FORMAT;
-using Constants::WINDOW_WIDTH;
-using Constants::WINDOW_HEIGHT;
 
 void Swapchain::setContext(Device& device, Surface& surface,
 	VkCommandPool commandPool,
@@ -274,7 +272,7 @@ unsigned char* Swapchain::writeFrameToBuffer(VkCommandBuffer cmds, Queue transfe
 	Image colorImageCopy;
 	Buffer buffer;
 
-	size_t size = WINDOW_HEIGHT * WINDOW_WIDTH * sizeof(char) * 4;
+	size_t size = extent.height * extent.width * sizeof(char) * 4;
 	unsigned char* imageCopy = (unsigned char*)malloc(size);
 
 	buffer.create(device, physicalDevice, size,
@@ -300,14 +298,14 @@ unsigned char* Swapchain::writeFrameToBuffer(VkCommandBuffer cmds, Queue transfe
 
 	VkBufferImageCopy bufferImageCopy;
 	bufferImageCopy.bufferOffset = 0;
-	bufferImageCopy.bufferRowLength = WINDOW_WIDTH;
-	bufferImageCopy.bufferImageHeight = WINDOW_HEIGHT;
+	bufferImageCopy.bufferRowLength = extent.width;
+	bufferImageCopy.bufferImageHeight = extent.height;
 	bufferImageCopy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	bufferImageCopy.imageSubresource.layerCount = 1;
 	bufferImageCopy.imageSubresource.baseArrayLayer = 0;
 	bufferImageCopy.imageSubresource.mipLevel = 0;
-	bufferImageCopy.imageExtent.width = WINDOW_WIDTH;
-	bufferImageCopy.imageExtent.height = WINDOW_HEIGHT;
+	bufferImageCopy.imageExtent.width = extent.width;
+	bufferImageCopy.imageExtent.height = extent.height;
 	bufferImageCopy.imageExtent.depth = 1;
 	bufferImageCopy.imageOffset = offset;
 

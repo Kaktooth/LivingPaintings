@@ -5,10 +5,10 @@
 #include "stb_image_write.h"
 
 using Constants::OUTPUT_FOLDER_NAME;
-using Constants::WINDOW_WIDTH;
-using Constants::WINDOW_HEIGHT;
 using Constants::EXPORT_FRAME_COUNT;
 using Constants::STREAM_FRAME_RATE;
+using Constants::WINDOW_WIDTH;
+using Constants::WINDOW_HEIGHT;
 
 #define 	STREAM_CODEC_ID  AV_CODEC_ID_MPEG4
 #define 	STREAM_GIF_CODEC_ID AV_CODEC_ID_GIF
@@ -18,10 +18,28 @@ using Constants::STREAM_FRAME_RATE;
 
 std::vector<unsigned char*> frames;
 uint32_t FileSupport::frameCount = EXPORT_FRAME_COUNT;
+uint32_t FileSupport::windowWidth = WINDOW_WIDTH;
+uint32_t FileSupport::windowHeight = WINDOW_HEIGHT;
+AVPixelFormat FileSupport::presentationSurfaceFormat = AV_PIX_FMT_RGBA;
 
-void FileSupport::setFrameSize(uint32_t frameCount)
+void FileSupport::setPresentationSurfaceFormat(uint32_t surfaceFormat)
+{
+	if (surfaceFormat >= 23 && surfaceFormat <= 29) {
+		presentationSurfaceFormat = AV_PIX_FMT_RGB8;
+	} else if (surfaceFormat >= 30 && surfaceFormat <= 36) {
+		presentationSurfaceFormat = AV_PIX_FMT_BGR8;
+	} else if (surfaceFormat >= 37 && surfaceFormat <= 43) {
+		presentationSurfaceFormat = AV_PIX_FMT_RGBA;
+	} else if (surfaceFormat >= 44 && surfaceFormat <= 50) {
+		presentationSurfaceFormat = AV_PIX_FMT_BGRA;
+	}
+}
+
+void FileSupport::setExportParams(uint32_t frameCount, uint32_t windowWidth, uint32_t windowHeight)
 {
 	FileSupport::frameCount = frameCount;
+	FileSupport::windowWidth = windowWidth;
+	FileSupport::windowHeight = windowHeight;
 }
 
 void FileSupport::gatherFrame(unsigned char* frameCopy, bool& writeVideo, std::string fileFormat)
@@ -32,7 +50,8 @@ void FileSupport::gatherFrame(unsigned char* frameCopy, bool& writeVideo, std::s
 		frames.erase(it, it + 2);
 		if (fileFormat == ".gif") {
 			writeFramesToStream(STREAM_GIF_CODEC_ID, STREAM_GIF_PIX_FMT, 1, fileFormat);
-		} else if (fileFormat == ".mp4") {
+		}
+		else if (fileFormat == ".mp4") {
 			writeFramesToStream(STREAM_CODEC_ID, STREAM_PIX_FMT, 500, fileFormat);
 		}
 		writeVideo = false;
@@ -65,8 +84,8 @@ void FileSupport::writeFramesToStream(AVCodecID codecId, AVPixelFormat frameForm
 	codecContext->framerate = (AVRational){ STREAM_FRAME_RATE, 1 };
 	codecContext->gop_size = 6;
 	codecContext->pix_fmt = frameFormat;
-	codecContext->width = WINDOW_WIDTH;
-	codecContext->height = WINDOW_HEIGHT;
+	codecContext->width = windowWidth;
+	codecContext->height = windowHeight;
 
 	if (outputFormatContext->flags & AVFMT_GLOBALHEADER) {
 		codecContext->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
@@ -84,8 +103,8 @@ void FileSupport::writeFramesToStream(AVCodecID codecId, AVPixelFormat frameForm
 	outputStream->avg_frame_rate = codecContext->framerate;
 	outputStream->codecpar->codec_id = codecContext->codec_id;
 	outputStream->codecpar->codec_type = AVMEDIA_TYPE_VIDEO;
-	outputStream->codecpar->width = WINDOW_WIDTH;
-	outputStream->codecpar->height = WINDOW_HEIGHT;
+	outputStream->codecpar->width = codecContext->width;
+	outputStream->codecpar->height = codecContext->height;
 	outputStream->codecpar->format = codecContext->pix_fmt;
 	outputStream->time_base = codecContext->time_base;
 	outputStream->avg_frame_rate = (AVRational){ STREAM_FRAME_RATE };
@@ -106,7 +125,8 @@ void FileSupport::writeFramesToStream(AVCodecID codecId, AVPixelFormat frameForm
 		std::cerr << "Error: Could not write output header" << std::endl;
 	}
 
-	SwsContext* swsCtxRGBtoYUV = sws_getContext(WINDOW_WIDTH, WINDOW_HEIGHT, AV_PIX_FMT_RGBA, WINDOW_WIDTH, WINDOW_HEIGHT, frameFormat, SWS_BILINEAR | SWS_ACCURATE_RND, 0, 0, 0);
+	SwsContext* swsCtxRGBtoYUV = sws_getContext(codecContext->width, codecContext->height, presentationSurfaceFormat,
+		codecContext->width, codecContext->height, frameFormat, SWS_BILINEAR | SWS_ACCURATE_RND, 0, 0, 0);
 	if (!swsCtxRGBtoYUV) {
 		std::cerr << "Could not initialize the conversion context\n" << std::endl;
 		exit(1);
@@ -115,16 +135,18 @@ void FileSupport::writeFramesToStream(AVCodecID codecId, AVPixelFormat frameForm
 	int frameCount = 0;
 	AVFrame* frame = av_frame_alloc();
 	frame->format = frameFormat;
-	frame->width = WINDOW_WIDTH;
-	frame->height = WINDOW_HEIGHT;
+	frame->width = codecContext->width;
+	frame->height = codecContext->height;
 	while (frameCount < frames.size()) {
 		res = av_frame_get_buffer(frame, 0);
 		av_image_alloc(frame->data, frame->linesize,
-			WINDOW_WIDTH, WINDOW_HEIGHT, frameFormat, 32);
+			codecContext->width, codecContext->height, frameFormat, 32);
 
-		uint8_t* data[1] = { frames[frameCount] };
-		int linesize[1] = { 4 * WINDOW_WIDTH };
-		res = sws_scale(swsCtxRGBtoYUV, data, linesize, 0, WINDOW_HEIGHT, frame->data, frame->linesize);
+		if (presentationSurfaceFormat != AV_PIX_FMT_RGB8) {
+			uint8_t* data[1] = { frames[frameCount] };
+			int linesize[1] = { 4 * codecContext->width };
+			res = sws_scale(swsCtxRGBtoYUV, data, linesize, 0, codecContext->height, frame->data, frame->linesize);
+		}
 
 		uint32_t frameTimestamp = frameTimestampModifier * frameCount;
 		frame->pts = frameTimestamp;

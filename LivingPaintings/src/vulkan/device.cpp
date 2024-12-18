@@ -28,28 +28,6 @@ VkDevice& Device::create(VkInstance& instance, Surface& surface)
     VkPhysicalDeviceFeatures2 deviceIndexingFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, &indexingFeatures };
     vkGetPhysicalDeviceFeatures2(physicalDevice, &deviceIndexingFeatures);
     vkGetPhysicalDeviceFeatures2(physicalDevice, &deviceFeatures2);
-    
-    VkFormatProperties formatProps;
-    vkGetPhysicalDeviceFormatProperties(physicalDevice, VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
-
-    if (!(formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT)) {
-        std::cout << "VK_FORMAT_R8G8B8A8_UNORM, feature: VK_FORMAT_FEATURE_BLIT_SRC_BIT. Feature is not supported!" << std::endl;
-    }
-
-    if (!(formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT)) {
-        std::cout << "VK_FORMAT_R8G8B8A8_UNORM, feature: VK_FORMAT_FEATURE_BLIT_DST_BIT. Feature is not supported!" << std::endl;
-    }
-
-    vkGetPhysicalDeviceFormatProperties(physicalDevice, VK_FORMAT_R8G8B8A8_SRGB, &formatProps);
-
-    if (!(formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT)) {
-        std::cout << "VK_FORMAT_R8G8B8A8_SRGB, feature: VK_FORMAT_FEATURE_BLIT_SRC_BIT. Feature is not supported!" << std::endl;
-    }
-
-    if (!(formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT)) {
-        std::cout << "VK_FORMAT_R8G8B8A8_SRGB, feature: VK_FORMAT_FEATURE_BLIT_DST_BIT. Feature is not supported!" << std::endl;
-    }
-
 
     VkDeviceCreateInfo deviceInfo {};
     deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
