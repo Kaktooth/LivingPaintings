@@ -367,6 +367,69 @@ void Descriptor::updateBindlessTexture(Image& textureWrite, uint32_t arrayElemen
 			0, nullptr);
 }
 
+void Descriptor::updateHeightTexture(Image& heightTexture)
+{
+
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		VkDescriptorImageInfo bumpTextureInfo{};
+		bumpTextureInfo.imageLayout = heightTexture.getDetails().layout;
+		bumpTextureInfo.imageView = heightTexture.getView();
+
+		VkDescriptorImageInfo bumpTextureSamplerInfo{};
+		bumpTextureSamplerInfo.imageLayout = heightTexture.getDetails().layout;
+		bumpTextureSamplerInfo.imageView = heightTexture.getView();
+
+		if (sampler != VK_NULL_HANDLE) {
+			bumpTextureSamplerInfo.sampler = sampler;
+		}
+
+		VkWriteDescriptorSet bumpTextureDescriptorSetWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+		bumpTextureDescriptorSetWrite.dstSet = sets[i];
+		bumpTextureDescriptorSetWrite.dstBinding = 2;
+		bumpTextureDescriptorSetWrite.dstArrayElement = 0;
+		bumpTextureDescriptorSetWrite.descriptorCount = 1;
+		bumpTextureDescriptorSetWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		bumpTextureDescriptorSetWrite.pImageInfo = &bumpTextureInfo;
+		vkUpdateDescriptorSets(device, 1, &bumpTextureDescriptorSetWrite,
+			0, nullptr);
+
+		VkWriteDescriptorSet bumpSampledTextureDescriptorSetWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+		bumpSampledTextureDescriptorSetWrite.dstSet = sets[i];
+		bumpSampledTextureDescriptorSetWrite.dstBinding = 3;
+		bumpSampledTextureDescriptorSetWrite.dstArrayElement = 0;
+		bumpSampledTextureDescriptorSetWrite.descriptorCount = 1;
+		bumpSampledTextureDescriptorSetWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		bumpSampledTextureDescriptorSetWrite.pImageInfo = &bumpTextureSamplerInfo;
+		vkUpdateDescriptorSets(device, 1, &bumpSampledTextureDescriptorSetWrite,
+			0, nullptr);
+	}
+}
+
+void Descriptor::updateMaskTextures(std::array<Image, MASKS_COUNT>& maskTextures)
+{
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		std::array<VkDescriptorImageInfo, MASKS_COUNT> selectedPosMaskInfo{};
+		for (uint16_t maskIndex = 0; maskIndex < MASKS_COUNT; maskIndex++) {
+			selectedPosMaskInfo[maskIndex].imageLayout = maskTextures[maskIndex].getDetails().layout;
+			selectedPosMaskInfo[maskIndex].imageView = maskTextures[maskIndex].getView();
+
+			if (sampler != VK_NULL_HANDLE) {
+				selectedPosMaskInfo[maskIndex].sampler = sampler;
+			}
+		}
+
+		VkWriteDescriptorSet maskTexturesDescriptorSetWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+		maskTexturesDescriptorSetWrite.dstSet = sets[i];
+		maskTexturesDescriptorSetWrite.dstBinding = 5;
+		maskTexturesDescriptorSetWrite.dstArrayElement = 0;
+		maskTexturesDescriptorSetWrite.descriptorCount = MASKS_COUNT;
+		maskTexturesDescriptorSetWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		maskTexturesDescriptorSetWrite.pImageInfo = selectedPosMaskInfo.data();
+		vkUpdateDescriptorSets(device, 1, &maskTexturesDescriptorSetWrite,
+			0, nullptr);
+	}
+}
+
 void Descriptor::destroy()
 {
 	vkDestroyDescriptorPool(device, pool, nullptr);

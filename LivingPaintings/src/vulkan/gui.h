@@ -105,7 +105,8 @@ public:
 	std::vector<ObjectParams> objectsAnimationParams{ objectParams };
 	std::vector<AnimationParams> animationControlParams{ animationParams };
 
-	SpecificDrawParams drawParams = { 1, false, false, false, false, "", EXPORT_FRAME_COUNT };
+	SpecificDrawParams drawParams = { false, 1, false, false, false };
+	VideoExportParams videoExportParams = { false, "", EXPORT_FRAME_COUNT };
 
 	uint16_t animIndex = 0;
 	uint16_t objIndex = 0;

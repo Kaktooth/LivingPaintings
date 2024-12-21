@@ -126,13 +126,15 @@ void Image::load(const char* filePath)
 {
     int width, height, channels;
     stbi_uc* pixels = stbi_load(filePath, &width, &height, &channels, STBI_rgb_alpha);
-    VkDeviceSize imageSize = imageDetails.width * imageDetails.height * imageDetails.channels;
+    imageDetails.width = width;
+    imageDetails.height = height;
+    imageDetails.bufferSize = width * height * imageDetails.channels;
 
     if (!pixels) {
         throw std::runtime_error("Failed to load texture image.");
     }
 
-    stagingBuffer.create(device, physicalDevice, pixels, imageSize);
+    stagingBuffer.create(device, physicalDevice, pixels, imageDetails.bufferSize);
     stbi_image_free(pixels);
 }
 
@@ -243,6 +245,47 @@ void Image::copyBufferToImage(Queue& queue, unsigned char* buffer)
     CommandBuffer::endSingleTimeCommands(device, commandPool, cmd, queue);
 
     tempImage.destroy();
+}
+
+void Image::copyBufferToImage(Queue& queue, unsigned char* buffer, uint32_t bufImageWidth, uint32_t bufImageHeight)
+{
+    Image tempImage;
+    tempImage.imageDetails.createImageInfo("", bufImageWidth, bufImageHeight,
+        imageDetails.channels, VK_IMAGE_LAYOUT_GENERAL,
+        VK_IMAGE_VIEW_TYPE_2D, imageDetails.format,
+        VK_SHADER_STAGE_FRAGMENT_BIT, VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT,
+        buffer);
+    tempImage.create(device, physicalDevice, commandPool,
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, queue);
+
+    VkCommandBuffer cmd = CommandBuffer::beginSingleTimeCommands(device, commandPool);
+
+    VkImageSubresourceLayers imageSubresource{};
+    imageSubresource.aspectMask = imageDetails.aspectFlags;
+    imageSubresource.mipLevel = 0;
+    imageSubresource.baseArrayLayer = 0;
+    imageSubresource.layerCount = 1;
+
+    VkImageCopy imageCopy{};
+    imageCopy.srcSubresource = imageSubresource;
+    imageCopy.srcOffset = { 0, 0, 0 };
+    imageCopy.dstSubresource = imageSubresource;
+    imageCopy.dstOffset = { 0, 0, 0 };
+    imageCopy.extent = { bufImageWidth, bufImageHeight, 1 };
+
+    vkCmdCopyImage(cmd, tempImage.get(),
+        VK_IMAGE_LAYOUT_GENERAL,
+        textureImage,
+        imageDetails.layout, 1, &imageCopy);
+
+    CommandBuffer::endSingleTimeCommands(device, commandPool, cmd, queue);
+
+    tempImage.destroy();
+
+    imageDetails.width = bufImageWidth;
+    imageDetails.height = bufImageHeight;
 }
 
 void Image::createImageView()

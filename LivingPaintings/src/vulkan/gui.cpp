@@ -124,27 +124,26 @@ void Gui::draw()
         ShowControls(&windowCreated);
 
         if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("New")) {}
-            if (ImGui::MenuItem("Open", "Ctrl+O")) {}
+            if (ImGui::MenuItem("Load Painting Image", "Ctrl+L")) { drawParams.paintingTextureLoaded = true; }
             if (ImGui::BeginMenu("Export As..")) {
-                float overallTime_s = (float)drawParams.frameCount / STREAM_FRAME_RATE;
+                float overallTime_s = (float)videoExportParams.frameCount / STREAM_FRAME_RATE;
                 std::string overallTime = "Time (seconds): " + std::to_string(overallTime_s);
                 ImGui::Text(overallTime.c_str());
                 ImGui::SameLine();
-                ImGui::DragInt("Number of frames", &drawParams.frameCount, 1, 10, 1500);
+                ImGui::DragInt("Number of frames", &videoExportParams.frameCount, 1, 10, 1500);
                 if (ImGui::MenuItem("Graphics Interchange Format (.gif)")) {
-                    drawParams.writeFile = true;
-                    drawParams.fileFormat = ".gif";
+                    videoExportParams.writeFile = true;
+                    videoExportParams.fileFormat = ".gif";
                 }
                 if (ImGui::MenuItem("MPEG-4 Part 14 (.mp4)")) {
-                    drawParams.writeFile = true;
-                    drawParams.fileFormat = ".mp4";
+                    videoExportParams.writeFile = true;
+                    videoExportParams.fileFormat = ".mp4";
                 }
                 ImGui::EndMenu();
             }
             ImGui::Separator();
 
-            if (ImGui::MenuItem("Quit", "Alt+F4")) {}
+            if (ImGui::MenuItem("Quit", "Alt+F4")) { exit(0); }
             ImGui::EndMenu();
         }
 

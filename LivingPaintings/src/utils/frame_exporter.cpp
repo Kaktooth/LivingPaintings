@@ -17,12 +17,12 @@ using Constants::WINDOW_HEIGHT;
 #define 	STREAM_FRAME_RATE   STREAM_FRAME_RATE
 
 std::vector<unsigned char*> frames;
-uint32_t FileSupport::frameCount = EXPORT_FRAME_COUNT;
-uint32_t FileSupport::windowWidth = WINDOW_WIDTH;
-uint32_t FileSupport::windowHeight = WINDOW_HEIGHT;
-AVPixelFormat FileSupport::presentationSurfaceFormat = AV_PIX_FMT_RGBA;
+uint32_t FrameExport::frameCount = EXPORT_FRAME_COUNT;
+uint32_t FrameExport::windowWidth = WINDOW_WIDTH;
+uint32_t FrameExport::windowHeight = WINDOW_HEIGHT;
+AVPixelFormat FrameExport::presentationSurfaceFormat = AV_PIX_FMT_RGBA;
 
-void FileSupport::setPresentationSurfaceFormat(uint32_t surfaceFormat)
+void FrameExport::setPresentationSurfaceFormat(uint32_t surfaceFormat)
 {
 	if (surfaceFormat >= 23 && surfaceFormat <= 29) {
 		presentationSurfaceFormat = AV_PIX_FMT_RGB8;
@@ -35,17 +35,17 @@ void FileSupport::setPresentationSurfaceFormat(uint32_t surfaceFormat)
 	}
 }
 
-void FileSupport::setExportParams(uint32_t frameCount, uint32_t windowWidth, uint32_t windowHeight)
+void FrameExport::setExportParams(uint32_t frameCount, uint32_t windowWidth, uint32_t windowHeight)
 {
-	FileSupport::frameCount = frameCount;
-	FileSupport::windowWidth = windowWidth;
-	FileSupport::windowHeight = windowHeight;
+	FrameExport::frameCount = frameCount;
+	FrameExport::windowWidth = windowWidth;
+	FrameExport::windowHeight = windowHeight;
 }
 
-void FileSupport::gatherFrame(unsigned char* frameCopy, bool& writeVideo, std::string fileFormat)
+void FrameExport::gatherFrame(unsigned char* frameCopy, bool& writeVideo, std::string fileFormat)
 {
 	frames.push_back(frameCopy);
-	if (frames.size() > FileSupport::frameCount + 1) { // first frames can contain gui, so more frames being added to array and bottom frames will be erased
+	if (frames.size() > FrameExport::frameCount + 1) { // first frames can contain gui, so more frames being added to array and bottom frames will be erased
 		auto it = frames.begin();
 		frames.erase(it, it + 2);
 		if (fileFormat == ".gif") {
@@ -58,7 +58,7 @@ void FileSupport::gatherFrame(unsigned char* frameCopy, bool& writeVideo, std::s
 	}
 }
 
-void FileSupport::writeFramesToStream(AVCodecID codecId, AVPixelFormat frameFormat, uint32_t frameTimestampModifier, std::string fileFormat)
+void FrameExport::writeFramesToStream(AVCodecID codecId, AVPixelFormat frameFormat, uint32_t frameTimestampModifier, std::string fileFormat)
 {
 	auto currentTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 	std::string currentTimeString(30, '\0');

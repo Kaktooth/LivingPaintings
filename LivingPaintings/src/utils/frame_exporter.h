@@ -13,7 +13,7 @@ extern "C" {
 #include "libswscale/swscale.h"
 }
 
-class FileSupport {
+class FrameExport {
 
 	//TODO create queue of files to be written
 	static uint32_t frameCount;

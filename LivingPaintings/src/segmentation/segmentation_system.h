@@ -23,6 +23,8 @@ class ImageSegmantationSystem {
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     std::array<Image, MASKS_COUNT> selectedPosMasks;
 
+    bool callbackIsSet = false;
+
     cv::Mat segmentImage(Sam const* sam);
 
 public:

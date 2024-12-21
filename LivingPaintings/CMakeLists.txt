@@ -38,6 +38,8 @@ file(GLOB INCLUDE_HEADERS
 
 add_executable (LivingPaintings ${SOURCES} ${HEADERS} ${INCLUDE_HEADERS} )
 
+target_compile_definitions(LivingPaintings PRIVATE $<$<CONFIG:Debug>:DEBUG>)
+
 target_include_directories(LivingPaintings PRIVATE ${onnxruntime_lib} ${OpenCV_LIBS}
 ${CMAKE_CURRENT_SOURCE_DIR}/include ${$ENV{VULKAN_SDK}/include} ${Stb_INCLUDE_DIR}
 ${FFMPEG_INCLUDE_DIRS})

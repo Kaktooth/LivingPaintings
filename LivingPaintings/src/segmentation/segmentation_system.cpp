@@ -255,20 +255,27 @@ void ImageSegmantationSystem::init(Device& _device, VkCommandPool& _commandPool,
                                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, transferQueue);
     }
 
-    glfwSetMouseButtonCallback(pWindow, mouse_buttons_callback);
-    glfwSetCursorPosCallback(pWindow, cursor_position_callback);
+    if (!callbackIsSet) {
+        glfwSetMouseButtonCallback(pWindow, mouse_buttons_callback);
+        glfwSetCursorPosCallback(pWindow, cursor_position_callback);
+        callbackIsSet = true;
+    }
+
     objectSelectionThread = std::thread(&ImageSegmantationSystem::runObjectSegmentationTask, *this);
 }
 
 void ImageSegmantationSystem::destroy()
 {
     runningSegmentation = false;
+    imageLoaded = false;
     if (objectSelectionThread.joinable()) {
         objectSelectionThread.join();
     }
     for (uint16_t maskIndex = 0; maskIndex < MASKS_COUNT; maskIndex++) {
         selectedPosMasks[maskIndex].destroy();
     }
+    selectedPosMasks = std::array<Image, MASKS_COUNT>();
+    runningSegmentation = true;
 }
 
 void ImageSegmantationSystem::changeWindowResolution(glm::uvec2& _windowResolution)

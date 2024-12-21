@@ -19,6 +19,7 @@
 #include "semaphore.h"
 #include "surface.h"
 #include "../utils/frame_exporter.h"
+#include "../utils/win_utils.cpp"
 #include "vulkan/vulkan.h"
 
 #define GLFW_INCLUDE_VULKAN
@@ -27,6 +28,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <vector>
+#include <filesystem>
 
 #define INIT(mainHandle, instance) (mainHandle = instance)
 

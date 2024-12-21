@@ -8,11 +8,12 @@
 
 namespace Constants {
 
-#ifdef NDEBUG
-static const bool ENABLE_VALIDATION_LAYERS = false;
-#else
+#ifdef DEBUG
 static const bool ENABLE_VALIDATION_LAYERS = true;
+#else
+static const bool ENABLE_VALIDATION_LAYERS = false;
 #endif
+
 static const uint16_t WINDOW_WIDTH = 1920;
 static const uint16_t WINDOW_HEIGHT = 1080;
 

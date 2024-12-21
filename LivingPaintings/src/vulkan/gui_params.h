@@ -68,14 +68,16 @@ struct LightParams {
 	float surfaceColorModifier;
 };
 
-
 //TODO rename
 struct SpecificDrawParams {
+	bool paintingTextureLoaded;
 	size_t pipelineHistorySize;
 	bool imageLoaded;
 	bool constructSelectedObject;
 	bool clearSelectedMask;
-	// video exporting params
+};
+
+struct VideoExportParams {
 	bool writeFile;
 	std::string fileFormat;
 	int frameCount;

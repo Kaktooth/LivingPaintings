@@ -59,6 +59,7 @@ public:
     void copyBufferToImage(Queue& queue, VkBuffer& buffer,
                            VkImageLayout dstLayout);
     void copyBufferToImage(Queue& queue, unsigned char* buffer);
+    void copyBufferToImage(Queue& queue, unsigned char* buffer, uint32_t bufImageWidth, uint32_t bufImageHeight);
     void createImageView();
     void destroy();
     VkImage& get();
