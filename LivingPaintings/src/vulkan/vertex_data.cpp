@@ -334,7 +334,7 @@ void Data::GraphicsObject::constructMeshFromTexture(uint16_t width, uint16_t hei
 
                 size_t lastSize = vertices.size();
                 size_t nextSize = lastSize + 1;
-                glm::vec3 pos = { (1 - vertPosX) * ratio, vertPosY, selectedDepth };
+                glm::vec3 pos = { (0.5f - vertPosX) * ratio, vertPosY - 0.5f, selectedDepth };
                 vertices.resize(nextSize);
                 vertices[lastSize] = { pos, { vertPosX, vertPosY } };
                 verticesToIndices.insert({ glm::vec2(pos), lastSize });

@@ -41,7 +41,7 @@ public:
     bool selectedObjectSizeChanged();
     bool selectedObjectSizeChanged(uint16_t maskIndex);
     void updatePositionMasks(Device& device, VkCommandPool& commandPool, Queue& transferQueue);
-    void inpaintImage(uint8_t patchSize, std::vector<Image>& objectsTextures, ObjectParams& objectParams, Descriptor& descriptor, VkCommandPool& commandPool, Queue& transferQueue);
+    void inpaintImage(uint8_t patchSize, std::vector<Image>& objectsTextures, Descriptor& descriptor, VkCommandPool& commandPool, Queue& transferQueue);
     uchar* getLatestBackground();
     bool& isImageLoaded();
     uchar* getSelectedPositionsMask();

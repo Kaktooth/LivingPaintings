@@ -231,11 +231,21 @@ void Engine::update()
 
 			gui.updateGlobalAnimationParams();
 			GlobalAnimationParams globAnimParams = gui.getGlobalAnimationParams();
-			for (size_t i = 0; i < graphicsObjects.size(); i++) {
+			ObjectParams paintingObjParams = gui.objectsParams[0];
+			Data::GraphicsObject::instanceUniform.move(paintingObjParams);
+			Data::GraphicsObject::instanceUniform.rotate(paintingObjParams);
+			Data::GraphicsObject::instanceUniform.scale(paintingObjParams);
+
+			for (size_t i = 1; i < graphicsObjects.size(); i++) {
 				ObjectParams objectParams = gui.objectsParams[i];
 				Data::GraphicsObject::instanceUniform.move(objectParams);
 				Data::GraphicsObject::instanceUniform.rotate(objectParams);
 				Data::GraphicsObject::instanceUniform.scale(objectParams);
+
+				paintingObjParams.index = i; // translate object to painting
+				Data::GraphicsObject::instanceUniform.move(paintingObjParams);
+				Data::GraphicsObject::instanceUniform.rotate(paintingObjParams);
+				Data::GraphicsObject::instanceUniform.scale(paintingObjParams);
 			}
 
 			for (size_t i = 0; i < gui.objectsAnimationParams.size(); i++) {
@@ -337,8 +347,7 @@ void Engine::update()
 				InpaintingParams inpaintingParams = gui.getInpaintingParams();
 				gui.createGraphicsObjectParams(constructedObject.instanceId);
 				if (inpaintingParams.enableInpainting) {
-					segmentationSystem.inpaintImage(inpaintingParams.patchSize, objectsTextures,
-						gui.objectsParams.back(), descriptor,
+					segmentationSystem.inpaintImage(inpaintingParams.patchSize, objectsTextures, descriptor,
 						vulkan.commandPool, transferQueue);
 
 					runComputeShader(0);

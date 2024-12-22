@@ -319,7 +319,7 @@ void ImageSegmantationSystem::updatePositionMasks(Device& device, VkCommandPool&
    found using moments of pixel colors of the image that is used to align inpainted area to the center.
    To inpaint the image there will be used square area patch of the image instead of whole image to 
    speed up method excecution time for larger images.  */
-void ImageSegmantationSystem::inpaintImage(uint8_t patchSize, std::vector<Image>& objectsTextures, ObjectParams& objectParams, Descriptor& descriptor, VkCommandPool& commandPool, Queue& transferQueue)
+void ImageSegmantationSystem::inpaintImage(uint8_t patchSize, std::vector<Image>& objectsTextures, Descriptor& descriptor, VkCommandPool& commandPool, Queue& transferQueue)
 {
     std::vector<std::vector<cv::Point>> contours;
     cv::findContours(selectedPosMask, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
@@ -396,14 +396,6 @@ void ImageSegmantationSystem::inpaintImage(uint8_t patchSize, std::vector<Image>
     for (uint16_t i = maxBinding; i >= 1; i--) {
         descriptor.updateBindlessTexture(objectsTextures[maxBinding - i], arrayElementId++);
     }
-    float objectMaxWidth = imageDetails.width - right - left;
-    float width = glm::sqrt(objectMaxWidth + side);
-    float objectMaxHeight = imageDetails.height - top - bottom;
-    float hight = glm::sqrt(objectMaxHeight + side);
-    glm::vec2 objectCenter = glm::vec2(pointNearCenter.x + width, pointNearCenter.y - hight);
-
-    objectParams.position[0] = -0.5f * ((float)imageDetails.width / imageDetails.height);
-    objectParams.position[1] = -0.5f;
 }
 
 bool& ImageSegmantationSystem::isImageLoaded() { return imageLoaded; }
