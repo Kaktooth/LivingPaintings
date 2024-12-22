@@ -32,16 +32,20 @@ struct GraphicsObject {
     static uint16_t s_instanceId;
 
     static struct Instance {
+        static const glm::mat3 IDENTITY_MAT_3;
+        static const glm::mat4 IDENTITY_MAT_4;
+
         glm::mat4* model { nullptr };
 
         void allocateInstances();
-        void move(ObjectParams params) const;
-        void rotate(ObjectParams params) const;
-        void scale(ObjectParams params) const;
+        void move(ObjectParams params, const glm::mat4 translationMatrix = IDENTITY_MAT_4);
+        void rotate(ObjectParams params);
+        void scale(ObjectParams params);
         void transform(GlobalAnimationParams globAnimParams, ObjectParams params, AnimationParams animationParams) const;
-        void move(ObjectParams params, float time) const;
-        void rotate(ObjectParams params, float time) const;
-        void scale(ObjectParams params, float time) const;
+        void move(ObjectParams params, float time);
+        void rotate(ObjectParams params, float time);
+        void scale(ObjectParams params, float time);
+        glm::mat4* translationMatrix(uint16_t instanceIndex) const;
         void destroy();
     } instanceUniform;
 

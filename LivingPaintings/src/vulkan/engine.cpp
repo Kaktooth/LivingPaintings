@@ -237,15 +237,16 @@ void Engine::update()
 			Data::GraphicsObject::instanceUniform.scale(paintingObjParams);
 
 			for (size_t i = 1; i < graphicsObjects.size(); i++) {
-				ObjectParams objectParams = gui.objectsParams[i];
-				Data::GraphicsObject::instanceUniform.move(objectParams);
-				Data::GraphicsObject::instanceUniform.rotate(objectParams);
-				Data::GraphicsObject::instanceUniform.scale(objectParams);
-
 				paintingObjParams.index = i; // translate object to painting
 				Data::GraphicsObject::instanceUniform.move(paintingObjParams);
 				Data::GraphicsObject::instanceUniform.rotate(paintingObjParams);
 				Data::GraphicsObject::instanceUniform.scale(paintingObjParams);
+				
+				ObjectParams objectParams = gui.objectsParams[i];
+				glm::mat4* translationMat = Data::GraphicsObject::instanceUniform.translationMatrix(i);
+				Data::GraphicsObject::instanceUniform.move(objectParams, *translationMat);
+				Data::GraphicsObject::instanceUniform.rotate(objectParams);
+				Data::GraphicsObject::instanceUniform.scale(objectParams);
 			}
 
 			for (size_t i = 0; i < gui.objectsAnimationParams.size(); i++) {

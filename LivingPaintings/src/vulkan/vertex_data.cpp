@@ -35,8 +35,8 @@ typedef CGAL::Alpha_shape_2<Triangulation_2> Alpha_shape_2;
 typedef Alpha_shape_2::All_faces_iterator Alpha_shape_faces_iterator;
 typedef Alpha_shape_2::Alpha_shape_edges_iterator Alpha_shape_edges_iterator;
 
-const glm::mat3 IDENTITY_MAT_3 = glm::identity<glm::mat3>();
-const glm::mat4 IDENTITY_MAT_4 = glm::identity<glm::mat4>();
+const glm::mat3 Data::GraphicsObject::Instance::IDENTITY_MAT_3 = glm::identity<glm::mat3>();
+const glm::mat4 Data::GraphicsObject::Instance::IDENTITY_MAT_4 = glm::identity<glm::mat4>();
 
 const std::map<uint16_t, uint8_t> CHECKED_REGIONS_TO_POINT_GRANULARITY {
     { 1000, 50 }, { 300, 20 }, { 150, 15 }, { 100, 10 }, { 80, 5 }, { 40, 4 }
@@ -85,29 +85,23 @@ void Data::GraphicsObject::Instance::allocateInstances()
     model = (glm::mat4*)alignedAlloc(RuntimeProperties::uboMemorySize, AlignmentProperties::dynamicUniformAlignment_mat4);
 }
 
-void Data::GraphicsObject::Instance::move(ObjectParams params) const
+void Data::GraphicsObject::Instance::move(ObjectParams params, glm::mat4 mat)
 {
-    uint64_t mstartaddr = reinterpret_cast<uint64_t>(model);
-    size_t uboOffset = params.index * AlignmentProperties::dynamicUniformAlignment_mat4;
-    glm::mat4* modelMat = reinterpret_cast<glm::mat4*>(mstartaddr + uboOffset);
-    *modelMat = glm::translate(IDENTITY_MAT_4, { params.position[0], params.position[1], params.position[2] });
+    glm::mat4* modelMat = translationMatrix(params.index);
+    *modelMat = glm::translate(mat, { params.position[0], params.position[1], params.position[2] });
 }
 
-void Data::GraphicsObject::Instance::rotate(ObjectParams params) const
+void Data::GraphicsObject::Instance::rotate(ObjectParams params)
 {
-    uint64_t mstartaddr = reinterpret_cast<uint64_t>(model);
-    size_t uboOffset = params.index * AlignmentProperties::dynamicUniformAlignment_mat4;
-    glm::mat4* modelMat = reinterpret_cast<glm::mat4*>(mstartaddr + uboOffset);
+    glm::mat4* modelMat = translationMatrix(params.index);
     *modelMat = glm::rotate(*modelMat, glm::radians(params.rotation[0]), IDENTITY_MAT_3[0]);
     *modelMat = glm::rotate(*modelMat, glm::radians(params.rotation[1]), IDENTITY_MAT_3[1]);
     *modelMat = glm::rotate(*modelMat, glm::radians(params.rotation[2]), IDENTITY_MAT_3[2]);
 }
 
-void Data::GraphicsObject::Instance::scale(ObjectParams params) const
+void Data::GraphicsObject::Instance::scale(ObjectParams params)
 {
-    uint64_t mstartaddr = reinterpret_cast<uint64_t>(model);
-    size_t uboOffset = params.index * AlignmentProperties::dynamicUniformAlignment_mat4;
-    glm::mat4* modelMat = reinterpret_cast<glm::mat4*>(mstartaddr + uboOffset);
+    glm::mat4* modelMat = translationMatrix(params.index);
     *modelMat = glm::scale(*modelMat, glm::vec3(params.scale[0], params.scale[1], params.scale[2]));
 }
 
@@ -159,30 +153,32 @@ void Data::GraphicsObject::Instance::transform(GlobalAnimationParams globAnimPar
     }
 }
 
-void Data::GraphicsObject::Instance::move(ObjectParams params, float time) const
+void Data::GraphicsObject::Instance::move(ObjectParams params, float time)
 {
-    uint64_t mstartaddr = reinterpret_cast<uint64_t>(model);
-    size_t uboOffset = params.index * AlignmentProperties::dynamicUniformAlignment_mat4;
-    glm::mat4* modelMat = reinterpret_cast<glm::mat4*>(mstartaddr + uboOffset);
+    glm::mat4* modelMat = translationMatrix(params.index);
     *modelMat = glm::translate(*modelMat, time * glm::vec3(params.position[0], params.position[1], params.position[2]));
 }
 
-void Data::GraphicsObject::Instance::rotate(ObjectParams params, float time) const
+void Data::GraphicsObject::Instance::rotate(ObjectParams params, float time)
 {
-    uint64_t mstartaddr = reinterpret_cast<uint64_t>(model);
-    size_t uboOffset = params.index * AlignmentProperties::dynamicUniformAlignment_mat4;
-    glm::mat4* modelMat = reinterpret_cast<glm::mat4*>(mstartaddr + uboOffset);
+    glm::mat4* modelMat = translationMatrix(params.index);
     *modelMat = glm::rotate(*modelMat, time * glm::radians(params.rotation[0]), IDENTITY_MAT_3[0]);
     *modelMat = glm::rotate(*modelMat, time * glm::radians(params.rotation[1]), IDENTITY_MAT_3[1]);
     *modelMat = glm::rotate(*modelMat, time * glm::radians(params.rotation[2]), IDENTITY_MAT_3[2]);
 }
 
-void Data::GraphicsObject::Instance::scale(ObjectParams params, float time) const
+void Data::GraphicsObject::Instance::scale(ObjectParams params, float time)
+{
+    glm::mat4* modelMat = translationMatrix(params.index);
+    *modelMat = glm::scale(*modelMat, time * glm::vec3(params.scale[0], params.scale[1], params.scale[2]));
+}
+
+glm::mat4* Data::GraphicsObject::Instance::translationMatrix(uint16_t instanceIndex) const
 {
     uint64_t mstartaddr = reinterpret_cast<uint64_t>(model);
-    size_t uboOffset = params.index * AlignmentProperties::dynamicUniformAlignment_mat4;
+    size_t uboOffset = instanceIndex * AlignmentProperties::dynamicUniformAlignment_mat4;
     glm::mat4* modelMat = reinterpret_cast<glm::mat4*>(mstartaddr + uboOffset);
-    *modelMat = glm::scale(*modelMat, time * glm::vec3(params.scale[0], params.scale[1], params.scale[2]));
+    return modelMat;
 }
 
 void Data::GraphicsObject::Instance::destroy()
