@@ -1,6 +1,7 @@
 #include "shader_compiler.h"
+#include "../utils/path_params.hpp"
 
-using Constants::SHADER_PATH;
+using Runtime::PATH_PARAMS;
 
 const std::map<std::string, shaderc_shader_kind> shaderTypes {
     { ".vert", shaderc_glsl_vertex_shader },
@@ -61,7 +62,7 @@ std::map<std::string, std::filesystem::directory_entry> ShaderCompiler::listModi
 {
     std::map<std::string, std::filesystem::directory_entry> filePaths {};
     std::map<std::string, std::filesystem::directory_entry> compilePaths {};
-    std::filesystem::path rootPath(SHADER_PATH);
+    std::filesystem::path rootPath(PATH_PARAMS.SHADER_PATH);
 
     auto dit = std::filesystem::directory_iterator { rootPath };
     for (const std::filesystem::directory_entry& entry : dit) {

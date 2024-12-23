@@ -57,12 +57,12 @@ set(TEXTURE_WIDTH 1200)
 set(TEXTURE_HEIGHT 950)
 set(PREPROCESS_SAM_FILE_NAME "edge_sam_3x_encoder.onnx")
 set(SAM_TEXTURE_FILE_NAME "edge_sam_3x_decoder.onnx")
-set(TEXTURE_FILE_PATH "$<TARGET_FILE_DIR:LivingPaintings>/resources/textures/${TEXTURE_FILE_NAME}")
-set(RESOURCE_SHADER_PATH "$<TARGET_FILE_DIR:LivingPaintings>/resources/shaders/")
-set(PREPROCESS_SAM_PATH "$<TARGET_FILE_DIR:LivingPaintings>/resources/models/${PREPROCESS_SAM_FILE_NAME}")
-set(SAM_PATH "$<TARGET_FILE_DIR:LivingPaintings>/resources/models/${SAM_TEXTURE_FILE_NAME}")
-set(RESOURCE_PREPROCESS_SAM_PATH "${CMAKE_CURRENT_SOURCE_DIR}/resources/models/${PREPROCESS_SAM_FILE_NAME}")
-set(RESOURCE_SAM_PATH "${CMAKE_CURRENT_SOURCE_DIR}/resources/models/${SAM_TEXTURE_FILE_NAME}")
+set(TEXTURE_FILE_PATH "/resources/textures/${TEXTURE_FILE_NAME}")
+set(RESOURCE_SHADER_PATH "/resources/shaders/")
+set(PREPROCESS_SAM_PATH "/resources/models/${PREPROCESS_SAM_FILE_NAME}")
+set(SAM_PATH "/resources/models/${SAM_TEXTURE_FILE_NAME}")
+set(RESOURCE_PREPROCESS_SAM_PATH "/resources/models/${PREPROCESS_SAM_FILE_NAME}")
+set(RESOURCE_SAM_PATH "/resources/models/${SAM_TEXTURE_FILE_NAME}")
 add_definitions( -DTEXTURE_FILE_PATH=${TEXTURE_FILE_PATH} )
 add_definitions( -DTEXTURE_WIDTH=${TEXTURE_WIDTH})
 add_definitions( -DTEXTURE_HEIGHT=${TEXTURE_HEIGHT} )
@@ -87,11 +87,6 @@ COMMAND ${CMAKE_COMMAND} -E copy_directory
 
 add_custom_command(TARGET LivingPaintings POST_BUILD
 COMMAND ${CMAKE_COMMAND} -E make_directory
-    "$<TARGET_FILE_DIR:LivingPaintings>/resources/models")
-
-add_custom_command(TARGET LivingPaintings POST_BUILD
-COMMAND ${CMAKE_COMMAND} -E copy
-    ${RESOURCE_PREPROCESS_SAM_PATH} ${RESOURCE_SAM_PATH}
     "$<TARGET_FILE_DIR:LivingPaintings>/resources/models")
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)

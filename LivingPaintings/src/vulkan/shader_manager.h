@@ -1,5 +1,4 @@
 #pragma once
-#include "consts.h"
 #include "shader_compiler.h"
 #include <iostream>
 #include <thread>

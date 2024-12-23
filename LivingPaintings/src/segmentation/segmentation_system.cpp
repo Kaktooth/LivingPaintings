@@ -1,10 +1,8 @@
 #include "segmentation_system.h"
-#include "../config.hpp"
-#include "../vulkan/consts.h"
-#include "inpaint/criminisi_inpainter.h"
+#include "../utils/path_params.hpp"
 
-using Constants::PREPROCESS_SAM_MODEL_PATH;
-using Constants::SAM_MODEL_PATH;
+using Runtime::PATH_PARAMS;
+
 using Constants::BUMP_TEXTURE_FORMAT;
 using Constants::SELECTED_REGION_HIGHLIGHT;
 using Constants::MASKS_COUNT;
@@ -60,7 +58,7 @@ static Sam::Parameter getSamParam(std::string const& preprocessModel,
     return param;
 }
 
-Sam::Parameter paramSam = getSamParam(PREPROCESS_SAM_MODEL_PATH, SAM_MODEL_PATH, 0, 0);
+Sam::Parameter paramSam = getSamParam(PATH_PARAMS.PREPROCESS_SAM_MODEL_PATH, PATH_PARAMS.SAM_MODEL_PATH, 0, 0);
 
 static void loadImage(Sam* sam, std::string const& inputImage)
 {

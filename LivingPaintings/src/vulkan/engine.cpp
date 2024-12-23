@@ -1,8 +1,11 @@
 #include "engine.h"
+#include "../utils/path_params.hpp"
 
 using Data::AlignmentProperties;
 using Data::RuntimeProperties;
+using Runtime::PATH_PARAMS;
 
+using Constants::APP_NAME;
 using Constants::WINDOW_WIDTH;
 using Constants::WINDOW_HEIGHT;
 using Constants::IMAGE_TEXTURE_FORMAT;
@@ -77,6 +80,35 @@ void Engine::init()
 
 	Queue& transferQueue = device.getTransferQueue();
 
+	Image paintingTexture;
+	paintingTexture.imageDetails.createImageInfo(
+		PATH_PARAMS.TEXTURE_PATH.c_str(), 0, 0, 4,
+		VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_VIEW_TYPE_2D,
+		IMAGE_TEXTURE_FORMAT,
+		VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
+		VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT,
+		VK_SAMPLE_COUNT_1_BIT, {}, 0);
+	paintingTexture.create(vulkan.device, vulkan.physicalDevice, vulkan.commandPool,
+		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, transferQueue);
+	objectsTextures.push_back(paintingTexture);
+
+	const uint32_t TEX_WIDTH = paintingTexture.imageDetails.width;
+	const uint32_t TEX_HEIGHT = paintingTexture.imageDetails.height;
+
+	heightMapTexture.imageDetails.createImageInfo(
+		"", TEX_WIDTH, TEX_HEIGHT, 1,
+		VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_VIEW_TYPE_2D,
+		BUMP_TEXTURE_FORMAT,
+		VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
+		VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT,
+		VK_SAMPLE_COUNT_1_BIT);
+	heightMapTexture.create(vulkan.device, vulkan.physicalDevice, vulkan.commandPool,
+		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, transferQueue);
+
+	textureSampler.create(vulkan.device, vulkan.physicalDevice);
+
 	size_t minUniformAlignment = device.getProperties().limits.minUniformBufferOffsetAlignment;
 	Data::setUniformDynamicAlignments(minUniformAlignment);
 	Data::GraphicsObject::instanceUniform.allocateInstances();
@@ -112,39 +144,14 @@ void Engine::init()
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 	segmentationSystem.init(device, vulkan.commandPool, pWindow,
-		TEXTURE_PATH, TEX_WIDTH, TEX_HEIGHT, controls.getMouseControls());
+		PATH_PARAMS.TEXTURE_PATH, TEX_WIDTH, TEX_HEIGHT,
+		controls.getMouseControls());
 
 	controls.fillInMouseControlInfo(glm::uvec2(WINDOW_WIDTH, WINDOW_HEIGHT),
 		0.1f, pWindow);
 
 	mouseControl.create(vulkan.device, vulkan.physicalDevice, mouseUniformSize,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-	Image paintingTexture;
-	paintingTexture.imageDetails.createImageInfo(
-		TEXTURE_PATH.c_str(), TEX_WIDTH, TEX_HEIGHT, 4,
-		VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_VIEW_TYPE_2D,
-		IMAGE_TEXTURE_FORMAT,
-		VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
-		VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT,
-		VK_SAMPLE_COUNT_1_BIT, {}, 0);
-	paintingTexture.create(vulkan.device, vulkan.physicalDevice, vulkan.commandPool,
-		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, transferQueue);
-	objectsTextures.push_back(paintingTexture);
-
-	heightMapTexture.imageDetails.createImageInfo(
-		"", TEX_WIDTH, TEX_HEIGHT, 1,
-		VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_VIEW_TYPE_2D,
-		BUMP_TEXTURE_FORMAT,
-		VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
-		VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT,
-		VK_SAMPLE_COUNT_1_BIT);
-	heightMapTexture.create(vulkan.device, vulkan.physicalDevice, vulkan.commandPool,
-		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, transferQueue);
-
-	textureSampler.create(vulkan.device, vulkan.physicalDevice);
 
 	descriptor.create(vulkan.device, instanceUniformBuffers,
 		viewUniformBuffers, paintingTexture,

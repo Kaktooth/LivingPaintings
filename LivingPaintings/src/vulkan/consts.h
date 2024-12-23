@@ -1,6 +1,4 @@
 #pragma once
-#include "../config.hpp"
-#include <cstdint>
 #include <string>
 #include <iostream>
 #include <vector>
@@ -44,15 +42,6 @@ static const uint8_t SELECTED_REGION_HIGHLIGHT = 70;
 
 static const size_t OBJECT_INSTANCES = 100;
 static const uint32_t MAX_BINDLESS_RESOURCES = 100;
-
-// TEXTURE_FILE_PATH variable is retrieved from Cmake with macros in file
-// config.hpp.in
-static const std::string TEXTURE_PATH = RETRIEVE_STRING(TEXTURE_FILE_PATH);
-static const uint16_t TEX_WIDTH = std::stoi(RETRIEVE_STRING(TEXTURE_WIDTH));
-static const uint16_t TEX_HEIGHT = std::stoi(RETRIEVE_STRING(TEXTURE_HEIGHT));
-static const std::string SHADER_PATH = RETRIEVE_STRING(RESOURCE_SHADER_PATH);
-static const std::string PREPROCESS_SAM_MODEL_PATH = RETRIEVE_STRING(PREPROCESS_SAM_PATH);
-static const std::string SAM_MODEL_PATH = RETRIEVE_STRING(SAM_PATH);
 
 static const uint16_t EFFECTS_COUNT = 3;
 static constexpr uint16_t MASKS_COUNT = EFFECTS_COUNT + 1;

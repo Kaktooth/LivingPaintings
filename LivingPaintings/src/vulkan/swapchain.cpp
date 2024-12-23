@@ -1,9 +1,5 @@
 #include "swapchain.h"
 
-using Constants::TEX_HEIGHT;
-using Constants::TEX_WIDTH;
-using Constants::IMAGE_TEXTURE_FORMAT;
-
 void Swapchain::setContext(Device& device, Surface& surface,
 	VkCommandPool commandPool,
 	VkSampleCountFlagBits samples,

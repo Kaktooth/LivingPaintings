@@ -1,5 +1,4 @@
 #pragma once
-#include "../config.hpp"
 #include "../segmentation/segmentation_system.h"
 #include "command_buffer.h"
 #include "command_pool.h"
@@ -32,10 +31,6 @@
 
 #define INIT(mainHandle, instance) (mainHandle = instance)
 
-using Constants::APP_NAME;
-using Constants::TEXTURE_PATH;
-using Constants::TEX_WIDTH;
-using Constants::TEX_HEIGHT;
 using Constants::MAX_SAMPLE_COUNT;
 
 class Engine {

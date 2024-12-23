@@ -1,6 +1,8 @@
 
 #define STR_INDIR(x) #x
-#define RETRIEVE_STRING(x) STR_INDIR(x)
+#define RETRIEVE_PATH(executablePath, x) (executablePath + STR_INDIR(x))
 
 #define TEXTURE_FILE_PATH @TEXTURE_FILE_PATH@
 #define RESOURCE_SHADER_PATH @RESOURCE_SHADER_PATH@
+#define PREPROCESS_SAM_PATH @PREPROCESS_SAM_PATH@
+#define SAM_PATH @SAM_PATH@

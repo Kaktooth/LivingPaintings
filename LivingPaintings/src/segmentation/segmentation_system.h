@@ -1,4 +1,5 @@
 #pragma once
+#include "inpaint/criminisi_inpainter.h"
 #include "../include/sam/sam.h"
 #include "../vulkan/controls.h"
 #include "../vulkan/image.h"

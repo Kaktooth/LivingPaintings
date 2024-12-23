@@ -1,7 +1,8 @@
 #include "shader_manager.h"
+#include "../utils/path_params.hpp"
 
 using namespace std::chrono_literals;
-using Constants::SHADER_PATH;
+using Runtime::PATH_PARAMS;
 
 const int8_t spvExtNameLength = 4;
 const int8_t shaderExtNameLength = 5;
@@ -35,7 +36,7 @@ void ShaderManager::notifyShaderFileChange()
 {
     std::cout << "\n[Shader Notifier] Started. Waiting for change notification..."
               << "\n";
-    const char* shaderPath = SHADER_PATH.c_str();
+    const char* shaderPath = PATH_PARAMS.SHADER_PATH.c_str();
 
     while (TRUE) {
     
