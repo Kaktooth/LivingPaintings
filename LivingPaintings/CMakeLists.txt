@@ -89,6 +89,12 @@ add_custom_command(TARGET LivingPaintings POST_BUILD
 COMMAND ${CMAKE_COMMAND} -E make_directory
     "$<TARGET_FILE_DIR:LivingPaintings>/resources/models")
 
+add_custom_command(TARGET LivingPaintings POST_BUILD
+COMMAND ${CMAKE_COMMAND} -E copy
+    "${CMAKE_CURRENT_SOURCE_DIR}${RESOURCE_PREPROCESS_SAM_PATH}" 
+    "${CMAKE_CURRENT_SOURCE_DIR}${RESOURCE_SAM_PATH}"
+    "$<TARGET_FILE_DIR:LivingPaintings>/resources/models")
+
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET LivingPaintings PROPERTY CXX_STANDARD 20)
 endif()
