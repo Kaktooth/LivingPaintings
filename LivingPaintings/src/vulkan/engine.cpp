@@ -228,6 +228,14 @@ void Engine::update()
 
 		pipeline.updateExtent(swapchain.getExtent());
 
+		gui.updateGlobalAnimationParams();
+
+		std::vector<AnimationParams> paintingAnimationParams;
+		std::copy_if(gui.animationControlParams.begin(), gui.animationControlParams.end(),
+			std::back_inserter(paintingAnimationParams), [&](const AnimationParams& animationParams) {
+				return animationParams.objIndex == 0;
+			});
+
 		for (int32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 			const uint32_t& currentFrame = swapchain.getCurrentFrame();
 			VkCommandBuffer& cmdGraphics = graphicsCmds.get(currentFrame);
@@ -236,7 +244,6 @@ void Engine::update()
 			const std::vector<VkSemaphore> waitSemaphores{ currentImageAvailable };
 			const std::vector<VkSemaphore> signalSemaphores{ currentRenderFinished };
 
-			gui.updateGlobalAnimationParams();
 			GlobalAnimationParams globAnimParams = gui.getGlobalAnimationParams();
 			ObjectParams paintingObjParams = gui.objectsParams[0];
 			Data::GraphicsObject::instanceUniform.move(paintingObjParams);
@@ -248,12 +255,20 @@ void Engine::update()
 				Data::GraphicsObject::instanceUniform.move(paintingObjParams);
 				Data::GraphicsObject::instanceUniform.rotate(paintingObjParams);
 				Data::GraphicsObject::instanceUniform.scale(paintingObjParams);
-				
+
 				ObjectParams objectParams = gui.objectsParams[i];
 				glm::mat4* translationMat = Data::GraphicsObject::instanceUniform.translationMatrix(i);
 				Data::GraphicsObject::instanceUniform.move(objectParams, *translationMat);
 				Data::GraphicsObject::instanceUniform.rotate(objectParams);
 				Data::GraphicsObject::instanceUniform.scale(objectParams);
+
+				for (size_t paintingAnimIndex = 0; paintingAnimIndex < paintingAnimationParams.size(); paintingAnimIndex++) {
+					ObjectParams objectAnimationParams = gui.objectsAnimationParams[paintingAnimIndex];
+					objectAnimationParams.index = i;
+					AnimationParams animationParams = paintingAnimationParams[paintingAnimIndex];
+					animationParams.objIndex = i;
+					Data::GraphicsObject::instanceUniform.transform(globAnimParams, objectAnimationParams, animationParams);
+				}
 			}
 
 			for (size_t i = 0; i < gui.objectsAnimationParams.size(); i++) {
