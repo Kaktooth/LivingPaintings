@@ -379,14 +379,39 @@ void Engine::update()
 			gui.drawParams.constructSelectedObject = false;
 		}
 
+		vkDeviceWaitIdle(vulkan.device);
+
 		if (gui.drawParams.paintingTextureLoaded) {
-			uint16_t width, height;
-			std::string filePath = getOpenedWindowFilePath().string();
+			for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+				vkResetCommandBuffer(graphicsCmds.get(i), VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+			}
+			for (size_t i = 0; i < graphicsObjects.size(); i++) {
+				vertexBuffers[i].destroy();
+				indexBuffers[i].destroy();
+				if (i > 0) {
+					vertexBuffers.erase(vertexBuffers.begin() + i);
+					indexBuffers.erase(indexBuffers.begin() + i);
+					graphicsObjects.erase(graphicsObjects.begin() + i);
+					i--;
+				}
+			}
+
+			Data::GraphicsObject::instanceUniform.destroy();
 
 			for (int objTextureIndex = 0; objTextureIndex < objectsTextures.size(); objTextureIndex++) {
 				objectsTextures[objTextureIndex].destroy();
 			}
 			objectsTextures.clear();
+
+			gui.objectsParams.clear();
+			gui.objectsAnimationParams.clear();
+			gui.animationControlParams.clear();
+			gui.objectsParams = std::vector<ObjectParams>{ gui.getObjectParams() };
+			gui.objectsAnimationParams = std::vector<ObjectParams>{ gui.getObjectParams() };
+			gui.animationControlParams = std::vector<AnimationParams>{ gui.getAnimationParams()};
+
+			uint16_t width, height;
+			std::string filePath = getOpenedWindowFilePath().string();
 
 			Image loadedPaintingTexture;
 			loadedPaintingTexture.imageDetails.createImageInfo(
@@ -423,11 +448,12 @@ void Engine::update()
 
 			descriptor.updateMaskTextures(segmentationSystem.getSelectedPosMasks());
 
+			Data::GraphicsObject::instanceUniform.allocateInstances();
+
+			graphicsObjects.resize(1);
+			vertexBuffers.resize(1);
+			indexBuffers.resize(1);
 			graphicsObjects[0].constructQuadWithAspectRatio(width, height, 0.0f);
-
-			vertexBuffers[0].destroy();
-			indexBuffers[0].destroy();
-
 			vertexBuffers[0].create(vulkan.device, vulkan.physicalDevice, vulkan.commandPool,
 				graphicsObjects[0].vertices, transferQueue);
 			indexBuffers[0].create(vulkan.device, vulkan.physicalDevice, vulkan.commandPool,
@@ -436,8 +462,6 @@ void Engine::update()
 			runComputeShader(0);
 			gui.drawParams.paintingTextureLoaded = false;
 		}
-
-		vkDeviceWaitIdle(vulkan.device);
 	}
 }
 
