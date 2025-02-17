@@ -16,7 +16,7 @@ using Constants::WINDOW_HEIGHT;
 #define 	STREAM_GIF_PIX_FMT   AV_PIX_FMT_RGB8
 #define 	STREAM_FRAME_RATE   STREAM_FRAME_RATE
 
-std::vector<unsigned char*> frames;
+std::vector<std::shared_ptr<unsigned char>> frames;
 uint32_t FrameExport::frameCount = EXPORT_FRAME_COUNT;
 uint32_t FrameExport::windowWidth = WINDOW_WIDTH;
 uint32_t FrameExport::windowHeight = WINDOW_HEIGHT;
@@ -26,11 +26,14 @@ void FrameExport::setPresentationSurfaceFormat(uint32_t surfaceFormat)
 {
 	if (surfaceFormat >= 23 && surfaceFormat <= 29) {
 		presentationSurfaceFormat = AV_PIX_FMT_RGB8;
-	} else if (surfaceFormat >= 30 && surfaceFormat <= 36) {
+	}
+	else if (surfaceFormat >= 30 && surfaceFormat <= 36) {
 		presentationSurfaceFormat = AV_PIX_FMT_BGR8;
-	} else if (surfaceFormat >= 37 && surfaceFormat <= 43) {
+	}
+	else if (surfaceFormat >= 37 && surfaceFormat <= 43) {
 		presentationSurfaceFormat = AV_PIX_FMT_RGBA;
-	} else if (surfaceFormat >= 44 && surfaceFormat <= 50) {
+	}
+	else if (surfaceFormat >= 44 && surfaceFormat <= 50) {
 		presentationSurfaceFormat = AV_PIX_FMT_BGRA;
 	}
 }
@@ -42,7 +45,7 @@ void FrameExport::setExportParams(uint32_t frameCount, uint32_t windowWidth, uin
 	FrameExport::windowHeight = windowHeight;
 }
 
-void FrameExport::gatherFrame(unsigned char* frameCopy, bool& writeVideo, std::string fileFormat)
+void FrameExport::gatherFrame(std::shared_ptr<unsigned char> frameCopy, bool& writeVideo, std::string fileFormat)
 {
 	frames.push_back(frameCopy);
 	if (frames.size() > FrameExport::frameCount + 1) { // first frames can contain gui, so more frames being added to array and bottom frames will be erased
@@ -75,8 +78,8 @@ void FrameExport::writeFramesToStream(AVCodecID codecId, AVPixelFormat frameForm
 		std::cerr << " Could not create video output!" << std::endl;
 	}
 
-	const AVCodec* gifCodec = avcodec_find_encoder(codecId);
-	AVCodecContext* codecContext = avcodec_alloc_context3(gifCodec);
+	const AVCodec* selectedCodec = avcodec_find_encoder(codecId);
+	AVCodecContext* codecContext = avcodec_alloc_context3(selectedCodec);
 	codecContext->codec_id = codecId;
 	codecContext->codec_type = AVMEDIA_TYPE_VIDEO;
 	codecContext->bit_rate = 400000;
@@ -91,11 +94,11 @@ void FrameExport::writeFramesToStream(AVCodecID codecId, AVPixelFormat frameForm
 		codecContext->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 	}
 
-	if (avcodec_open2(codecContext, gifCodec, nullptr)) {
+	if (avcodec_open2(codecContext, selectedCodec, nullptr)) {
 		std::cerr << "Could not open codec" << std::endl;
 	}
 
-	AVStream* outputStream = avformat_new_stream(outputFormatContext, gifCodec);
+	AVStream* outputStream = avformat_new_stream(outputFormatContext, selectedCodec);
 	if (!outputStream) {
 		std::cerr << "Could not allocate output stream" << std::endl;
 	}
@@ -138,12 +141,12 @@ void FrameExport::writeFramesToStream(AVCodecID codecId, AVPixelFormat frameForm
 	frame->width = codecContext->width;
 	frame->height = codecContext->height;
 	while (frameCount < frames.size()) {
-		res = av_frame_get_buffer(frame, 0);
+		//res = av_frame_get_buffer(frame, 0);
 		av_image_alloc(frame->data, frame->linesize,
 			codecContext->width, codecContext->height, frameFormat, 32);
 
 		if (presentationSurfaceFormat != AV_PIX_FMT_RGB8) {
-			uint8_t* data[1] = { frames[frameCount] };
+			uint8_t* data[1] = { frames[frameCount].get() };
 			int linesize[1] = { 4 * codecContext->width };
 			res = sws_scale(swsCtxRGBtoYUV, data, linesize, 0, codecContext->height, frame->data, frame->linesize);
 		}
@@ -182,18 +185,19 @@ void FrameExport::writeFramesToStream(AVCodecID codecId, AVPixelFormat frameForm
 
 		}
 		av_packet_unref(&outPacket);
+		av_freep(&frame->data[0]);
 		frameCount++;
 	}
 
 	frames.clear();
 
 	av_write_trailer(outputFormatContext);
-
-	av_free(frame->data[0]);
-	av_free(frame);
+	
+	av_free(swsCtxRGBtoYUV);
 	avcodec_close(codecContext);
 	av_free(codecContext);
 
 	printf("\n");
 	avio_close(outputFormatContext->pb);
+	avformat_free_context(outputFormatContext);
 }

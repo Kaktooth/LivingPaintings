@@ -313,22 +313,22 @@ void Image::destroy()
     vkFreeMemory(device, imageMemory, nullptr);
 }
 
-VkImage& Image::get()
+const VkImage& Image::get() const
 {
     return textureImage;
 }
 
-VkImageView& Image::getView()
+const VkImageView& Image::getView() const
 {
     return imageView;
 }
 
-StagingBuffer Image::getBuffer()
+const StagingBuffer Image::getBuffer() const
 {
     return stagingBuffer;
 }
 
-Image::Details& Image::getDetails()
+const Image::Details& Image::getDetails() const
 {
     return imageDetails;
 }

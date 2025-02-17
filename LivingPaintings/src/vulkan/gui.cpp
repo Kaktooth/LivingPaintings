@@ -167,7 +167,6 @@ void Gui::draw()
                     ImGui::SeparatorText("Construction Parameters");
                     ImGui::DragInt("Alpha (1 - 10000)", &objectConstructionParams.alphaPercentage, 10.0f, 1, 10000, "%d%%");
                     ImGui::SeparatorText("Inpainting");
-                    // TODO disable and enable inpainting..
                     ImGui::Checkbox("Enable", &inpaintingParams.enableInpainting);
                     ImGui::DragInt("Patch Size", &inpaintingParams.patchSize, 1, 5, 200);
                     ImGui::Spacing();

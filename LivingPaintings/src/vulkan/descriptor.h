@@ -26,11 +26,11 @@ public:
                 std::vector<UniformBuffer> uniformInstanceBuffers,
                 std::vector<UniformBuffer> uniformViewBuffers,
                 Image& paintingTexture, Image& heightMapTexture, Sampler& textureSampler,
-                UniformBuffer& mouseUniform, std::array<Image, MASKS_COUNT>& selectedPosMasks,
+                UniformBuffer& mouseUniform, const std::array<Image, MASKS_COUNT>& selectedPosMasks,
                 UniformBuffer& timeUniform, UniformBuffer& effectParamsUniform, UniformBuffer& lightParamsUniform);
     void updateBindlessTexture(Image& textureWrite, uint32_t arrayElementId);
     void updateHeightTexture(Image& heightTexture);
-    void updateMaskTextures(std::array<Image, MASKS_COUNT>& maskTextures);
+    void updateMaskTextures(const std::array<Image, MASKS_COUNT>& maskTextures);
     void destroy();
     VkDescriptorSetLayout& getSetLayout();
     VkDescriptorSetLayout& getBindlessSetLayout();

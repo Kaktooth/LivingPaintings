@@ -159,38 +159,14 @@ void UniformBuffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
     vkMapMemory(device, getDeviceMemory(), 0, size, 0, &mapped);
 }
 
+template <typename T>
+void UniformBuffer::update(const T& uniform)
+{
+    memcpy(mapped, &uniform, sizeof(uniform));
+}
+
 template <>
-void UniformBuffer::update(const Data::GraphicsObject::Instance& uniform)
+void UniformBuffer::update<Data::GraphicsObject::Instance>(const Data::GraphicsObject::Instance& uniform)
 {
     memcpy(mapped, uniform.model, memorySize);
-}
-
-template <>
-void UniformBuffer::update(const Data::GraphicsObject::View& uniform)
-{
-    memcpy(mapped, &uniform, sizeof(uniform));
-}
-
-template <>
-void UniformBuffer::update(const Controls::MouseControl& uniform)
-{
-    memcpy(mapped, &uniform, sizeof(uniform));
-}
-
-template <>
-void UniformBuffer::update(const float& uniform)
-{
-    memcpy(mapped, &uniform, sizeof(uniform));
-}
-
-template <>
-void UniformBuffer::update(const EffectParams& uniform)
-{
-    memcpy(mapped, &uniform, sizeof(uniform));
-}
-
-template <>
-void UniformBuffer::update(const LightParams& uniform)
-{
-    memcpy(mapped, &uniform, sizeof(uniform));
 }

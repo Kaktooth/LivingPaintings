@@ -145,7 +145,7 @@ void Engine::init()
 
 	segmentationSystem.init(device, vulkan.commandPool, pWindow,
 		PATH_PARAMS.TEXTURE_PATH, TEX_WIDTH, TEX_HEIGHT,
-		controls.getMouseControls());
+		&controls.getMouseControls());
 
 	controls.fillInMouseControlInfo(glm::uvec2(WINDOW_WIDTH, WINDOW_HEIGHT),
 		0.1f, pWindow);
@@ -334,7 +334,7 @@ void Engine::update()
 				signalSemaphores, pWindow);
 
 			if (gui.videoExportParams.writeFile) {
-				unsigned char* frame = swapchain.writeFrameToBuffer(cmdGraphics, transferQueue, currentFrame);
+				std::shared_ptr<uchar> frame = swapchain.writeFrameToBuffer(cmdGraphics, transferQueue, currentFrame);
 				FrameExport::gatherFrame(frame, gui.videoExportParams.writeFile, gui.videoExportParams.fileFormat);
 			}
 			else {
@@ -349,10 +349,10 @@ void Engine::update()
 
 		if (gui.drawParams.constructSelectedObject) {
 			Data::GraphicsObject constructedObject;
-			const unsigned char* mask = segmentationSystem.getSelectedPositionsMask(0);
+			std::shared_ptr<uchar> spSelectedPosMask = segmentationSystem.getSelectedPositionsMask(0);
 			segmentationSystem.removeAllMaskPositions(0);
 			ObjectConstructionParams objectConstructionParams = gui.getObjectConstructionParams();
-			constructedObject.constructMeshFromTexture(objectsTextures[0].imageDetails.width, objectsTextures[0].imageDetails.height, 0.001f, mask,
+			constructedObject.constructMeshFromTexture(objectsTextures[0].imageDetails.width, objectsTextures[0].imageDetails.height, 0.001f, spSelectedPosMask.get(),
 				objectConstructionParams.alphaPercentage);
 
 			if (constructedObject.indices.size() > 0) {
@@ -444,9 +444,9 @@ void Engine::update()
 
 			segmentationSystem.destroy();
 			segmentationSystem.init(device, vulkan.commandPool, pWindow,
-				filePath.c_str(), width, height, controls.getMouseControls());
-
-			descriptor.updateMaskTextures(segmentationSystem.getSelectedPosMasks());
+				filePath.c_str(), width, height, &controls.getMouseControls());
+			const std::array<Image, MASKS_COUNT> spSelectedPosMasks = segmentationSystem.getSelectedPosMasks();
+			descriptor.updateMaskTextures(spSelectedPosMasks);
 
 			Data::GraphicsObject::instanceUniform.allocateInstances();
 

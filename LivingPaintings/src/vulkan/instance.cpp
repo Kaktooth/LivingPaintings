@@ -76,7 +76,7 @@ std::vector<const char*> VulkanInstance::findRequiredExtensions() const
     return extensions;
 }
 
-bool VulkanInstance::checkValidationLayerSupport() const
+bool VulkanInstance::checkValidationLayerSupport()
 {
     uint32_t layerCount;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);

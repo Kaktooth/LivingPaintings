@@ -32,7 +32,7 @@ public:
         VkBuffer dstBuffer, VkDeviceSize size,
         Queue& transferQueue);
     void destroy();
-    VkBuffer& get();
+    VkBuffer& get(); // TODO const
     VkDeviceMemory& getDeviceMemory();
     VkDeviceSize& getMemorySize();
 };
@@ -73,5 +73,6 @@ public:
     void create(VkDevice& device, VkPhysicalDevice& physicalDevice,
         const VkDeviceSize size,
         VkMemoryPropertyFlags memoryProperyFlags);
-    void update(const auto& uniformObject);
+    template<typename T>
+    void update(const T& uniformObject);
 };

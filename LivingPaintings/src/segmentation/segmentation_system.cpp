@@ -17,8 +17,8 @@ bool runningSegmentation = true;
 bool imageLoaded = false;
 std::string imagePath;
 
-GLFWwindow* pWindow = nullptr;
-Controls::MouseControl* mouseControl = nullptr;
+std::shared_ptr<GLFWwindow> pWindow = nullptr;
+std::shared_ptr<Controls::MouseControl> mouseControl = nullptr;
 std::unique_ptr<Sam> samModel = nullptr;
 glm::uvec2 modelResolution;
 
@@ -97,11 +97,11 @@ static void loadImage(Sam* sam, std::string const& inputImage)
     image = latestImageTexture;
 }
 
-cv::Mat ImageSegmantationSystem::segmentImage(Sam const* sam)
+cv::Mat ImageSegmantationSystem::segmentImage(const Sam* sam)
 {
     double xpos;
     double ypos;
-    glfwGetCursorPos(pWindow, &xpos, &ypos);
+    glfwGetCursorPos(pWindow.get(), &xpos, &ypos);
     cv::Point point(xpos, ypos);
     return sam->getMask(point);
 }
@@ -192,7 +192,6 @@ void ImageSegmantationSystem::runObjectSegmentationTask()
     while (runningSegmentation) {
         bool inputPositionsEmpty = inputPositions.empty();
         if (!inputPositionsEmpty) {
-            //TODO pos to mouse
             glm::uvec2 pos = inputPositions.front();
             inputPositions.pop();
 
@@ -222,7 +221,7 @@ void ImageSegmantationSystem::runObjectSegmentationTask()
 void ImageSegmantationSystem::init(Device& _device, VkCommandPool& _commandPool,
     GLFWwindow* _pWindow, const std::string& _imagePath,
     uint32_t imageWidth, uint32_t imageHeight,
-    Controls::MouseControl& _mouseControl)
+    Controls::MouseControl* _mouseControl)
 {
     const std::string createFolder = "mkdir " + INPAINTING_HISTORY_FOLDER_NAME;
     system(createFolder.c_str());
@@ -230,10 +229,10 @@ void ImageSegmantationSystem::init(Device& _device, VkCommandPool& _commandPool,
     const glm::uvec2 windowSize = glm::uvec2(WINDOW_WIDTH, WINDOW_HEIGHT);
     imageResolution = glm::uvec2(imageWidth, imageHeight);
 
-    pWindow = _pWindow;
+    pWindow.reset(_pWindow);
     windowResolution = windowSize;
     imagePath = _imagePath;
-    mouseControl = &_mouseControl;
+    mouseControl.reset(_mouseControl);
     device = _device.get();
     physicalDevice = _device.getPhysicalDevice();
     Queue& transferQueue = _device.getTransferQueue();
@@ -254,8 +253,8 @@ void ImageSegmantationSystem::init(Device& _device, VkCommandPool& _commandPool,
     }
 
     if (!callbackIsSet) {
-        glfwSetMouseButtonCallback(pWindow, mouse_buttons_callback);
-        glfwSetCursorPosCallback(pWindow, cursor_position_callback);
+        glfwSetMouseButtonCallback(pWindow.get(), mouse_buttons_callback);
+        glfwSetCursorPosCallback(pWindow.get(), cursor_position_callback);
         callbackIsSet = true;
     }
 
@@ -307,8 +306,8 @@ bool ImageSegmantationSystem::selectedObjectSizeChanged(uint16_t maskIndex)
 void ImageSegmantationSystem::updatePositionMasks(Device& device, VkCommandPool& commandPool, Queue& transferQueue)
 {
     if (selectedObjectSizeChanged()) {
-        unsigned char* selectedPosMask = getSelectedPositionsMask();
-        selectedPosMasks[mouseControl->maskIndex].copyBufferToImage(transferQueue, selectedPosMask);
+        std::shared_ptr<uchar> spSelectedPosMask = getSelectedPositionsMask();
+        selectedPosMasks[mouseControl->maskIndex].copyBufferToImage(transferQueue, spSelectedPosMask.get());
     }
 }
 
@@ -362,7 +361,6 @@ void ImageSegmantationSystem::inpaintImage(uint8_t patchSize, std::vector<Image>
     cv::copyMakeBorder(inpaintedImage, resImage, top, bottom, left, right, cv::BorderTypes::BORDER_CONSTANT, 0);
     cv::copyTo(resImage, image, selectedPosMask);
 
-    //TODO implement inpainted image history
     std::stringstream filePath;
     filePath << INPAINTING_HISTORY_FOLDER_NAME << "/" << "latest.png";
     std::vector<int> imageWriteParams;
@@ -398,18 +396,19 @@ void ImageSegmantationSystem::inpaintImage(uint8_t patchSize, std::vector<Image>
 
 bool& ImageSegmantationSystem::isImageLoaded() { return imageLoaded; }
 
-uchar* ImageSegmantationSystem::getSelectedPositionsMask()
+const std::shared_ptr<uchar> ImageSegmantationSystem::getSelectedPositionsMask()
 {
     return getSelectedPositionsMask(mouseControl->maskIndex);
 }
 
-uchar* ImageSegmantationSystem::getSelectedPositionsMask(uint16_t maskIndex)
+const std::shared_ptr<uchar> ImageSegmantationSystem::getSelectedPositionsMask(uint16_t maskIndex)
 {
+   std::shared_ptr<uchar> spPositionMask;
    auto pixelSize = static_cast<size_t>(imageResolution.x) * static_cast<size_t>(imageResolution.y);
-   auto selectedPositionsMask = static_cast<unsigned char*>(calloc(1, pixelSize));
+   auto pSelectedPositionsMask = static_cast<unsigned char*>(calloc(1, pixelSize));
     for (uint32_t width = 0; width < imageResolution.x; width++) {
         for (uint32_t height = 0; height < imageResolution.y; height++) {
-            unsigned char* offset = selectedPositionsMask + width + (imageResolution.x * height);
+            unsigned char* offset = pSelectedPositionsMask + width + (imageResolution.x * height);
             auto pos = glm::uvec2(width, height);
             if (objectPositions[maskIndex].contains(pos)) {
                 offset[0] = SELECTED_REGION_HIGHLIGHT;
@@ -418,10 +417,11 @@ uchar* ImageSegmantationSystem::getSelectedPositionsMask(uint16_t maskIndex)
             }
         }
     }
-    return selectedPositionsMask;
+    spPositionMask.reset(pSelectedPositionsMask);
+    return spPositionMask;
 }
 
-std::array<Image, MASKS_COUNT>& ImageSegmantationSystem::getSelectedPosMasks()
+const std::array<Image, MASKS_COUNT>& ImageSegmantationSystem::getSelectedPosMasks()
 {
     return selectedPosMasks;
 }

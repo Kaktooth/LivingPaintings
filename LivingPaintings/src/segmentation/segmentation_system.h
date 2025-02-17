@@ -20,32 +20,31 @@ using Constants::MASKS_COUNT;
 
 class ImageSegmantationSystem {
 
-    VkDevice device = VK_NULL_HANDLE;
-    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-    std::array<Image, MASKS_COUNT> selectedPosMasks;
+	VkDevice device = VK_NULL_HANDLE;
+	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+	std::array<Image, MASKS_COUNT> selectedPosMasks;
 
-    bool callbackIsSet = false;
+	bool callbackIsSet = false;
 
-    cv::Mat segmentImage(Sam const* sam);
+	cv::Mat segmentImage(Sam const* sam);
 
 public:
-    void runObjectSegmentationTask();
+	void runObjectSegmentationTask();
 
-    void init(Device& _device, VkCommandPool& _commandPool, GLFWwindow* pWindow,
-              const std::string& imagePath, uint32_t width, uint32_t height,
-              Controls::MouseControl& mouseControl);
-    void destroy();
+	void init(Device& _device, VkCommandPool& _commandPool, GLFWwindow* pWindow,
+		const std::string& imagePath, uint32_t width, uint32_t height,
+		Controls::MouseControl* mouseControl);
+	void destroy();
 
-    void changeWindowResolution(glm::uvec2& windowResolution);
-    void removeAllMaskPositions();
-    void removeAllMaskPositions(uint16_t maskIndex);
-    bool selectedObjectSizeChanged();
-    bool selectedObjectSizeChanged(uint16_t maskIndex);
-    void updatePositionMasks(Device& device, VkCommandPool& commandPool, Queue& transferQueue);
-    void inpaintImage(uint8_t patchSize, std::vector<Image>& objectsTextures, Descriptor& descriptor, VkCommandPool& commandPool, Queue& transferQueue);
-    uchar* getLatestBackground();
-    bool& isImageLoaded();
-    uchar* getSelectedPositionsMask();
-    uchar* getSelectedPositionsMask(uint16_t maskIndex);
-    std::array<Image, MASKS_COUNT>& getSelectedPosMasks();
+	void changeWindowResolution(glm::uvec2& windowResolution);
+	void removeAllMaskPositions();
+	void removeAllMaskPositions(uint16_t maskIndex);
+	bool selectedObjectSizeChanged();
+	bool selectedObjectSizeChanged(uint16_t maskIndex);
+	void updatePositionMasks(Device& device, VkCommandPool& commandPool, Queue& transferQueue);
+	void inpaintImage(uint8_t patchSize, std::vector<Image>& objectsTextures, Descriptor& descriptor, VkCommandPool& commandPool, Queue& transferQueue);
+	bool& isImageLoaded();
+	const std::shared_ptr<uchar> getSelectedPositionsMask();
+	const std::shared_ptr<uchar> getSelectedPositionsMask(uint16_t maskIndex);
+	const std::array<Image, MASKS_COUNT>& getSelectedPosMasks();
 };

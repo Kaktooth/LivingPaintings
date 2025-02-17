@@ -68,7 +68,6 @@ struct LightParams {
 	float surfaceColorModifier;
 };
 
-//TODO rename
 struct SpecificDrawParams {
 	bool paintingTextureLoaded;
 	size_t pipelineHistorySize;

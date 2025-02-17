@@ -47,7 +47,7 @@ void ShaderCompiler::compile(std::filesystem::path shaderPath, const std::string
 
     if (shaderModule.GetCompilationStatus() != shaderc_compilation_status_success) {
         std::cerr << shaderModule.GetErrorMessage();
-        throw std::format_error(shaderModule.GetErrorMessage());
+        throw std::runtime_error("Shader Compilation Error: " + shaderModule.GetErrorMessage());
     }
     std::vector<uint32_t> compiled { shaderModule.cbegin(), shaderModule.cend() };
 

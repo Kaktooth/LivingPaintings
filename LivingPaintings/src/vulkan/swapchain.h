@@ -53,7 +53,7 @@ public:
     void recreate(Queue& graphicsQueue, VkRenderPass& renderPass, GLFWwindow* window);
     void destroy();
     
-    unsigned char* writeFrameToBuffer(VkCommandBuffer cmd, Queue transferQueue, uint8_t currentFrame);
+    std::shared_ptr<unsigned char> writeFrameToBuffer(VkCommandBuffer cmd, Queue transferQueue, uint8_t currentFrame);
     
     uint32_t getMinImageCount();
     VkFormat& getImageFormat();

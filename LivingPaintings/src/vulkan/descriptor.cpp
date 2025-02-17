@@ -7,7 +7,7 @@ void Descriptor::create(VkDevice& device,
 	std::vector<UniformBuffer> uniformInstanceBuffers,
 	std::vector<UniformBuffer> uniformViewBuffers,
 	Image& paintingTexture, Image& heightMapTexture, Sampler& textureSampler,
-	UniformBuffer& mouseUniform, std::array<Image, MASKS_COUNT>& selectedPosMasks,
+	UniformBuffer& mouseUniform, const std::array<Image, MASKS_COUNT>& selectedPosMasks,
 	UniformBuffer& timeUniform, UniformBuffer& effectParamsUniform, UniformBuffer& lightParamsUniform)
 {
 	this->device = device;
@@ -405,7 +405,7 @@ void Descriptor::updateHeightTexture(Image& heightTexture)
 	}
 }
 
-void Descriptor::updateMaskTextures(std::array<Image, MASKS_COUNT>& maskTextures)
+void Descriptor::updateMaskTextures(const std::array<Image, MASKS_COUNT>& maskTextures)
 {
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		std::array<VkDescriptorImageInfo, MASKS_COUNT> selectedPosMaskInfo{};

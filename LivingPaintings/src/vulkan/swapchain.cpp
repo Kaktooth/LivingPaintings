@@ -140,8 +140,8 @@ void Swapchain::createFramebuffers(VkRenderPass& renderPass)
 {
 	framebuffers.resize(imageViews.size());
 
-	VkImageView& depthImageView = depthImage.getView();
-	VkImageView& colorImageView = colorImage.getView();
+	const VkImageView& depthImageView = depthImage.getView();
+	const VkImageView& colorImageView = colorImage.getView();
 	for (size_t i = 0; i < imageViews.size(); i++) {
 		std::vector<VkImageView> attachments = { colorImageView, depthImageView, imageViews[i] };
 
@@ -261,11 +261,11 @@ void Swapchain::recreate(Queue& graphicsQueue, VkRenderPass& renderPass,
 	createFramebuffers(renderPass);
 }
 
-unsigned char* Swapchain::writeFrameToBuffer(VkCommandBuffer cmds, Queue transferQueue, uint8_t currentFrame)
+std::shared_ptr<unsigned char> Swapchain::writeFrameToBuffer(VkCommandBuffer cmds, Queue transferQueue, uint8_t currentFrame)
 {
+	std::shared_ptr<unsigned char> spImageCopy;
 	VkOffset3D offset = VkOffset3D{ 0, 0, 0 };
 	VkCommandBuffer cmd = CommandBuffer::beginSingleTimeCommands(device, commandPool);
-	Image colorImageCopy;
 	Buffer buffer;
 
 	size_t size = extent.height * extent.width * sizeof(char) * 4;
@@ -332,9 +332,11 @@ unsigned char* Swapchain::writeFrameToBuffer(VkCommandBuffer cmds, Queue transfe
 	void* mapped;
 	vkMapMemory(device, buffer.getDeviceMemory(), 0, size, 0, &mapped);
 	memcpy(imageCopy, mapped, size);
-
 	buffer.destroy();
-	return imageCopy;
+
+	spImageCopy.reset(imageCopy);
+	
+	return spImageCopy;
 }
 
 uint32_t Swapchain::getMinImageCount()

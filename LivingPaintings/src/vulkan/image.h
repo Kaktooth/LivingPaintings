@@ -62,8 +62,8 @@ public:
     void copyBufferToImage(Queue& queue, unsigned char* buffer, uint32_t bufImageWidth, uint32_t bufImageHeight);
     void createImageView();
     void destroy();
-    VkImage& get();
-    VkImageView& getView();
-    StagingBuffer getBuffer();
-    Details& getDetails();
+    const VkImage& get() const;
+    const VkImageView& getView() const;
+    const StagingBuffer getBuffer() const;
+    const Details& getDetails() const;
 };

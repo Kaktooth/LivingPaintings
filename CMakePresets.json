@@ -7,12 +7,12 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/out/build/${presetName}",
       "installDir": "${sourceDir}/out/install/${presetName}",
-      "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "VCPKG_TARGET_TRIPLET": "x64-windows",
-        "CMAKE_C_COMPILER": "clang.exe",
-        "CMAKE_CXX_COMPILER": "clang.exe"
-      },
+        "cacheVariables": {
+            "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+            "VCPKG_TARGET_TRIPLET": "x64-windows",
+            "CMAKE_C_COMPILER": "D:/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/bin/clang.exe",
+            "CMAKE_CXX_COMPILER": "D:/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/bin/clang.exe"
+        },
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",

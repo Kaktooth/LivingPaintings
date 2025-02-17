@@ -9,6 +9,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <vector>
+#include <cstring>
 
 class VulkanInstance {
 
@@ -19,7 +20,7 @@ public:
     static void enumerateExtentions();
     std::vector<const char*> findRequiredExtensions() const;
     [[nodiscard]]
-    bool checkValidationLayerSupport() const;
+    bool checkValidationLayerSupport();
     void destroy();
     VkInstance& get();
 };
