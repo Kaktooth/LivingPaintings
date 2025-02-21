@@ -3,7 +3,7 @@
 VkSurfaceKHR& Surface::create(VkInstance& instance, GLFWwindow* pWindow)
 {
     this->instance = instance;
-    this->pWindow = pWindow;
+    this->pWindow.reset(pWindow);
     if (glfwCreateWindowSurface(instance, pWindow, nullptr, &surface) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create window surface.");
     }
@@ -19,7 +19,7 @@ VkExtent2D Surface::chooseResolution()
     }
 
     int width, height;
-    glfwGetFramebufferSize(pWindow, &width, &height);
+    glfwGetFramebufferSize(pWindow.get(), &width, &height);
 
     VkExtent2D extent = {
         static_cast<uint32_t>(width),

@@ -16,8 +16,8 @@ std::map<std::string, std::vector<char>> compiledShaders{};
 
 void ShaderCompiler::compileIfChanged()
 {
-    std::map<std::string, std::filesystem::directory_entry> shaderEntries = listModifiedFiles();
-    for (const auto& shaderEntry : shaderEntries) {
+    const std::map<std::string, std::filesystem::directory_entry> shaderEntries = listModifiedFiles();
+    for (const auto shaderEntry : shaderEntries) {
         std::filesystem::path shaderPath = shaderEntry.second.path();
         std::string filename = shaderEntry.first + ".spv";
         std::string spvPath = shaderPath.string() + ".spv";

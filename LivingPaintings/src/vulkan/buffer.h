@@ -73,6 +73,12 @@ public:
     void create(VkDevice& device, VkPhysicalDevice& physicalDevice,
         const VkDeviceSize size,
         VkMemoryPropertyFlags memoryProperyFlags);
+
     template<typename T>
-    void update(const T& uniformObject);
+    inline void update(const T& uniform) {
+        memcpy(mapped, &uniform, sizeof(uniform));
+    };
+    inline void update(const Data::GraphicsObject::Instance& uniform) {
+        memcpy(mapped, uniform.model, memorySize);
+    };
 };

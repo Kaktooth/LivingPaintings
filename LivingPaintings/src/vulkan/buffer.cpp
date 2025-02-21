@@ -111,7 +111,7 @@ void VertexBuffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
     vkMapMemory(device, stagingBufferDeviceMemory, 0, size, 0, &data);
     memcpy(data, vertecies.data(), static_cast<size_t>(size));
     vkUnmapMemory(device, stagingBufferDeviceMemory);
-
+    
     Buffer::create(
         device, physicalDevice, size,
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
@@ -157,16 +157,4 @@ void UniformBuffer::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
     Buffer::create(device, physicalDevice, size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
         VK_SHARING_MODE_EXCLUSIVE, memoryProperyFlags);
     vkMapMemory(device, getDeviceMemory(), 0, size, 0, &mapped);
-}
-
-template <typename T>
-void UniformBuffer::update(const T& uniform)
-{
-    memcpy(mapped, &uniform, sizeof(uniform));
-}
-
-template <>
-void UniformBuffer::update<Data::GraphicsObject::Instance>(const Data::GraphicsObject::Instance& uniform)
-{
-    memcpy(mapped, uniform.model, memorySize);
 }

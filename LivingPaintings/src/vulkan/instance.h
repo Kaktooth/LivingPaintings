@@ -14,6 +14,7 @@
 class VulkanInstance {
 
     VkInstance instance = VK_NULL_HANDLE;
+    std::vector<const char*> extentions;
 
 public:
     VkInstance& create(VkDebugUtilsMessengerCreateInfoEXT& debugCreateInfo);

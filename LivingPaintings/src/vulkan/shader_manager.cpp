@@ -67,6 +67,8 @@ void ShaderManager::notifyShaderFileChange()
             break;
         }
     }
+
+    delete shaderPath;
 }
 
 void ShaderManager::createShaderModules(VkDevice& device)

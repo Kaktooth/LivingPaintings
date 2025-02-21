@@ -1,8 +1,8 @@
 #include "swapchain.h"
 
 void Swapchain::setContext(Device& device, Surface& surface,
-	VkCommandPool commandPool,
-	VkSampleCountFlagBits samples,
+	VkCommandPool& commandPool,
+	VkSampleCountFlagBits& samples,
 	std::vector<VkFormat> depthFormatCandidates)
 {
 	this->device = device.get();

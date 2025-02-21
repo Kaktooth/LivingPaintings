@@ -36,7 +36,7 @@ class Swapchain {
 
 public:
     void setContext(Device& device, Surface& surface,
-        VkCommandPool commandPool, VkSampleCountFlagBits samples,
+        VkCommandPool& commandPool, VkSampleCountFlagBits& samples,
         std::vector<VkFormat> depthFormatCandidates);
     void create();
     VkImageView& createImageView(VkImage& image, VkFormat& format,

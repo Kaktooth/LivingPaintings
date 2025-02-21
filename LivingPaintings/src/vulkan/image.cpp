@@ -48,13 +48,18 @@ void Image::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
 
     bool imageFound = strcmp(imageDetails.filePath, "") != 0;
     if (imageFound) {
-        load(imageDetails.filePath);
+        load();
     } else {
-
-        if (imageDetails.pixels == (stbi_uc*)"") {
+        bool needAlloc = imageDetails.pixels == nullptr;
+        if (needAlloc) {
             imageDetails.pixels = (stbi_uc*)calloc(1, imageDetails.bufferSize);
         }
+
         stagingBuffer.create(device, physicalDevice, imageDetails.pixels, imageDetails.bufferSize);
+
+        if (needAlloc) {
+            free(imageDetails.pixels);
+        }
     }
 
     VkImageCreateInfo imageInfo {};
@@ -122,10 +127,10 @@ void Image::create(VkDevice& device, VkPhysicalDevice& physicalDevice,
     createImageView();
 }
 
-void Image::load(const char* filePath)
+void Image::load()
 {
     int width, height, channels;
-    stbi_uc* pixels = stbi_load(filePath, &width, &height, &channels, STBI_rgb_alpha);
+    stbi_uc* pixels = stbi_load(imageDetails.filePath, &width, &height, &channels, STBI_rgb_alpha);
     imageDetails.width = width;
     imageDetails.height = height;
     imageDetails.bufferSize = width * height * imageDetails.channels;

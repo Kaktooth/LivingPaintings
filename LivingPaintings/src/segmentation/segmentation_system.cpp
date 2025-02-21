@@ -19,15 +19,12 @@ std::string imagePath;
 
 std::shared_ptr<GLFWwindow> pWindow = nullptr;
 std::shared_ptr<Controls::MouseControl> mouseControl = nullptr;
-std::unique_ptr<Sam> samModel = nullptr;
+std::shared_ptr<Sam> samModel = nullptr;
 glm::uvec2 modelResolution;
 
 cv::Mat latestImageTexture;
 glm::uvec2 imageResolution;
 glm::uvec2 windowResolution;
-
-// Resize point using old (imageResolution) and new (windowResolution) resolutions.
-#define RESIZE_POINT_POSITION(pointPos) (((pointPos) / glm::vec2(windowResolution)) * glm::vec2(imageResolution))
 
 std::unordered_set<glm::uvec2> brushPositions { { 0, 0 }, { 1, 0 }, { -1, 0 }, { 0, 1 },
     { 0, -1 }, { 1, 1 }, { -1, -1 }, { 1, -1 },
@@ -92,7 +89,7 @@ static void loadImage(Sam* sam, std::string const& inputImage)
     } else {
         std::cout << "Image is loaded!" << '\n';
     }
-
+    
     //load image again because previous image has lost resolution after resize
     image = latestImageTexture;
 }
@@ -125,10 +122,14 @@ static void useBrush(glm::uvec2 pos)
     }
 }
 
+inline glm::uvec2 resisePointPos(glm::vec2 pos) {
+    return (pos / glm::vec2(windowResolution)) * glm::vec2(imageResolution);
+}
+
 static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
     if (buttonHeld.first || buttonHeld.second) {
-        glm::uvec2 pos = RESIZE_POINT_POSITION(glm::vec2(xpos, ypos));
+        glm::uvec2 pos = resisePointPos(glm::vec2(xpos, ypos));
         useBrush(pos);
     }
 }
@@ -148,7 +149,7 @@ static void mouse_buttons_callback(GLFWwindow* window, int button, int action,
         if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS && mods == GLFW_MOD_CONTROL) {
             glm::dvec2 cursorPos {};
             glfwGetCursorPos(window, &cursorPos.x, &cursorPos.y);
-            glm::uvec2 pos = RESIZE_POINT_POSITION(glm::vec2(cursorPos));
+            glm::uvec2 pos = resisePointPos(cursorPos);
             std::cout << "Selected pixel position: " << pos.x << " " << pos.y << '\n';
             if (mouseControl->pixelScaling) {
                 buttonHeld.first = true;
@@ -160,7 +161,7 @@ static void mouse_buttons_callback(GLFWwindow* window, int button, int action,
         if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS && mods == GLFW_MOD_CONTROL) {
             glm::dvec2 cursorPos {};
             glfwGetCursorPos(window, &cursorPos.x, &cursorPos.y);
-            glm::uvec2 pos = RESIZE_POINT_POSITION(glm::vec2(cursorPos));
+            glm::uvec2 pos = resisePointPos(cursorPos);
 
             if (mouseControl->pixelScaling) {
                 buttonHeld.second = true;
@@ -228,7 +229,7 @@ void ImageSegmantationSystem::init(Device& _device, VkCommandPool& _commandPool,
 
     const glm::uvec2 windowSize = glm::uvec2(WINDOW_WIDTH, WINDOW_HEIGHT);
     imageResolution = glm::uvec2(imageWidth, imageHeight);
-
+    selectedPosMasks = std::array<Image, MASKS_COUNT>();
     pWindow.reset(_pWindow);
     windowResolution = windowSize;
     imagePath = _imagePath;
@@ -271,8 +272,10 @@ void ImageSegmantationSystem::destroy()
     for (uint16_t maskIndex = 0; maskIndex < MASKS_COUNT; maskIndex++) {
         selectedPosMasks[maskIndex].destroy();
     }
-    selectedPosMasks = std::array<Image, MASKS_COUNT>();
     runningSegmentation = true;
+    latestImageTexture.release();
+    image.release();
+    selectedPosMask.release();
 }
 
 void ImageSegmantationSystem::changeWindowResolution(glm::uvec2& _windowResolution)
@@ -354,6 +357,7 @@ void ImageSegmantationSystem::inpaintImage(uint8_t patchSize, std::vector<Image>
     cv::Mat resImage;
     cv::Mat inpaintedImage;
     inpainter.image().copyTo(inpaintedImage);
+    inpainter.image().release();
     uint32_t top = border_h.start;
     uint32_t bottom = image.rows - border_h.end;
     uint32_t left = border_w.start;
@@ -384,6 +388,7 @@ void ImageSegmantationSystem::inpaintImage(uint8_t patchSize, std::vector<Image>
     inpaintImage.create(this->device, physicalDevice, commandPool,
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, transferQueue);
+    stbi_image_free(inpaintedTextureBuffer);
     objectsTextures.push_back(inpaintImage);
 
     uint16_t maxBinding = Image::bindingIdToImageArrayElementId[imageDetails.bindingId];

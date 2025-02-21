@@ -24,7 +24,7 @@ class FrameExport {
 public:
 	static void setPresentationSurfaceFormat(uint32_t surfaceFormat);
 	static void setExportParams(uint32_t frameCount, uint32_t windowWidth, uint32_t windowHeight);
-	static void gatherFrame(std::shared_ptr<unsigned char> frame, bool& writeVideo, std::string fileFormat);
+	static void gatherFrame(std::shared_ptr<unsigned char> frame, bool& writeVideo, std::string& fileFormat);
 	static void writeFramesToStream(AVCodecID codecId, AVPixelFormat frameFormat,
-		uint32_t frameTimestampModifier, std::string fileFormat);
+		uint32_t frameTimestampModifier, std::string& fileFormat);
 };

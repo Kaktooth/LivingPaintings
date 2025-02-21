@@ -12,7 +12,7 @@ class Surface {
 
     VkInstance instance;
     VkSurfaceKHR surface;
-    GLFWwindow* pWindow;
+    std::shared_ptr<GLFWwindow> pWindow;
 
 public:
     struct Details {

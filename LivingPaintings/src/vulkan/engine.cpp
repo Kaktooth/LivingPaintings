@@ -442,6 +442,7 @@ void Engine::update()
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, transferQueue);
 			descriptor.updateHeightTexture(heightMapTexture);
 
+			// better to swap images
 			segmentationSystem.destroy();
 			segmentationSystem.init(device, vulkan.commandPool, pWindow,
 				filePath.c_str(), width, height, &controls.getMouseControls());
@@ -522,9 +523,11 @@ void Engine::initWindow(const uint16_t width, const uint16_t height)
 	glfwMakeContextCurrent(pWindow);
 	glfwSetFramebufferSizeCallback(
 		pWindow, [](GLFWwindow* window, int width, int height) {
+			std::shared_ptr<Controls> pControls;
+			std::shared_ptr<ImageSegmantationSystem> pSegmentationSystem;
 			glm::uvec2 windowResolution = glm::uvec2(width, height);
-			Controls* pControls = reinterpret_cast<Controls*>(glfwGetWindowUserPointer(window));
-			ImageSegmantationSystem* pSegmentationSystem = reinterpret_cast<ImageSegmantationSystem*>(glfwGetWindowUserPointer(window));
+			pControls.reset(reinterpret_cast<Controls*>(glfwGetWindowUserPointer(window)));
+			pSegmentationSystem.reset(reinterpret_cast<ImageSegmantationSystem*>(glfwGetWindowUserPointer(window)));
 			pControls->updateWindowSize(windowResolution);
 			pSegmentationSystem->changeWindowResolution(windowResolution);
 		});

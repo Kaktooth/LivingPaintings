@@ -14,7 +14,7 @@ class Image {
     VkCommandPool commandPool = VK_NULL_HANDLE;
     VkBufferUsageFlags usageFlags;
 
-    void load(const char* filePath);
+    void load();
     void transitionLayout(Queue& queue, VkImageLayout oldLayout,
                           VkImageLayout newLayout,
                           VkPipelineStageFlags destinationStage);
@@ -49,7 +49,7 @@ public:
             int stageUsage, VkImageTiling tiling,
             int aspectFlags,
             VkSampleCountFlagBits samples,
-            stbi_uc* pixels = (stbi_uc*)"",
+            stbi_uc* pixels = nullptr,
             uint32_t bindingId = imageId++);
     } imageDetails;
 
